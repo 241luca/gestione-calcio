@@ -85,8 +85,8 @@ export class PaymentService {
     });
 
     // Notifica real-time
-    if (this.socketService) {
-      this.socketService.sendToOrganization(
+    if (SocketService.isInitialized()) {
+      SocketService.sendToOrganization(
         data.organizationId,
         'payment:created',
         { payment }
@@ -230,8 +230,8 @@ export class PaymentService {
     }
 
     // Notifica real-time
-    if (this.socketService) {
-      this.socketService.sendToOrganization(
+    if (SocketService.isInitialized()) {
+      SocketService.sendToOrganization(
         organizationId,
         'payment:statusChanged',
         { payment: updated, oldStatus: payment.status, newStatus: status }
@@ -298,8 +298,8 @@ export class PaymentService {
     });
 
     // Notifica real-time
-    if (this.socketService) {
-      this.socketService.sendToOrganization(
+    if (SocketService.isInitialized()) {
+      SocketService.sendToOrganization(
         organizationId,
         'payment:recorded',
         { payment: updated }
@@ -507,8 +507,8 @@ export class PaymentService {
     console.log(`✅ Creati ${results.created.length} pagamenti su ${results.total}`);
 
     // Notifica real-time
-    if (this.socketService) {
-      this.socketService.sendToOrganization(
+    if (SocketService.isInitialized()) {
+      SocketService.sendToOrganization(
         data.organizationId,
         'payments:bulkCreated',
         { results }
@@ -722,8 +722,8 @@ export class PaymentService {
       });
 
       // Notifica real-time
-      if (this.socketService) {
-        this.socketService.sendToOrganization(
+      if (SocketService.isInitialized()) {
+        SocketService.sendToOrganization(
           payment.organizationId,
           'payment:overdue',
           { payment }

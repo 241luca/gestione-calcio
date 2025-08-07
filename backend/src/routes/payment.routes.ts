@@ -3,14 +3,10 @@ import { PaymentService } from '../services/payment.service';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/auth.middleware';
 import { ResponseFormatter } from '../utils/responseFormatter';
-import SocketService from '../services/socket.service';
 import { z } from 'zod';
 
 const router = Router();
 const paymentService = new PaymentService();
-
-// Collega il SocketService al PaymentService per notifiche real-time
-paymentService.setSocketService(SocketService);
 
 // Schema di validazione per la creazione pagamento
 const createPaymentSchema = z.object({
