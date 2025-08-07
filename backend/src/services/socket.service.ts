@@ -78,6 +78,15 @@ class SocketService {
   }
 
   /**
+   * Invia un messaggio a tutti gli utenti di un'organizzazione
+   */
+  sendToOrganization(organizationId: string, event: string, data: any) {
+    if (this.io) {
+      this.io.to(`org:${organizationId}`).emit(event, data);
+    }
+  }
+
+  /**
    * Invia notifica a un utente specifico
    */
   sendNotification(userId: string, notification: any) {
