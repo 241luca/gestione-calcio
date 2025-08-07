@@ -180,6 +180,12 @@ case "$1" in
         echo "Project Dir: $PROJECT_DIR"
         ;;
     
+    close-terminals)
+        print_info "Chiusura di tutte le finestre Terminal..."
+        osascript -e 'tell application "Terminal" to quit'
+        print_success "Tutte le finestre Terminal sono state chiuse"
+        ;;
+    
     logs-backend)
         print_info "Ultimi log backend:"
         if [ -f "$BACKEND_DIR/logs/app.log" ]; then
@@ -228,6 +234,7 @@ case "$1" in
         echo "  stop-all         - Ferma tutti i servizi"
         echo "  check-ports      - Controlla le porte"
         echo "  system-info      - Informazioni sistema"
+        echo "  close-terminals  - Chiude tutte le finestre Terminal"
         echo "  help             - Mostra questo messaggio"
         ;;
     

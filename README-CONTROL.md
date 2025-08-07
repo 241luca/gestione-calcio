@@ -41,6 +41,10 @@ chmod +x soccer-manager.sh
 - **Porta 3000 bloccata?** → Clicca "Kill Porta 3000"
 - **Porta 5173 bloccata?** → Clicca "Kill Porta 5173"
 
+### Troppe Finestre Terminal Aperte?
+- Clicca **"Chiudi Tutti i Terminal"** (pulsante rosso nel pannello Utilità)
+- Questo chiuderà TUTTE le finestre Terminal aperte
+
 ### Dopo un Pull da Git
 1. Clicca **"Git Pull"** per aggiornare il codice
 2. Clicca **"Installa Dipendenze"** se ci sono nuove librerie

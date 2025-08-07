@@ -452,6 +452,9 @@
                     <button class="btn btn-dark" onclick="runCommand('system-info')">
                         ℹ️ Info Sistema
                     </button>
+                    <button class="btn btn-danger" onclick="runCommand('close-terminals')">
+                        🚪 Chiudi Tutti i Terminal
+                    </button>
                 </div>
                 <div id="utilities-status" class="status"></div>
             </div>
@@ -643,6 +646,11 @@
             'system-info': {
                 cmd: 'echo "Node: $(node -v)" && echo "NPM: $(npm -v)" && echo "PostgreSQL: $(psql --version)" && echo "Git: $(git --version)"',
                 description: 'Recupero informazioni sistema...',
+                statusId: 'utilities-status'
+            },
+            'close-terminals': {
+                cmd: 'osascript -e \'tell application "Terminal" to quit\'',
+                description: 'Chiusura di tutte le finestre Terminal...',
                 statusId: 'utilities-status'
             }
         };
