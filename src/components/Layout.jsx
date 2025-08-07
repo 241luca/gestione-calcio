@@ -10,7 +10,8 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  TruckIcon
 } from '@heroicons/react/24/outline';
 import { authService } from '../services/api';
 import NotificationCenter from './NotificationCenter';
@@ -26,6 +27,7 @@ const Layout = ({ setIsAuthenticated }) => {
     { name: 'Squadre', href: '/teams', icon: UsersIcon },
     { name: 'Documenti', href: '/documents', icon: DocumentTextIcon },
     { name: 'Pagamenti', href: '/payments', icon: CurrencyEuroIcon },
+    { name: 'Trasporti', href: '/transport', icon: TruckIcon },
     { name: 'Calendario', href: '/calendar', icon: CalendarIcon },
     { name: 'Report', href: '/reports', icon: ChartBarIcon },
     { name: 'Impostazioni', href: '/settings', icon: Cog6ToothIcon },
