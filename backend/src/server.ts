@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth.routes';
 import athleteRoutes from './routes/athlete.routes';
 import transportRoutes from './routes/transport.routes';
+import notificationRoutes from './routes/notification.routes';
 
 // Carica le variabili d'ambiente
 dotenv.config();
@@ -40,6 +41,7 @@ app.get('/', (req: Request, res: Response) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/athletes', athleteRoutes);
 app.use('/api/v1/transport', transportRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // Route health check
 app.get('/health', async (req: Request, res: Response) => {

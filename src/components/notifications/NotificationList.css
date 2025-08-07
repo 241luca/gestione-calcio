@@ -1,0 +1,10 @@
+/* src/components/notifications/NotificationList.css */
+
+.notification-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-list > * + * {
+  border-top: 1px solid #f3f4f6;
+}

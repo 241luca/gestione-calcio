@@ -14,7 +14,7 @@ import {
   TruckIcon
 } from '@heroicons/react/24/outline';
 import { authService } from '../services/api';
-import NotificationCenter from './NotificationCenter';
+import NotificationBell from './notifications/NotificationBell';
 
 const Layout = ({ setIsAuthenticated }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -28,6 +28,7 @@ const Layout = ({ setIsAuthenticated }) => {
     { name: 'Documenti', href: '/documents', icon: DocumentTextIcon },
     { name: 'Pagamenti', href: '/payments', icon: CurrencyEuroIcon },
     { name: 'Trasporti', href: '/transport', icon: TruckIcon },
+    { name: 'Notifiche', href: '/notifications', icon: Bars3Icon },
     { name: 'Calendario', href: '/calendar', icon: CalendarIcon },
     { name: 'Report', href: '/reports', icon: ChartBarIcon },
     { name: 'Impostazioni', href: '/settings', icon: Cog6ToothIcon },
@@ -142,7 +143,7 @@ const Layout = ({ setIsAuthenticated }) => {
             </h2>
           </div>
           <div className="flex items-center space-x-4">
-            <NotificationCenter />
+            <NotificationBell />
             <div className="hidden lg:flex items-center">
               <span className="text-sm text-gray-600 mr-2">{user?.name || 'Utente'}</span>
               <button

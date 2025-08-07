@@ -13,6 +13,7 @@ import CalendarPage from './pages/CalendarPage';
 import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
 import TransportPage from './pages/TransportPage';
+import NotificationsPage from './pages/NotificationsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -69,6 +70,7 @@ function App() {
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="transport" element={<TransportPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="reports" element={<ReportsPage />} />
