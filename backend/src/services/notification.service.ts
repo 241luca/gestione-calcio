@@ -1,4 +1,4 @@
-// backend/src/services/notification.service.ts - VERSIONE CORRETTA
+// backend/src/services/notification.service.ts - VERSIONE CORRETTA FINALE
 import { PrismaClient } from '@prisma/client';
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import { addDays, subDays, startOfDay, endOfDay } from 'date-fns';
@@ -214,17 +214,17 @@ export class NotificationService {
    */
   async notifyOrganization(organizationId: string, data: any) {
     try {
-      // Trova tutti gli utenti dell'organizzazione tramite la tabella di join
-      const organizationUsers = await prisma.organizationUser.findMany({
+      // Trova tutti gli utenti dell'organizzazione
+      const users = await prisma.user.findMany({
         where: {
-          organizationId
+          organizationId: organizationId
         },
         select: { 
-          userId: true 
+          id: true 
         }
       });
 
-      const userIds = organizationUsers.map(ou => ou.userId);
+      const userIds = users.map((u: { id: string }) => u.id);
       
       if (userIds.length === 0) {
         return { created: 0 };
@@ -445,9 +445,9 @@ export class NotificationService {
           where: { id: match.homeTeamId }
         });
 
-        const awayTeam = match.awayTeamId ? await prisma.team.findUnique({
+        const awayTeam = await prisma.team.findUnique({
           where: { id: match.awayTeamId }
-        }) : null;
+        });
 
         await this.createNotification({
           userId: null,
@@ -461,7 +461,7 @@ export class NotificationService {
             matchId: match.id,
             date: match.date,
             time: match.time,
-            venueId: match.venueId
+            venue: match.venue
           }
         });
         remindersSent++;
