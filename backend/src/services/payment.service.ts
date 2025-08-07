@@ -1,7 +1,7 @@
 import { PrismaClient, PaymentStatus, PaymentType } from '@prisma/client';
 import { NotFoundError, BadRequestError, ConflictError } from '../utils/errors';
 import { NotificationService } from './notification.service';
-import { SocketService } from './socket.service';
+import SocketService from './socket.service';
 import { ResponseFormatter } from '../utils/responseFormatter';
 import { addDays, differenceInDays, startOfMonth, endOfMonth, format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -10,19 +10,10 @@ const prisma = new PrismaClient();
 
 export class PaymentService {
   private notificationService: NotificationService;
-  private socketService: SocketService | null = null;
 
   constructor() {
     this.notificationService = new NotificationService();
     console.log('💰 Payment Service inizializzato');
-  }
-
-  /**
-   * Imposta il SocketService per notifiche real-time
-   */
-  setSocketService(socketService: SocketService) {
-    this.socketService = socketService;
-    console.log('💰 Socket Service collegato a Payment Service');
   }
 
   /**
