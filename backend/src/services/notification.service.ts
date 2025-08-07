@@ -37,12 +37,14 @@ export class NotificationService {
         }
       });
 
-      // Invia notifica in tempo reale via Socket.io
-      SocketService.sendNotification(data.userId, notification);
-      
-      // Aggiorna anche il contatore
-      const unreadCount = await this.getUnreadCount(data.userId);
-      SocketService.sendNotificationCount(data.userId, unreadCount);
+      // Invia notifica in tempo reale via Socket.io (solo se userId non è null)
+      if (data.userId) {
+        SocketService.sendNotification(data.userId, notification);
+        
+        // Aggiorna anche il contatore
+        const unreadCount = await this.getUnreadCount(data.userId);
+        SocketService.sendNotificationCount(data.userId, unreadCount);
+      }
 
       return notification;
     } catch (error) {
@@ -59,7 +61,7 @@ export class NotificationService {
     type: string;
     title: string;
     message: string;
-    priority?: NotificationPriority;
+    priority?: string;
     link?: string;
     data?: any;
   }) {
@@ -74,7 +76,7 @@ export class NotificationService {
           priority: notificationData.priority || 'normal',
           link: notificationData.link,
           data: notificationData.data || {},
-          status: 'unread',
+          // status: 'unread', // Rimosso
           isRead: false
         }))
       });

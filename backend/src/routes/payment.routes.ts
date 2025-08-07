@@ -102,7 +102,8 @@ router.post('/', authorize('payments:create'), async (req: AuthRequest, res, nex
 
     const payment = await paymentService.createPayment({
       organizationId,
-      ...validatedData
+      ...validatedData,
+      createdById: req.user!.userId
     });
 
     res.status(201).json(ResponseFormatter.success(payment, {
@@ -220,7 +221,8 @@ router.post('/bulk', authorize('payments:create'), async (req: AuthRequest, res,
 
     const results = await paymentService.bulkCreatePayments({
       organizationId,
-      ...validatedData
+      ...validatedData,
+      createdById: req.user!.userId
     });
 
     res.status(201).json(ResponseFormatter.success(results, {

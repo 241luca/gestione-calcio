@@ -36,6 +36,7 @@ export class PaymentService {
     dueDate: Date;
     description?: string;
     notes?: string;
+    createdById: string;
   }) {
     console.log('💰 Creazione nuovo pagamento:', data);
 
@@ -70,7 +71,8 @@ export class PaymentService {
         dueDate: data.dueDate,
         description: data.description || paymentType.name,
         notes: data.notes,
-        status: 'PENDING' as PaymentStatus
+        status: 'PENDING' as PaymentStatus,
+        createdById: data.createdById
       },
       include: {
         athlete: true,
@@ -478,6 +480,7 @@ export class PaymentService {
       amount: number;
       dueDate: Date;
       description?: string;
+      createdById: string;
     }
   ) {
     console.log('💰 Creazione pagamenti multipli:', data.athleteIds.length, 'atleti');
@@ -496,7 +499,8 @@ export class PaymentService {
           typeId: data.typeId,
           amount: data.amount,
           dueDate: data.dueDate,
-          description: data.description
+          description: data.description,
+          createdById: data.createdById
         });
 
         results.created.push(payment);
