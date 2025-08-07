@@ -11,6 +11,7 @@ import athleteRoutes from './routes/athlete.routes';
 import transportRoutes from './routes/transport.routes';
 import notificationRoutes from './routes/notification.routes';
 import documentRoutes from './routes/document.routes';
+import paymentRoutes from './routes/payment.routes';
 
 // Carica le variabili d'ambiente
 dotenv.config();
@@ -59,6 +60,7 @@ app.use('/api/v1/athletes', athleteRoutes);
 app.use('/api/v1/transport', transportRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/documents', documentRoutes);
+app.use('/api/v1/payments', paymentRoutes);
 
 // Route health check
 app.get('/health', async (req: Request, res: Response) => {

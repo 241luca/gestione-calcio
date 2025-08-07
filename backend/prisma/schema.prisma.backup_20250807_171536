@@ -316,13 +316,11 @@ model Payment {
   type           PaymentType   @relation(fields: [typeId], references: [id])
   typeId         Int
   amount         Float
-  paidAmount     Float?        @default(0)  // AGGIUNTO: Importo pagato
   dueDate        DateTime
   paidDate       DateTime?
   status         PaymentStatus @default(PENDING)
   paymentMethod  String?       // CASH, BANK_TRANSFER, CREDIT_CARD
   transactionId  String?       // Riferimento transazione
-  description    String?       // AGGIUNTO: Descrizione pagamento
   notes          String?
   
   // Nuovi campi
@@ -351,7 +349,6 @@ model Payment {
 enum PaymentStatus {
   PENDING
   PAID
-  PARTIAL    // AGGIUNTO: Pagamento parziale
   OVERDUE
   CANCELLED
 }

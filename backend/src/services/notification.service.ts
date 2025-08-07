@@ -1,5 +1,5 @@
 // backend/src/services/notification.service.ts
-import { PrismaClient, NotificationPriority, NotificationStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import { ResponseFormatter } from '../utils/responseFormatter';
 import { addDays, subDays, startOfDay, endOfDay } from 'date-fns';
@@ -12,12 +12,12 @@ export class NotificationService {
    * Crea una nuova notifica per un utente
    */
   async createNotification(data: {
-    userId: string;
+    userId: string | null;
     organizationId: string;
     type: string;
     title: string;
     message: string;
-    priority?: NotificationPriority;
+    priority?: string;
     link?: string;
     data?: any;
   }) {
@@ -32,7 +32,7 @@ export class NotificationService {
           priority: data.priority || 'normal',
           link: data.link,
           data: data.data || {},
-          status: 'unread',
+          // status: 'unread', // Rimosso - non esiste nel modello
           isRead: false
         }
       });
