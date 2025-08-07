@@ -9,8 +9,7 @@
     "start": "node dist/server.js",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "seed": "ts-node src/scripts/seed.ts",
-    "seed:complete": "ts-node src/scripts/seed-complete.ts",
+    "seed": "ts-node prisma/seed.ts",
     "generate": "prisma generate"
   },
   "dependencies": {
