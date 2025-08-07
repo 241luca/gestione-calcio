@@ -1,4 +1,4 @@
-import { PrismaClient, TransportBookingStatus } from '@prisma/client';
+          route: true,import { PrismaClient } from '@prisma/client';
 import { 
   NotFoundError, 
   BadRequestError, 
@@ -198,7 +198,7 @@ export class TransportService {
     const route = await prisma.transportRoute.create({
       data: {
         name: data.name,
-        description: data.description,
+        // description: data.description, // Campo non esiste nel DB
         startLocation: data.startLocation,
         endLocation: data.endLocation,
         stops: data.stops || [],
@@ -286,7 +286,7 @@ export class TransportService {
     const updated = await prisma.transportRoute.update({
       where: { id: routeId },
       data: {
-        driverName,
+        // driverName, // Campo non esiste nel DB
         driverPhone
       }
     });
@@ -361,7 +361,7 @@ export class TransportService {
           include: {
             homeTeam: true,
             awayTeam: true,
-            venue: true
+            // venue: true // Relazione non esiste
           }
         },
         session: {

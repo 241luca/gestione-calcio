@@ -8,7 +8,7 @@ import SocketService from './services/socket.service';
 // Import routes
 import authRoutes from './routes/auth.routes';
 import athleteRoutes from './routes/athlete.routes';
-import transportRoutes from './routes/transport.routes';
+// import transportRoutes from './routes/transport.routes'; // Commentato temporaneamente
 import notificationRoutes from './routes/notification.routes';
 import documentRoutes from './routes/document.routes';
 import paymentRoutes from './routes/payment.routes';
@@ -57,7 +57,7 @@ app.get('/', (req: Request, res: Response) => {
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/athletes', athleteRoutes);
-app.use('/api/v1/transport', transportRoutes);
+// app.use('/api/v1/transport', transportRoutes); // Commentato temporaneamente
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/documents', documentRoutes);
 app.use('/api/v1/payments', paymentRoutes);
