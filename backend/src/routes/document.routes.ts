@@ -1,15 +1,27 @@
 // backend/src/routes/document.routes.ts
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
+import path from 'path';
 import { authenticate, authorize } from '../middleware/auth.middleware';
-import documentService from '../services/document.service';
+import { DocumentService } from '../services/document.service';
 import { ResponseFormatter } from '../utils/responseFormatter';
 
 const router = Router();
+const documentService = new DocumentService();
 
 // Configurazione Multer per upload files
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: storage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB
   },
@@ -19,6 +31,7 @@ const upload = multer({
       'image/jpeg',
       'image/jpg',
       'image/png',
+      'image/gif',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
@@ -26,7 +39,7 @@ const upload = multer({
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Tipo file non supportato'));
+      cb(new Error('Tipo di file non supportato'));
     }
   }
 });
@@ -35,89 +48,114 @@ const upload = multer({
 router.use(authenticate);
 
 /**
- * GET /api/v1/documents/athlete/:athleteId
- * Recupera tutti i documenti di un atleta
+ * GET /api/v1/documents
+ * Recupera lista documenti con filtri
  */
-router.get('/athlete/:athleteId', 
-  authorize('documents:read'),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { athleteId } = req.params;
-      const organizationId = req.headers['x-organization-id'] as string;
+router.get('/', async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const filters = {
+      athleteId: req.query.athleteId,
+      typeId: req.query.typeId ? parseInt(req.query.typeId) : undefined,
+      status: req.query.status,
+      isVerified: req.query.isVerified === 'true'
+    };
 
-      const documents = await documentService.getAthleteDocuments(
-        athleteId,
-        organizationId
-      );
+    const pagination = {
+      page: parseInt(req.query.page as string) || 1,
+      limit: parseInt(req.query.limit as string) || 20
+    };
 
-      res.json(ResponseFormatter.success(documents));
-    } catch (error) {
-      next(error);
-    }
+    const result = await documentService.getDocuments(
+      req.user.organizationId,
+      filters,
+      pagination
+    );
+
+    res.json(ResponseFormatter.success(result));
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 /**
- * POST /api/v1/documents/upload
- * Upload di un nuovo documento
+ * GET /api/v1/documents/stats
+ * Statistiche documenti
  */
-router.post('/upload',
+router.get('/stats', async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const stats = await documentService.getDocumentStats(req.user.organizationId);
+    res.json(ResponseFormatter.success(stats));
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/documents/expiring
+ * Documenti in scadenza
+ */
+router.get('/expiring', async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const days = parseInt(req.query.days as string) || 30;
+    const documents = await documentService.getExpiringDocuments(
+      req.user.organizationId,
+      days
+    );
+    res.json(ResponseFormatter.success(documents));
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/documents/:id
+ * Recupera singolo documento
+ */
+router.get('/:id', async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const document = await documentService.getDocumentById(
+      req.params.id,
+      req.user.organizationId
+    );
+    res.json(ResponseFormatter.success(document));
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/documents
+ * Upload nuovo documento
+ */
+router.post('/',
   authorize('documents:write'),
   upload.single('file'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: any, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
         return res.status(400).json(
-          ResponseFormatter.error(
-            'FILE_REQUIRED',
-            'Nessun file caricato'
-          )
+          ResponseFormatter.error('BAD_REQUEST', 'Nessun file caricato')
         );
       }
 
-      const organizationId = req.headers['x-organization-id'] as string;
-      const userId = (req as any).user.userId;
-
-      // Parsing dei dati dal form
-      const data = {
+      const documentData = {
         athleteId: req.body.athleteId,
         typeId: parseInt(req.body.typeId),
-        organizationId,
-        issueDate: req.body.issueDate ? new Date(req.body.issueDate) : undefined,
-        expiryDate: req.body.expiryDate ? new Date(req.body.expiryDate) : undefined,
-        notes: req.body.notes
+        issueDate: req.body.issueDate,
+        expiryDate: req.body.expiryDate,
+        notes: req.body.notes,
+        organizationId: req.user.organizationId
       };
-
-      // Validazioni
-      if (!data.athleteId) {
-        return res.status(400).json(
-          ResponseFormatter.error(
-            'VALIDATION_ERROR',
-            'ID atleta richiesto'
-          )
-        );
-      }
-
-      if (!data.typeId) {
-        return res.status(400).json(
-          ResponseFormatter.error(
-            'VALIDATION_ERROR',
-            'Tipo documento richiesto'
-          )
-        );
-      }
 
       const document = await documentService.uploadDocument(
         req.file,
-        data,
-        userId
+        documentData
       );
 
       res.status(201).json(
-        ResponseFormatter.success(
-          document,
-          { message: 'Documento caricato con successo' }
-        )
+        ResponseFormatter.success(document, {
+          message: 'Documento caricato con successo'
+        })
       );
     } catch (error) {
       next(error);
@@ -127,27 +165,22 @@ router.post('/upload',
 
 /**
  * PUT /api/v1/documents/:id/verify
- * Verifica un documento (solo admin/staff)
+ * Verifica documento
  */
 router.put('/:id/verify',
-  authorize('documents:admin'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  authorize('documents:verify'),
+  async (req: any, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
-      const userId = (req as any).user.userId;
-      const { notes } = req.body;
-
       const document = await documentService.verifyDocument(
-        id,
-        userId,
-        notes
+        req.params.id,
+        req.user.organizationId,
+        req.user.userId
       );
 
       res.json(
-        ResponseFormatter.success(
-          document,
-          { message: 'Documento verificato con successo' }
-        )
+        ResponseFormatter.success(document, {
+          message: 'Documento verificato con successo'
+        })
       );
     } catch (error) {
       next(error);
@@ -157,22 +190,18 @@ router.put('/:id/verify',
 
 /**
  * DELETE /api/v1/documents/:id
- * Elimina un documento
+ * Elimina documento
  */
 router.delete('/:id',
   authorize('documents:delete'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: any, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
-
-      const result = await documentService.deleteDocument(id);
-
-      res.json(
-        ResponseFormatter.success(
-          result,
-          { message: 'Documento eliminato con successo' }
-        )
+      const result = await documentService.deleteDocument(
+        req.params.id,
+        req.user.organizationId
       );
+
+      res.json(ResponseFormatter.success(result));
     } catch (error) {
       next(error);
     }
@@ -180,65 +209,15 @@ router.delete('/:id',
 );
 
 /**
- * GET /api/v1/documents/stats
- * Ottieni statistiche documenti dell'organizzazione
+ * POST /api/v1/documents/update-expired
+ * Aggiorna stati documenti scaduti (cron job)
  */
-router.get('/stats',
-  authorize('documents:read'),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const organizationId = req.headers['x-organization-id'] as string;
-
-      const stats = await documentService.getDocumentStats(organizationId);
-
-      res.json(ResponseFormatter.success(stats));
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/**
- * POST /api/v1/documents/check-expiring
- * Controlla documenti in scadenza (può essere chiamato manualmente o da cron)
- */
-router.post('/check-expiring',
+router.post('/update-expired',
   authorize('documents:admin'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: any, res: Response, next: NextFunction) => {
     try {
-      const result = await documentService.checkExpiringDocuments();
-
-      res.json(
-        ResponseFormatter.success(
-          result,
-          { message: 'Controllo documenti completato' }
-        )
-      );
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/**
- * GET /api/v1/documents/types
- * Ottieni tutti i tipi di documento disponibili
- */
-router.get('/types',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // Questo dovrebbe venire dal database
-      // Per ora restituiamo dei tipi predefiniti
-      const types = [
-        { id: 1, name: 'Certificato Medico Sportivo', isRequired: true, hasExpiry: true },
-        { id: 2, name: 'Documento Identità', isRequired: true, hasExpiry: true },
-        { id: 3, name: 'Codice Fiscale', isRequired: true, hasExpiry: false },
-        { id: 4, name: 'Foto Tessera', isRequired: false, hasExpiry: false },
-        { id: 5, name: 'Consenso Privacy', isRequired: true, hasExpiry: false },
-        { id: 6, name: 'Autorizzazione Genitori', isRequired: true, hasExpiry: false }
-      ];
-
-      res.json(ResponseFormatter.success(types));
+      const result = await documentService.updateExpiredDocuments();
+      res.json(ResponseFormatter.success(result));
     } catch (error) {
       next(error);
     }
