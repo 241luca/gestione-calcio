@@ -2,14 +2,9 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import { createServer } from 'http';
-import SocketService from './services/socket.service';
 
-// Import routes
+// Import solo i routes che funzionano sicuramente
 import authRoutes from './routes/auth.routes';
-import athleteRoutes from './routes/athlete.routes';
-import notificationRoutes from './routes/notification.routes';
-import documentRoutes from './routes/document.routes';
 import paymentRoutes from './routes/payment.routes';
 
 // Carica le variabili d'ambiente
@@ -21,12 +16,6 @@ const prisma = new PrismaClient();
 // Crea l'applicazione Express
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
-
-// Crea server HTTP per Socket.io
-const httpServer = createServer(app);
-
-// Inizializza Socket.io
-SocketService.initialize(httpServer);
 
 // Middleware
 app.use(cors({
@@ -43,28 +32,45 @@ app.use('/uploads', express.static('uploads'));
 app.get('/', (req: Request, res: Response) => {
   res.json({
     success: true,
-    message: 'Soccer Management System API',
-    version: '2.0.0',
+    message: 'Soccer Management System API - Minimal Version',
+    version: '1.0.0',
     timestamp: new Date(),
     features: {
       auth: true,
-      athletes: true,
-      documents: true,
       payments: true,
-      notifications: true,
-      transport: false,
-      realtime: true,
-      socketio: 'enabled'
+      athletes: false,
+      documents: false,
+      notifications: false,
+      transport: false
     }
   });
 });
 
-// API Routes
+// API Routes FUNZIONANTI
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/athletes', athleteRoutes);
-app.use('/api/v1/notifications', notificationRoutes);
-app.use('/api/v1/documents', documentRoutes);
 app.use('/api/v1/payments', paymentRoutes);
+
+// Route temporanee disabilitate - restituiscono messaggio informativo
+app.use('/api/v1/athletes', (req: Request, res: Response) => {
+  res.status(503).json({
+    success: false,
+    message: 'Servizio atleti temporaneamente disabilitato per manutenzione'
+  });
+});
+
+app.use('/api/v1/documents', (req: Request, res: Response) => {
+  res.status(503).json({
+    success: false,
+    message: 'Servizio documenti temporaneamente disabilitato per manutenzione'
+  });
+});
+
+app.use('/api/v1/notifications', (req: Request, res: Response) => {
+  res.status(503).json({
+    success: false,
+    message: 'Servizio notifiche temporaneamente disabilitato per manutenzione'
+  });
+});
 
 // Route health check
 app.get('/health', async (req: Request, res: Response) => {
@@ -72,21 +78,17 @@ app.get('/health', async (req: Request, res: Response) => {
     // Verifica connessione database
     await prisma.$queryRaw`SELECT 1`;
     
-    // Ottieni info utenti online
-    const onlineUsers = SocketService.getOnlineUsersCount();
-    
     res.json({
       success: true,
       status: 'healthy',
       database: 'connected',
-      socketio: 'active',
-      onlineUsers: onlineUsers,
+      mode: 'minimal',
       services: {
         auth: 'active',
-        athletes: 'active',
-        documents: 'active',
         payments: 'active',
-        notifications: 'active',
+        athletes: 'disabled',
+        documents: 'disabled',
+        notifications: 'disabled',
         transport: 'disabled'
       },
       timestamp: new Date()
@@ -99,21 +101,6 @@ app.get('/health', async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
-
-// Route per test Socket.io
-app.get('/api/v1/socket/test', (req: Request, res: Response) => {
-  // Invia un messaggio di test a tutti gli utenti connessi
-  SocketService.broadcast('test:message', {
-    message: 'Test broadcast da server',
-    timestamp: new Date()
-  });
-  
-  res.json({
-    success: true,
-    message: 'Messaggio di test inviato a tutti gli utenti connessi',
-    onlineUsers: SocketService.getOnlineUsersCount()
-  });
 });
 
 // Error handler globale
@@ -146,21 +133,18 @@ async function startServer() {
     await prisma.$connect();
     console.log('✅ Database connesso');
     
-    // Avvia il server HTTP con Socket.io
-    httpServer.listen(PORT, () => {
-      console.log(`🚀 Server avviato su http://localhost:${PORT}`);
-      console.log(`🔌 Socket.io attivo su ws://localhost:${PORT}`);
+    // Avvia il server
+    app.listen(PORT, () => {
+      console.log(`🚀 Server avviato in modalità MINIMAL su http://localhost:${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
-      console.log(`🧪 Test Socket.io: http://localhost:${PORT}/api/v1/socket/test`);
-      console.log('\n✅ SERVIZI ATTIVI:');
-      console.log('  ✅ Autenticazione');
-      console.log('  ✅ Atleti');
-      console.log('  ✅ Documenti');
-      console.log('  ✅ Pagamenti');
-      console.log('  ✅ Notifiche');
-      console.log('  ✅ Socket.io (Real-time)');
+      console.log('\n⚠️  SERVIZI ATTIVI:');
+      console.log('  ✅ Auth');
+      console.log('  ✅ Payments');
       console.log('\n⚠️  SERVIZI DISABILITATI:');
-      console.log('  ❌ Trasporti (da implementare)');
+      console.log('  ❌ Athletes');
+      console.log('  ❌ Documents');
+      console.log('  ❌ Notifications');
+      console.log('  ❌ Transport');
     });
   } catch (error) {
     console.error('❌ Errore avvio server:', error);

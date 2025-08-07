@@ -1,71 +1,79 @@
 // backend/src/services/document.service.ts - VERSIONE SEMPLIFICATA
-import { PrismaClient, DocumentStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { NotFoundError, BadRequestError } from '../utils/errors';
-import { ResponseFormatter } from '../utils/responseFormatter';
-import NotificationService from './notification.service';
-import SocketService from './socket.service';
-import { addDays, differenceInDays, format } from 'date-fns';
+import { addDays, differenceInDays } from 'date-fns';
 import * as fs from 'fs';
 import * as path from 'path';
 
 const prisma = new PrismaClient();
-const notificationService = new NotificationService();
 
 export class DocumentService {
-  private uploadDir = process.env.UPLOAD_DIR || './uploads/documents';
-
-  constructor() {
-    // Crea la directory uploads se non esiste
-    if (!fs.existsSync(this.uploadDir)) {
-      fs.mkdirSync(this.uploadDir, { recursive: true });
-    }
-  }
+  private readonly UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+  private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  private readonly ALLOWED_MIME_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
 
   /**
-   * Upload di un documento
+   * Upload documento
    */
   async uploadDocument(
     file: Express.Multer.File,
-    athleteId: string,
-    typeId: number,
-    organizationId: string,
-    uploadedById: string,
-    expiryDate?: Date
+    data: {
+      athleteId: string;
+      typeId: number;
+      issueDate?: string;
+      expiryDate?: string;
+      notes?: string;
+      organizationId: string;
+    }
   ) {
     try {
+      // Validazioni base
+      if (!file) {
+        throw new BadRequestError('Nessun file caricato');
+      }
+
+      if (file.size > this.MAX_FILE_SIZE) {
+        throw new BadRequestError('File troppo grande (max 10MB)');
+      }
+
+      if (!this.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+        throw new BadRequestError('Tipo di file non supportato');
+      }
+
       // Verifica che l'atleta esista
       const athlete = await prisma.athlete.findFirst({
-        where: { id: athleteId, organizationId }
+        where: {
+          id: data.athleteId,
+          organizationId: data.organizationId
+        }
       });
 
       if (!athlete) {
         throw new NotFoundError('Atleta non trovato');
       }
 
-      // Determina lo stato del documento
-      let status: DocumentStatus = 'VALID';
-      if (expiryDate) {
-        const daysUntilExpiry = differenceInDays(expiryDate, new Date());
-        if (daysUntilExpiry < 0) {
-          status = 'EXPIRED';
-        } else if (daysUntilExpiry <= 30) {
-          status = 'EXPIRING';
-        }
-      }
-
-      // Crea il record del documento
+      // Crea il documento nel database
       const document = await prisma.document.create({
         data: {
-          athleteId,
-          typeId,
+          organizationId: data.organizationId,
+          athleteId: data.athleteId,
+          typeId: data.typeId,
           fileName: file.originalname,
-          fileUrl: `/uploads/documents/${file.filename}`,
+          fileUrl: `/uploads/${file.filename}`,
           fileSize: file.size,
           mimeType: file.mimetype,
-          expiryDate,
-          status,
-          organizationId,
-          uploadedById
+          issueDate: data.issueDate ? new Date(data.issueDate) : null,
+          expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+          status: 'VALID',
+          notes: data.notes,
+          isVerified: false
         },
         include: {
           athlete: true,
@@ -73,15 +81,22 @@ export class DocumentService {
         }
       });
 
-      // Invia notifica se il documento sta per scadere
-      if (status === 'EXPIRING' && expiryDate) {
-        const daysUntilExpiry = differenceInDays(expiryDate, new Date());
-        await notificationService.sendDocumentExpiryNotification(
-          athleteId,
-          document.type.name,
-          daysUntilExpiry,
-          organizationId
-        );
+      // Aggiorna lo stato se il documento è in scadenza
+      if (document.expiryDate) {
+        const daysUntilExpiry = differenceInDays(document.expiryDate, new Date());
+        if (daysUntilExpiry < 0) {
+          await prisma.document.update({
+            where: { id: document.id },
+            data: { status: 'EXPIRED' }
+          });
+          document.status = 'EXPIRED';
+        } else if (daysUntilExpiry <= 30) {
+          await prisma.document.update({
+            where: { id: document.id },
+            data: { status: 'EXPIRING' }
+          });
+          document.status = 'EXPIRING';
+        }
       }
 
       return document;
@@ -92,24 +107,48 @@ export class DocumentService {
   }
 
   /**
-   * Recupera tutti i documenti di un atleta
+   * Recupera documenti con filtri
    */
-  async getDocumentsByAthlete(athleteId: string, organizationId: string) {
+  async getDocuments(
+    organizationId: string,
+    filters: any = {},
+    pagination: { page: number; limit: number }
+  ) {
     try {
-      const documents = await prisma.document.findMany({
-        where: {
-          athleteId,
-          organizationId
-        },
-        include: {
-          type: true
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      });
+      const { page = 1, limit = 20 } = pagination;
+      const skip = (page - 1) * limit;
 
-      return documents;
+      const where: any = {
+        organizationId,
+        ...(filters.athleteId && { athleteId: filters.athleteId }),
+        ...(filters.typeId && { typeId: filters.typeId }),
+        ...(filters.status && { status: filters.status }),
+        ...(filters.isVerified !== undefined && { isVerified: filters.isVerified })
+      };
+
+      const [documents, total] = await Promise.all([
+        prisma.document.findMany({
+          where,
+          include: {
+            athlete: true,
+            type: true
+          },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit
+        }),
+        prisma.document.count({ where })
+      ]);
+
+      return {
+        documents,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
     } catch (error) {
       console.error('Error getting documents:', error);
       throw new BadRequestError('Errore nel recupero dei documenti');
@@ -117,19 +156,36 @@ export class DocumentService {
   }
 
   /**
-   * Verifica un documento
+   * Recupera un singolo documento
    */
-  async verifyDocument(
-    documentId: string,
-    verifiedById: string,
-    organizationId: string
-  ) {
+  async getDocumentById(id: string, organizationId: string) {
     try {
       const document = await prisma.document.findFirst({
-        where: {
-          id: documentId,
-          organizationId
+        where: { id, organizationId },
+        include: {
+          athlete: true,
+          type: true
         }
+      });
+
+      if (!document) {
+        throw new NotFoundError('Documento non trovato');
+      }
+
+      return document;
+    } catch (error) {
+      console.error('Error getting document:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verifica un documento
+   */
+  async verifyDocument(id: string, organizationId: string, verifiedBy: string) {
+    try {
+      const document = await prisma.document.findFirst({
+        where: { id, organizationId }
       });
 
       if (!document) {
@@ -141,10 +197,10 @@ export class DocumentService {
       }
 
       const updated = await prisma.document.update({
-        where: { id: documentId },
+        where: { id },
         data: {
           isVerified: true,
-          verifiedById,
+          verifiedBy,
           verifiedAt: new Date()
         },
         include: {
@@ -163,13 +219,10 @@ export class DocumentService {
   /**
    * Elimina un documento
    */
-  async deleteDocument(documentId: string, organizationId: string) {
+  async deleteDocument(id: string, organizationId: string) {
     try {
       const document = await prisma.document.findFirst({
-        where: {
-          id: documentId,
-          organizationId
-        }
+        where: { id, organizationId }
       });
 
       if (!document) {
@@ -177,17 +230,19 @@ export class DocumentService {
       }
 
       // Elimina il file fisico se esiste
-      const filePath = path.join(process.cwd(), document.fileUrl);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      if (document.fileUrl && document.fileUrl.startsWith('/uploads/')) {
+        const filePath = path.join(this.UPLOAD_DIR, path.basename(document.fileUrl));
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
       }
 
-      // Elimina il record dal database
+      // Elimina dal database
       await prisma.document.delete({
-        where: { id: documentId }
+        where: { id }
       });
 
-      return { success: true };
+      return { success: true, message: 'Documento eliminato con successo' };
     } catch (error) {
       console.error('Error deleting document:', error);
       throw error;
@@ -195,107 +250,126 @@ export class DocumentService {
   }
 
   /**
-   * Controlla documenti in scadenza
+   * Aggiorna stato documenti scaduti (chiamato da cron job)
    */
-  async checkExpiringDocuments(organizationId: string) {
+  async updateExpiredDocuments() {
     try {
-      const thirtyDaysFromNow = addDays(new Date(), 30);
-      
-      const expiringDocuments = await prisma.document.findMany({
+      const now = new Date();
+      const thirtyDaysFromNow = addDays(now, 30);
+
+      // Documenti scaduti
+      await prisma.document.updateMany({
+        where: {
+          expiryDate: { lt: now },
+          status: { not: 'EXPIRED' }
+        },
+        data: { status: 'EXPIRED' }
+      });
+
+      // Documenti in scadenza
+      await prisma.document.updateMany({
+        where: {
+          expiryDate: {
+            gte: now,
+            lte: thirtyDaysFromNow
+          },
+          status: { not: 'EXPIRING' }
+        },
+        data: { status: 'EXPIRING' }
+      });
+
+      // Documenti validi
+      await prisma.document.updateMany({
+        where: {
+          expiryDate: { gt: thirtyDaysFromNow },
+          status: { not: 'VALID' }
+        },
+        data: { status: 'VALID' }
+      });
+
+      return { success: true, message: 'Stati documenti aggiornati' };
+    } catch (error) {
+      console.error('Error updating expired documents:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Statistiche documenti
+   */
+  async getDocumentStats(organizationId: string) {
+    try {
+      const [total, byStatus, byType, unverified] = await Promise.all([
+        prisma.document.count({
+          where: { organizationId }
+        }),
+        prisma.document.groupBy({
+          by: ['status'],
+          where: { organizationId },
+          _count: true
+        }),
+        prisma.document.groupBy({
+          by: ['typeId'],
+          where: { organizationId },
+          _count: true
+        }),
+        prisma.document.count({
+          where: { organizationId, isVerified: false }
+        })
+      ]);
+
+      // Recupera i nomi dei tipi di documento
+      const types = await prisma.documentType.findMany();
+      const typeMap = new Map(types.map(t => [t.id, t.name]));
+
+      return {
+        total,
+        unverified,
+        verified: total - unverified,
+        byStatus: byStatus.map(s => ({
+          status: s.status,
+          count: s._count
+        })),
+        byType: byType.map(t => ({
+          typeId: t.typeId,
+          typeName: typeMap.get(t.typeId) || 'Sconosciuto',
+          count: t._count
+        }))
+      };
+    } catch (error) {
+      console.error('Error getting document stats:', error);
+      throw new BadRequestError('Errore nel recupero delle statistiche');
+    }
+  }
+
+  /**
+   * Recupera documenti in scadenza
+   */
+  async getExpiringDocuments(organizationId: string, days: number = 30) {
+    try {
+      const futureDate = addDays(new Date(), days);
+
+      const documents = await prisma.document.findMany({
         where: {
           organizationId,
           expiryDate: {
             gte: new Date(),
-            lte: thirtyDaysFromNow
-          },
-          status: {
-            not: 'EXPIRED'
+            lte: futureDate
           }
         },
         include: {
           athlete: true,
           type: true
-        }
-      });
-
-      // Aggiorna lo stato dei documenti
-      for (const doc of expiringDocuments) {
-        if (doc.expiryDate) {
-          const daysUntilExpiry = differenceInDays(doc.expiryDate, new Date());
-          
-          let newStatus: DocumentStatus = 'VALID';
-          if (daysUntilExpiry <= 30) {
-            newStatus = 'EXPIRING';
-          }
-
-          if (newStatus !== doc.status) {
-            await prisma.document.update({
-              where: { id: doc.id },
-              data: { status: newStatus }
-            });
-
-            // Invia notifica
-            if (daysUntilExpiry === 30 || daysUntilExpiry === 7 || daysUntilExpiry === 1) {
-              await notificationService.sendDocumentExpiryNotification(
-                doc.athleteId,
-                doc.type.name,
-                daysUntilExpiry,
-                organizationId
-              );
-            }
-          }
-        }
-      }
-
-      return expiringDocuments.length;
-    } catch (error) {
-      console.error('Error checking expiring documents:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Recupera statistiche documenti
-   */
-  async getDocumentStats(organizationId: string) {
-    try {
-      const [total, valid, expiring, expired] = await Promise.all([
-        prisma.document.count({ where: { organizationId } }),
-        prisma.document.count({ where: { organizationId, status: 'VALID' } }),
-        prisma.document.count({ where: { organizationId, status: 'EXPIRING' } }),
-        prisma.document.count({ where: { organizationId, status: 'EXPIRED' } })
-      ]);
-
-      return {
-        total,
-        valid,
-        expiring,
-        expired,
-        completionRate: total > 0 ? Math.round((valid / total) * 100) : 0
-      };
-    } catch (error) {
-      console.error('Error getting document stats:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Recupera i tipi di documento disponibili
-   */
-  async getDocumentTypes() {
-    try {
-      const types = await prisma.documentType.findMany({
+        },
         orderBy: {
-          name: 'asc'
+          expiryDate: 'asc'
         }
       });
 
-      return types;
+      return documents;
     } catch (error) {
-      console.error('Error getting document types:', error);
-      throw new BadRequestError('Errore nel recupero dei tipi di documento');
+      console.error('Error getting expiring documents:', error);
+      throw new BadRequestError('Errore nel recupero dei documenti in scadenza');
     }
   }
 }
-
-export default DocumentService;

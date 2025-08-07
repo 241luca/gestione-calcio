@@ -1,81 +1,53 @@
-import { Request, Response } from 'express';
-import { PrismaClient, AthleteStatus } from '@prisma/client';
-import { z } from 'zod';
-import { AuthRequest } from './auth.service';
+// backend/src/services/athlete.service.ts - VERSIONE SEMPLIFICATA
+import { PrismaClient } from '@prisma/client';
+import { NotFoundError, BadRequestError, ConflictError } from '../utils/errors';
 
 const prisma = new PrismaClient();
 
-// Schema di validazione per creare un atleta
-const createAthleteSchema = z.object({
-  firstName: z.string().min(1, 'Nome richiesto'),
-  lastName: z.string().min(1, 'Cognome richiesto'),
-  birthDate: z.string().transform(str => new Date(str)),
-  birthPlace: z.string().optional(),
-  nationality: z.string().default('Italiana'),
-  fiscalCode: z.string().optional(),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  province: z.string().optional(),
-  zipCode: z.string().optional(),
-  teamId: z.string().uuid().optional(),
-  positionId: z.string().uuid().optional(),
-  jerseyNumber: z.number().int().positive().optional(),
-  status: z.nativeEnum(AthleteStatus).default(AthleteStatus.ACTIVE),
-  parentName: z.string().optional(),
-  parentPhone: z.string().optional(),
-  parentEmail: z.string().email().optional(),
-  medicalNotes: z.string().optional(),
-  allergies: z.string().optional()
-});
-
-// Schema per l'aggiornamento (tutti i campi opzionali)
-const updateAthleteSchema = createAthleteSchema.partial();
-
-class AthleteService {
+export class AthleteService {
   /**
-   * Ottieni lista atleti con paginazione e filtri
+   * Recupera lista atleti con filtri e paginazione
    */
-  async getAthletes(req: AuthRequest, res: Response) {
+  async getAthletes(
+    organizationId: string,
+    filters: any = {},
+    pagination: { page: number; limit: number; sortBy?: string; sortOrder?: string }
+  ) {
     try {
-      const organizationId = req.user!.organizationId;
-      
-      // Parametri di paginazione
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
+      const { page = 1, limit = 50, sortBy = 'lastName', sortOrder = 'asc' } = pagination;
       const skip = (page - 1) * limit;
-      
-      // Filtri opzionali
-      const { teamId, status, search } = req.query;
-      
-      // Costruisci la query
-      const where: any = { organizationId };
-      
-      if (teamId) where.teamId = teamId;
-      if (status) where.status = status;
-      if (search) {
-        where.OR = [
-          { firstName: { contains: search as string, mode: 'insensitive' } },
-          { lastName: { contains: search as string, mode: 'insensitive' } },
-          { fiscalCode: { contains: search as string, mode: 'insensitive' } }
-        ];
-      }
 
-      // Esegui le query in parallelo
+      // Costruisci la clausola where
+      const where: any = {
+        organizationId,
+        ...(filters.teamId && { teamId: filters.teamId }),
+        ...(filters.status && { status: filters.status }),
+        ...(filters.search && {
+          OR: [
+            { firstName: { contains: filters.search, mode: 'insensitive' } },
+            { lastName: { contains: filters.search, mode: 'insensitive' } },
+            { fiscalCode: { contains: filters.search, mode: 'insensitive' } },
+            { email: { contains: filters.search, mode: 'insensitive' } }
+          ]
+        })
+      };
+
+      // Esegui le query
       const [athletes, total] = await Promise.all([
         prisma.athlete.findMany({
           where,
           skip,
           take: limit,
-          orderBy: { lastName: 'asc' },
+          orderBy: { [sortBy]: sortOrder },
           include: {
             team: true,
             position: true,
+            transportZone: true,
             _count: {
               select: {
                 documents: true,
                 payments: true,
+                matchRoster: true,
                 injuries: true
               }
             }
@@ -84,45 +56,34 @@ class AthleteService {
         prisma.athlete.count({ where })
       ]);
 
-      res.json({
-        success: true,
-        data: {
-          athletes,
-          pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-            hasNext: page * limit < total,
-            hasPrev: page > 1
-          }
+      return {
+        athletes,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasNext: page * limit < total,
+          hasPrev: page > 1
         }
-      });
+      };
     } catch (error) {
-      console.error('Get athletes error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Errore recupero atleti'
-      });
+      console.error('Error getting athletes:', error);
+      throw new BadRequestError('Errore nel recupero degli atleti');
     }
   }
 
   /**
-   * Ottieni dettagli singolo atleta
+   * Recupera dettagli singolo atleta
    */
-  async getAthleteById(req: AuthRequest, res: Response) {
+  async getAthleteById(id: string, organizationId: string) {
     try {
-      const { id } = req.params;
-      const organizationId = req.user!.organizationId;
-
       const athlete = await prisma.athlete.findFirst({
-        where: { 
-          id,
-          organizationId 
-        },
+        where: { id, organizationId },
         include: {
           team: true,
           position: true,
+          transportZone: true,
           documents: {
             include: { type: true },
             orderBy: { expiryDate: 'asc' }
@@ -132,92 +93,67 @@ class AthleteService {
             orderBy: { dueDate: 'desc' },
             take: 10
           },
+          matchRoster: {
+            include: {
+              match: {
+                include: {
+                  homeTeam: true,
+                  awayTeam: true,
+                  competition: true
+                }
+              }
+            },
+            orderBy: { match: { date: 'desc' } },
+            take: 10
+          },
           injuries: {
             orderBy: { injuryDate: 'desc' }
-          },
-          attendances: {
-            include: { session: true },
-            orderBy: { session: { date: 'desc' } },
-            take: 10
           }
         }
       });
 
       if (!athlete) {
-        return res.status(404).json({
-          success: false,
-          error: 'Atleta non trovato'
-        });
+        throw new NotFoundError('Atleta non trovato');
       }
 
-      // Calcola statistiche aggiuntive
-      const stats = {
-        documentsValid: athlete.documents.filter(d => d.status === 'VALID').length,
-        documentsExpiring: athlete.documents.filter(d => d.status === 'EXPIRING').length,
-        documentsExpired: athlete.documents.filter(d => d.status === 'EXPIRED').length,
-        paymentsPending: athlete.payments.filter(p => p.status === 'PENDING').length,
-        paymentsOverdue: athlete.payments.filter(p => p.status === 'OVERDUE').length,
-        activeInjuries: athlete.injuries.filter(i => !i.isRecovered).length
-      };
-
-      res.json({
-        success: true,
-        data: {
-          ...athlete,
-          stats
-        }
-      });
+      return athlete;
     } catch (error) {
-      console.error('Get athlete error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Errore recupero atleta'
-      });
+      console.error('Error getting athlete:', error);
+      throw error;
     }
   }
 
   /**
    * Crea nuovo atleta
    */
-  async createAthlete(req: AuthRequest, res: Response) {
+  async createAthlete(data: any, organizationId: string) {
     try {
-      const organizationId = req.user!.organizationId;
-      
-      // Valida i dati
-      const data = createAthleteSchema.parse(req.body);
-
-      // Controlla se il codice fiscale esiste già (se fornito)
+      // Verifica codice fiscale univoco
       if (data.fiscalCode) {
         const existing = await prisma.athlete.findFirst({
-          where: { 
+          where: {
             fiscalCode: data.fiscalCode,
-            organizationId 
+            organizationId
           }
         });
 
         if (existing) {
-          return res.status(409).json({
-            success: false,
-            error: 'Codice fiscale già registrato'
-          });
+          throw new ConflictError('Codice fiscale già presente');
         }
       }
 
-      // Controlla numero maglia se specificato
+      // Verifica numero maglia univoco nel team
       if (data.jerseyNumber && data.teamId) {
         const existingJersey = await prisma.athlete.findFirst({
           where: {
             jerseyNumber: data.jerseyNumber,
             teamId: data.teamId,
-            status: AthleteStatus.ACTIVE
+            organizationId
           }
         });
 
         if (existingJersey) {
-          return res.status(409).json({
-            success: false,
-            error: `Numero maglia ${data.jerseyNumber} già assegnato in questa squadra`
-          });
+          throw new ConflictError('Numero maglia già assegnato in questa squadra');
         }
       }
 
@@ -226,63 +162,42 @@ class AthleteService {
         data: {
           ...data,
           organizationId,
-          status: data.status || AthleteStatus.ACTIVE
+          birthDate: data.birthDate ? new Date(data.birthDate) : null,
+          medicalExpiryDate: data.medicalExpiryDate ? new Date(data.medicalExpiryDate) : null,
+          status: data.status || 'ACTIVE'
         },
         include: {
           team: true,
-          position: true
+          position: true,
+          transportZone: true
         }
       });
 
-      res.status(201).json({
-        success: true,
-        data: athlete,
-        message: 'Atleta creato con successo'
-      });
+      return athlete;
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(422).json({
-          success: false,
-          error: 'Dati non validi',
-          details: error.errors
-        });
-      }
-
-      console.error('Create athlete error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Errore creazione atleta'
-      });
+      console.error('Error creating athlete:', error);
+      throw error;
     }
   }
 
   /**
    * Aggiorna atleta
    */
-  async updateAthlete(req: AuthRequest, res: Response) {
+  async updateAthlete(id: string, data: any, organizationId: string) {
     try {
-      const { id } = req.params;
-      const organizationId = req.user!.organizationId;
-      
-      // Valida i dati
-      const data = updateAthleteSchema.parse(req.body);
-
-      // Verifica che l'atleta esista e appartenga all'organizzazione
+      // Verifica che l'atleta esista
       const existing = await prisma.athlete.findFirst({
         where: { id, organizationId }
       });
 
       if (!existing) {
-        return res.status(404).json({
-          success: false,
-          error: 'Atleta non trovato'
-        });
+        throw new NotFoundError('Atleta non trovato');
       }
 
-      // Controlla codice fiscale se cambiato
+      // Verifica codice fiscale se cambiato
       if (data.fiscalCode && data.fiscalCode !== existing.fiscalCode) {
         const duplicate = await prisma.athlete.findFirst({
-          where: { 
+          where: {
             fiscalCode: data.fiscalCode,
             organizationId,
             id: { not: id }
@@ -290,203 +205,163 @@ class AthleteService {
         });
 
         if (duplicate) {
-          return res.status(409).json({
-            success: false,
-            error: 'Codice fiscale già registrato'
-          });
+          throw new ConflictError('Codice fiscale già presente');
         }
       }
 
-      // Controlla numero maglia se cambiato
-      if (data.jerseyNumber && data.teamId) {
-        const existingJersey = await prisma.athlete.findFirst({
+      // Verifica numero maglia se cambiato
+      if (data.jerseyNumber && (data.teamId || existing.teamId)) {
+        const teamId = data.teamId || existing.teamId;
+        const duplicateJersey = await prisma.athlete.findFirst({
           where: {
             jerseyNumber: data.jerseyNumber,
-            teamId: data.teamId,
-            status: AthleteStatus.ACTIVE,
+            teamId,
+            organizationId,
             id: { not: id }
           }
         });
 
-        if (existingJersey) {
-          return res.status(409).json({
-            success: false,
-            error: `Numero maglia ${data.jerseyNumber} già assegnato in questa squadra`
-          });
+        if (duplicateJersey) {
+          throw new ConflictError('Numero maglia già assegnato in questa squadra');
         }
       }
 
       // Aggiorna l'atleta
-      const athlete = await prisma.athlete.update({
+      const updated = await prisma.athlete.update({
         where: { id },
-        data,
+        data: {
+          ...data,
+          birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+          medicalExpiryDate: data.medicalExpiryDate ? new Date(data.medicalExpiryDate) : undefined
+        },
         include: {
           team: true,
-          position: true
+          position: true,
+          transportZone: true
         }
       });
 
-      res.json({
-        success: true,
-        data: athlete,
-        message: 'Atleta aggiornato con successo'
-      });
+      return updated;
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(422).json({
-          success: false,
-          error: 'Dati non validi',
-          details: error.errors
-        });
-      }
-
-      console.error('Update athlete error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Errore aggiornamento atleta'
-      });
+      console.error('Error updating athlete:', error);
+      throw error;
     }
   }
 
   /**
    * Elimina atleta (soft delete)
    */
-  async deleteAthlete(req: AuthRequest, res: Response) {
+  async deleteAthlete(id: string, organizationId: string) {
     try {
-      const { id } = req.params;
-      const organizationId = req.user!.organizationId;
-
-      // Verifica che l'atleta esista
       const athlete = await prisma.athlete.findFirst({
-        where: { id, organizationId },
-        include: {
-          payments: {
-            where: {
-              status: { in: ['PENDING', 'OVERDUE'] }
-            }
-          }
-        }
+        where: { id, organizationId }
       });
 
       if (!athlete) {
-        return res.status(404).json({
-          success: false,
-          error: 'Atleta non trovato'
-        });
+        throw new NotFoundError('Atleta non trovato');
       }
 
-      // Controlla se ci sono pagamenti in sospeso
-      if (athlete.payments.length > 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'Non puoi eliminare un atleta con pagamenti in sospeso',
-          details: {
-            pendingPayments: athlete.payments.length
-          }
-        });
-      }
-
-      // Soft delete: imposta lo stato come INACTIVE
-      await prisma.athlete.update({
-        where: { id },
-        data: { 
-        status: AthleteStatus.INACTIVE,
-          teamId: null // Rimuovi dalla squadra
+      // Verifica se ci sono pagamenti pendenti
+      const pendingPayments = await prisma.payment.count({
+        where: {
+          athleteId: id,
+          status: { in: ['PENDING', 'OVERDUE'] }
         }
       });
 
-      res.json({
-        success: true,
-        message: 'Atleta eliminato con successo'
+      if (pendingPayments > 0) {
+        throw new BadRequestError('Non puoi eliminare un atleta con pagamenti in sospeso');
+      }
+
+      // Soft delete - imposta come INACTIVE
+      await prisma.athlete.update({
+        where: { id },
+        data: {
+          status: 'INACTIVE',
+          teamId: null
+        }
       });
+
+      return { success: true, message: 'Atleta eliminato con successo' };
     } catch (error) {
-      console.error('Delete athlete error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Errore eliminazione atleta'
-      });
+      console.error('Error deleting athlete:', error);
+      throw error;
     }
   }
 
   /**
-   * Ottieni statistiche atleti
+   * Statistiche atleti
    */
-  async getStats(req: AuthRequest, res: Response) {
+  async getAthleteStats(organizationId: string) {
     try {
-      const organizationId = req.user!.organizationId;
-
-      const [
-        totalAthletes,
-        activeAthletes,
-        athletesByStatus,
-        athletesByTeam,
-        documentsExpiring,
-        paymentsOverdue
-      ] = await Promise.all([
-        // Totale atleti
+      const [total, byStatus, byTeam] = await Promise.all([
         prisma.athlete.count({
           where: { organizationId }
         }),
-        // Atleti attivi
-        prisma.athlete.count({
-          where: { organizationId, status: AthleteStatus.ACTIVE }
-        }),
-        // Atleti per stato
         prisma.athlete.groupBy({
           by: ['status'],
           where: { organizationId },
           _count: true
         }),
-        // Atleti per squadra
         prisma.athlete.groupBy({
           by: ['teamId'],
-          where: { organizationId, teamId: { not: null } },
+          where: { organizationId },
           _count: true
-        }),
-        // Documenti in scadenza
-        prisma.document.count({
-          where: {
-            organizationId,
-            status: 'EXPIRING'
-          }
-        }),
-        // Pagamenti in ritardo
-        prisma.payment.count({
-          where: {
-            organizationId,
-            status: 'OVERDUE'
-          }
         })
       ]);
 
-      res.json({
-        success: true,
-        data: {
-          totalAthletes,
-          activeAthletes,
-          inactiveAthletes: totalAthletes - activeAthletes,
-          athletesByStatus: athletesByStatus.map(s => ({
-            status: s.status,
-            count: s._count
-          })),
-          athletesByTeam: athletesByTeam.map(t => ({
+      // Recupera i nomi dei team
+      const teams = await prisma.team.findMany({
+        where: { organizationId }
+      });
+      const teamMap = new Map(teams.map(t => [t.id, t.name]));
+
+      return {
+        total,
+        active: byStatus.find(s => s.status === 'ACTIVE')?._count || 0,
+        inactive: byStatus.find(s => s.status === 'INACTIVE')?._count || 0,
+        injured: byStatus.find(s => s.status === 'INJURED')?._count || 0,
+        suspended: byStatus.find(s => s.status === 'SUSPENDED')?._count || 0,
+        byTeam: byTeam
+          .filter(t => t.teamId !== null)
+          .map(t => ({
             teamId: t.teamId,
+            teamName: teamMap.get(t.teamId!) || 'Sconosciuto',
             count: t._count
-          })),
-          alerts: {
-            documentsExpiring,
-            paymentsOverdue
-          }
-        }
-      });
+          }))
+      };
     } catch (error) {
-      console.error('Get stats error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Errore recupero statistiche'
-      });
+      console.error('Error getting athlete stats:', error);
+      throw new BadRequestError('Errore nel recupero delle statistiche');
     }
   }
-}
 
-export const athleteService = new AthleteService();
+  /**
+   * Importa atleti da CSV
+   */
+  async bulkImportAthletes(athletes: any[], organizationId: string) {
+    const results = {
+      imported: [] as any[],
+      failed: [] as any[],
+      total: athletes.length
+    };
+
+    for (const [index, athleteData] of athletes.entries()) {
+      try {
+        const athlete = await this.createAthlete(athleteData, organizationId);
+        results.imported.push({
+          row: index + 1,
+          athlete
+        });
+      } catch (error: any) {
+        results.failed.push({
+          row: index + 1,
+          data: athleteData,
+          error: error.message
+        });
+      }
+    }
+
+    return results;
+  }
+}

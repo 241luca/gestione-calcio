@@ -1,9 +1,7 @@
-// backend/src/services/notification.service.ts - VERSIONE SEMPLIFICATA
+// backend/src/services/notification.service.ts - VERSIONE CORRETTA
 import { PrismaClient } from '@prisma/client';
 import { NotFoundError, BadRequestError } from '../utils/errors';
-import { ResponseFormatter } from '../utils/responseFormatter';
 import { addDays, subDays, startOfDay, endOfDay } from 'date-fns';
-import SocketService from './socket.service';
 
 const prisma = new PrismaClient();
 
@@ -36,15 +34,6 @@ export class NotificationService {
         }
       });
 
-      // Invia notifica in tempo reale via Socket.io (solo se userId non è null)
-      if (data.userId) {
-        SocketService.sendNotification(data.userId, notification);
-        
-        // Aggiorna anche il contatore
-        const unreadCount = await this.getUnreadCount(data.userId);
-        SocketService.sendNotificationCount(data.userId, unreadCount);
-      }
-
       return notification;
     } catch (error) {
       console.error('Error creating notification:', error);
@@ -53,22 +42,45 @@ export class NotificationService {
   }
 
   /**
-   * Recupera tutte le notifiche di un utente
+   * Recupera le notifiche di un utente con filtri
    */
-  async getNotificationsByUser(userId: string, organizationId: string) {
+  async getUserNotifications(
+    userId: string,
+    filters: any = {},
+    pagination: { page: number; limit: number }
+  ) {
     try {
-      const notifications = await prisma.notification.findMany({
-        where: {
-          userId,
-          organizationId
-        },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        take: 50
-      });
+      const { page = 1, limit = 20 } = pagination;
+      const skip = (page - 1) * limit;
 
-      return notifications;
+      const where: any = {
+        userId,
+        ...(filters.status && { isRead: filters.status === 'read' }),
+        ...(filters.priority && { priority: filters.priority }),
+        ...(filters.type && { type: filters.type }),
+        ...(filters.fromDate && { createdAt: { gte: filters.fromDate } }),
+        ...(filters.toDate && { createdAt: { lte: filters.toDate } })
+      };
+
+      const [notifications, total] = await Promise.all([
+        prisma.notification.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit
+        }),
+        prisma.notification.count({ where })
+      ]);
+
+      return {
+        notifications,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
     } catch (error) {
       console.error('Error getting notifications:', error);
       throw new BadRequestError('Errore nel recupero delle notifiche');
@@ -100,10 +112,7 @@ export class NotificationService {
   async markAsRead(notificationId: string, userId: string) {
     try {
       const notification = await prisma.notification.findFirst({
-        where: {
-          id: notificationId,
-          userId
-        }
+        where: { id: notificationId, userId }
       });
 
       if (!notification) {
@@ -112,15 +121,11 @@ export class NotificationService {
 
       const updated = await prisma.notification.update({
         where: { id: notificationId },
-        data: {
+        data: { 
           isRead: true,
           readAt: new Date()
         }
       });
-
-      // Aggiorna contatore via Socket.io
-      const unreadCount = await this.getUnreadCount(userId);
-      SocketService.sendNotificationCount(userId, unreadCount);
 
       return updated;
     } catch (error) {
@@ -134,7 +139,7 @@ export class NotificationService {
    */
   async markAllAsRead(userId: string) {
     try {
-      await prisma.notification.updateMany({
+      const result = await prisma.notification.updateMany({
         where: {
           userId,
           isRead: false
@@ -145,13 +150,10 @@ export class NotificationService {
         }
       });
 
-      // Aggiorna contatore via Socket.io
-      SocketService.sendNotificationCount(userId, 0);
-
-      return { success: true };
+      return { updated: result.count };
     } catch (error) {
       console.error('Error marking all as read:', error);
-      throw new BadRequestError('Errore nel marcare le notifiche come lette');
+      throw new BadRequestError('Errore nell\'aggiornamento delle notifiche');
     }
   }
 
@@ -161,10 +163,7 @@ export class NotificationService {
   async deleteNotification(notificationId: string, userId: string) {
     try {
       const notification = await prisma.notification.findFirst({
-        where: {
-          id: notificationId,
-          userId
-        }
+        where: { id: notificationId, userId }
       });
 
       if (!notification) {
@@ -175,10 +174,6 @@ export class NotificationService {
         where: { id: notificationId }
       });
 
-      // Aggiorna contatore
-      const unreadCount = await this.getUnreadCount(userId);
-      SocketService.sendNotificationCount(userId, unreadCount);
-
       return { success: true };
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -187,48 +182,333 @@ export class NotificationService {
   }
 
   /**
-   * Invia notifica di documento in scadenza
+   * Crea notifiche in bulk
    */
-  async sendDocumentExpiryNotification(
-    athleteId: string, 
-    documentName: string, 
-    daysUntilExpiry: number,
-    organizationId: string
-  ) {
-    const priority = daysUntilExpiry <= 7 ? 'high' : 'normal';
-    
-    await this.createNotification({
-      userId: null, // Per ora null
-      organizationId,
-      type: 'DOCUMENT_EXPIRY',
-      title: 'Documento in scadenza',
-      message: `Il documento ${documentName} scade tra ${daysUntilExpiry} giorni`,
-      priority,
-      link: `/athletes/${athleteId}/documents`,
-      data: { athleteId, documentName, daysUntilExpiry }
-    });
+  async createBulkNotifications(userIds: string[], data: any) {
+    try {
+      const notifications = userIds.map(userId => ({
+        userId,
+        organizationId: data.organizationId,
+        type: data.type || 'info',
+        title: data.title,
+        message: data.message,
+        priority: data.priority || 'normal',
+        link: data.link,
+        data: data.data || {},
+        isRead: false
+      }));
+
+      const result = await prisma.notification.createMany({
+        data: notifications
+      });
+
+      return { created: result.count };
+    } catch (error) {
+      console.error('Error creating bulk notifications:', error);
+      throw new BadRequestError('Errore nella creazione delle notifiche');
+    }
   }
 
   /**
-   * Invia notifica di pagamento in scadenza
+   * Notifica tutta l'organizzazione
    */
-  async sendPaymentReminderNotification(
-    athleteId: string,
-    amount: number,
-    dueDate: Date,
-    organizationId: string
-  ) {
-    await this.createNotification({
-      userId: null, // Per ora null
-      organizationId,
-      type: 'PAYMENT_REMINDER',
-      title: 'Pagamento in scadenza',
-      message: `Pagamento di €${amount} in scadenza il ${dueDate.toLocaleDateString()}`,
-      priority: 'normal',
-      link: `/payments`,
-      data: { athleteId, amount, dueDate }
-    });
+  async notifyOrganization(organizationId: string, data: any) {
+    try {
+      // Trova tutti gli utenti dell'organizzazione
+      const users = await prisma.user.findMany({
+        where: {
+          organizationUsers: {
+            some: {
+              organizationId
+            }
+          }
+        },
+        select: { id: true }
+      });
+
+      const userIds = users.map(u => u.id);
+      
+      return await this.createBulkNotifications(userIds, {
+        ...data,
+        organizationId
+      });
+    } catch (error) {
+      console.error('Error notifying organization:', error);
+      throw new BadRequestError('Errore nell\'invio delle notifiche');
+    }
+  }
+
+  /**
+   * Notifica un team
+   */
+  async notifyTeam(teamId: string, data: any) {
+    try {
+      // Trova gli atleti del team
+      const athletes = await prisma.athlete.findMany({
+        where: { teamId },
+        select: { id: true }
+      });
+
+      // Per ora creiamo notifiche generiche per il team
+      // In futuro si potrebbero notificare anche gli allenatori
+      const notification = await this.createNotification({
+        userId: null, // Notifica di sistema
+        organizationId: data.organizationId,
+        type: 'team',
+        title: data.title,
+        message: data.message,
+        priority: data.priority || 'normal',
+        link: `/teams/${teamId}`,
+        data: { teamId, ...data.data }
+      });
+
+      return { created: 1, notification };
+    } catch (error) {
+      console.error('Error notifying team:', error);
+      throw new BadRequestError('Errore nell\'invio della notifica al team');
+    }
+  }
+
+  /**
+   * Recupera i template di notifica
+   */
+  async getNotificationTemplates() {
+    // Template predefiniti (in futuro potrebbero venire dal database)
+    return [
+      {
+        id: 1,
+        name: 'Documento in scadenza',
+        type: 'document_expiry',
+        title: 'Documento in scadenza',
+        message: 'Il documento {{documentType}} di {{athleteName}} scade il {{expiryDate}}'
+      },
+      {
+        id: 2,
+        name: 'Pagamento scaduto',
+        type: 'payment_overdue',
+        title: 'Pagamento scaduto',
+        message: 'Il pagamento di {{amount}}€ per {{athleteName}} è scaduto'
+      },
+      {
+        id: 3,
+        name: 'Convocazione partita',
+        type: 'match_roster',
+        title: 'Convocazione partita',
+        message: 'Sei stato convocato per la partita del {{matchDate}}'
+      },
+      {
+        id: 4,
+        name: 'Allenamento annullato',
+        type: 'training_cancelled',
+        title: 'Allenamento annullato',
+        message: 'L\'allenamento del {{date}} è stato annullato'
+      }
+    ];
+  }
+
+  /**
+   * Crea un template personalizzato
+   */
+  async createCustomTemplate(data: any) {
+    // In futuro salveremo nel database
+    return {
+      id: Date.now(),
+      ...data,
+      createdAt: new Date()
+    };
+  }
+
+  /**
+   * Invia promemoria documenti in scadenza
+   */
+  async sendDocumentExpiryNotifications() {
+    try {
+      const thirtyDaysFromNow = addDays(new Date(), 30);
+      
+      const expiringDocuments = await prisma.document.findMany({
+        where: {
+          expiryDate: {
+            gte: new Date(),
+            lte: thirtyDaysFromNow
+          },
+          status: { not: 'EXPIRED' }
+        },
+        include: {
+          athlete: true,
+          type: true
+        }
+      });
+
+      let notificationsSent = 0;
+
+      for (const doc of expiringDocuments) {
+        await this.createNotification({
+          userId: null, // Notifica di sistema
+          organizationId: doc.organizationId,
+          type: 'document_expiry',
+          title: 'Documento in scadenza',
+          message: `Il documento ${doc.type.name} di ${doc.athlete.firstName} ${doc.athlete.lastName} scade il ${doc.expiryDate?.toLocaleDateString()}`,
+          priority: 'high',
+          link: `/athletes/${doc.athleteId}/documents`,
+          data: {
+            documentId: doc.id,
+            athleteId: doc.athleteId,
+            documentType: doc.type.name,
+            expiryDate: doc.expiryDate
+          }
+        });
+        notificationsSent++;
+      }
+
+      return { sent: notificationsSent, total: expiringDocuments.length };
+    } catch (error) {
+      console.error('Error sending document expiry notifications:', error);
+      return { sent: 0, total: 0, error: error };
+    }
+  }
+
+  /**
+   * Invia promemoria pagamenti
+   */
+  async sendPaymentReminders() {
+    try {
+      const overduePayments = await prisma.payment.findMany({
+        where: {
+          status: 'OVERDUE',
+          reminderSent: false
+        },
+        include: {
+          athlete: true,
+          type: true
+        }
+      });
+
+      let remindersSent = 0;
+
+      for (const payment of overduePayments) {
+        await this.createNotification({
+          userId: null,
+          organizationId: payment.organizationId,
+          type: 'payment_overdue',
+          title: 'Pagamento scaduto',
+          message: `Pagamento di €${payment.amount} per ${payment.athlete.firstName} ${payment.athlete.lastName} scaduto`,
+          priority: 'urgent',
+          link: `/payments/${payment.id}`,
+          data: {
+            paymentId: payment.id,
+            athleteId: payment.athleteId,
+            amount: payment.amount
+          }
+        });
+
+        // Aggiorna flag reminder
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: { reminderSent: true }
+        });
+
+        remindersSent++;
+      }
+
+      return { sent: remindersSent, total: overduePayments.length };
+    } catch (error) {
+      console.error('Error sending payment reminders:', error);
+      return { sent: 0, total: 0, error: error };
+    }
+  }
+
+  /**
+   * Invia promemoria partite
+   */
+  async sendMatchReminders() {
+    try {
+      const tomorrow = addDays(new Date(), 1);
+      const dayAfterTomorrow = addDays(new Date(), 2);
+
+      const upcomingMatches = await prisma.match.findMany({
+        where: {
+          date: {
+            gte: tomorrow,
+            lt: dayAfterTomorrow
+          }
+        },
+        include: {
+          homeTeam: true,
+          awayTeam: true,
+          venue: true
+        }
+      });
+
+      let remindersSent = 0;
+
+      for (const match of upcomingMatches) {
+        await this.createNotification({
+          userId: null,
+          organizationId: match.organizationId,
+          type: 'match_reminder',
+          title: 'Partita domani',
+          message: `Partita ${match.homeTeam.name} vs ${match.awayTeam?.name || 'TBD'} domani alle ${match.time}`,
+          priority: 'high',
+          link: `/matches/${match.id}`,
+          data: {
+            matchId: match.id,
+            date: match.date,
+            time: match.time,
+            venue: match.venue?.name
+          }
+        });
+        remindersSent++;
+      }
+
+      return { sent: remindersSent, total: upcomingMatches.length };
+    } catch (error) {
+      console.error('Error sending match reminders:', error);
+      return { sent: 0, total: 0, error: error };
+    }
+  }
+
+  /**
+   * Invia promemoria allenamenti
+   */
+  async sendTrainingReminders() {
+    // Implementazione base
+    return { sent: 0, total: 0 };
+  }
+
+  /**
+   * Statistiche notifiche
+   */
+  async getNotificationStats(organizationId: string) {
+    try {
+      const [total, unread, byType, byPriority] = await Promise.all([
+        prisma.notification.count({
+          where: { organizationId }
+        }),
+        prisma.notification.count({
+          where: { organizationId, isRead: false }
+        }),
+        prisma.notification.groupBy({
+          by: ['type'],
+          where: { organizationId },
+          _count: true
+        }),
+        prisma.notification.groupBy({
+          by: ['priority'],
+          where: { organizationId },
+          _count: true
+        })
+      ]);
+
+      return {
+        total,
+        unread,
+        read: total - unread,
+        byType: byType.map(t => ({ type: t.type, count: t._count })),
+        byPriority: byPriority.map(p => ({ priority: p.priority, count: p._count }))
+      };
+    } catch (error) {
+      console.error('Error getting notification stats:', error);
+      throw new BadRequestError('Errore nel recupero delle statistiche');
+    }
   }
 }
-
-export default NotificationService;
