@@ -102,6 +102,11 @@ export const authorize = (...requiredPermissions: string[]) => {
       return next();
     }
 
+    // Se non ci sono permessi richiesti specifici, permetti l'accesso (per le route che richiedono solo autenticazione)
+    if (requiredPermissions.length === 0) {
+      return next();
+    }
+
     // Verifica se l'utente ha almeno uno dei permessi richiesti
     const hasPermission = requiredPermissions.some(permission => {
       // Permesso esatto

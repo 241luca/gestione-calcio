@@ -42,7 +42,7 @@ router.use(authenticate);
  * GET /api/v1/payments
  * Recupera tutti i pagamenti dell'organizzazione con filtri opzionali
  */
-router.get('/', authorize('payments:read'), async (req: AuthRequest, res, next) => {
+router.get('/', async (req: AuthRequest, res, next) => {
   try {
     console.log('💰 GET /payments - Recupero pagamenti organizzazione');
     const organizationId = req.user!.organizationId;
@@ -189,7 +189,7 @@ router.get('/overdue', authorize('payments:read'), async (req: AuthRequest, res,
  * GET /api/v1/payments/stats
  * Recupera le statistiche sui pagamenti
  */
-router.get('/stats', authorize('payments:read'), async (req: AuthRequest, res, next) => {
+router.get('/stats', async (req: AuthRequest, res, next) => {
   try {
     console.log('💰 GET /payments/stats - Statistiche pagamenti');
     const organizationId = req.user!.organizationId;

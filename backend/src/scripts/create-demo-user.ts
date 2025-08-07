@@ -123,6 +123,33 @@ async function createDemoUser() {
       }
     }
 
+    // Creiamo alcune squadre di esempio se non esistono
+    const teams = [
+      { name: 'Primi Calci 2016', category: 'Primi Calci', season: '2024/2025', coach: 'Mario Rossi' },
+      { name: 'Pulcini 2014', category: 'Pulcini', season: '2024/2025', coach: 'Giuseppe Verdi' },
+      { name: 'Esordienti 2012', category: 'Esordienti', season: '2024/2025', coach: 'Antonio Bianchi' },
+      { name: 'Giovanissimi 2010', category: 'Giovanissimi', season: '2024/2025', coach: 'Francesco Neri' }
+    ];
+
+    for (const team of teams) {
+      const existing = await prisma.team.findFirst({
+        where: { 
+          name: team.name,
+          organizationId: organization.id
+        }
+      });
+
+      if (!existing) {
+        await prisma.team.create({
+          data: {
+            ...team,
+            organizationId: organization.id
+          }
+        });
+        console.log(`✅ Squadra "${team.name}" creata`);
+      }
+    }
+
     console.log('\n🎉 Setup completato con successo!');
     console.log('\n📝 Credenziali di accesso:');
     console.log('   Email: demo@soccermanager.com');
