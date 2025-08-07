@@ -214,19 +214,21 @@ export class NotificationService {
    */
   async notifyOrganization(organizationId: string, data: any) {
     try {
-      // Trova tutti gli utenti dell'organizzazione
-      const users = await prisma.user.findMany({
+      // Trova tutti gli utenti dell'organizzazione tramite la tabella di join
+      const organizationUsers = await prisma.organizationUser.findMany({
         where: {
-          organizationUsers: {
-            some: {
-              organizationId
-            }
-          }
+          organizationId
         },
-        select: { id: true }
+        select: { 
+          userId: true 
+        }
       });
 
-      const userIds = users.map(u => u.id);
+      const userIds = organizationUsers.map(ou => ou.userId);
+      
+      if (userIds.length === 0) {
+        return { created: 0 };
+      }
       
       return await this.createBulkNotifications(userIds, {
         ...data,
@@ -418,43 +420,48 @@ export class NotificationService {
   }
 
   /**
-   * Invia promemoria partite
+   * Invia promemoria partite - VERSIONE SEMPLIFICATA
    */
   async sendMatchReminders() {
     try {
       const tomorrow = addDays(new Date(), 1);
       const dayAfterTomorrow = addDays(new Date(), 2);
 
+      // Query semplificata senza include delle relazioni
       const upcomingMatches = await prisma.match.findMany({
         where: {
           date: {
             gte: tomorrow,
             lt: dayAfterTomorrow
           }
-        },
-        include: {
-          homeTeam: true,
-          awayTeam: true,
-          venue: true
         }
       });
 
       let remindersSent = 0;
 
       for (const match of upcomingMatches) {
+        // Recupera i team separatamente se necessario
+        const homeTeam = await prisma.team.findUnique({
+          where: { id: match.homeTeamId }
+        });
+
+        const awayTeam = match.awayTeamId ? await prisma.team.findUnique({
+          where: { id: match.awayTeamId }
+        }) : null;
+
         await this.createNotification({
           userId: null,
           organizationId: match.organizationId,
           type: 'match_reminder',
           title: 'Partita domani',
-          message: `Partita ${match.homeTeam.name} vs ${match.awayTeam?.name || 'TBD'} domani alle ${match.time}`,
+          message: `Partita ${homeTeam?.name || 'TBD'} vs ${awayTeam?.name || 'TBD'} domani alle ${match.time}`,
           priority: 'high',
           link: `/matches/${match.id}`,
           data: {
             matchId: match.id,
             date: match.date,
             time: match.time,
-            venue: match.venue?.name
+            venueId: match.venueId
           }
         });
         remindersSent++;
