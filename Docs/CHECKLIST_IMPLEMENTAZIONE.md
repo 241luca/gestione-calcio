@@ -25,13 +25,13 @@
 ### 🚧 Da Implementare
 
 #### Transport Service (Priorità: ALTA)
-- [ ] Create transport.service.ts
-- [ ] Create transport.routes.ts
-- [ ] Create transport zones CRUD
-- [ ] Create routes CRUD
-- [ ] Create schedules management
-- [ ] Create bookings system
-- [ ] Add transport notifications
+- [x] Create transport.service.ts ✅ (07/08/2025)
+- [x] Create transport.routes.ts ✅ (07/08/2025)
+- [x] Create transport zones CRUD ✅ (07/08/2025)
+- [x] Create routes CRUD ✅ (07/08/2025)
+- [x] Create schedules management ✅ (07/08/2025)
+- [x] Create bookings system ✅ (07/08/2025)
+- [x] Add transport notifications ✅ (07/08/2025)
 - [ ] Write tests
 
 #### Notification Service (Priorità: ALTA)
