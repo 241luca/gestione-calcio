@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaBell } from 'react-icons/fa';
 import notificationService from '../../services/notificationService';
+import { useSocket } from '../../hooks/useSocket';
 import NotificationList from './NotificationList';
 import './NotificationBell.css';
 
@@ -11,22 +12,62 @@ function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
+  
+  // Usa il nostro hook Socket.io
+  const { connected, markNotificationRead, markAllNotificationsRead } = useSocket();
 
   // Carica le notifiche quando il componente si monta
   useEffect(() => {
     loadNotifications();
     
-    // Ricarica ogni 30 secondi
-    const interval = setInterval(loadNotifications, 30000);
-    
     // Chiudi dropdown quando clicchi fuori
     document.addEventListener('mousedown', handleClickOutside);
     
     return () => {
-      clearInterval(interval);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Ascolta eventi Socket.io per notifiche real-time
+  useEffect(() => {
+    // Ascolta nuove notifiche
+    const handleNewNotification = (event) => {
+      const notification = event.detail;
+      console.log('🔔 Nuova notifica ricevuta in NotificationBell:', notification);
+      
+      // Aggiungi la nuova notifica all'inizio della lista
+      setNotifications(prev => [notification, ...prev].slice(0, 10));
+      
+      // Incrementa il contatore
+      setUnreadCount(prev => prev + 1);
+    };
+
+    // Ascolta aggiornamenti del contatore
+    const handleCountUpdate = (event) => {
+      const { count } = event.detail;
+      console.log('🔢 Aggiornamento contatore notifiche:', count);
+      setUnreadCount(count);
+    };
+
+    // Registra i listener
+    window.addEventListener('notification:new', handleNewNotification);
+    window.addEventListener('notification:countUpdate', handleCountUpdate);
+
+    // Pulisci i listener quando il componente si smonta
+    return () => {
+      window.removeEventListener('notification:new', handleNewNotification);
+      window.removeEventListener('notification:countUpdate', handleCountUpdate);
+    };
+  }, []);
+
+  // Mostra indicatore di connessione Socket.io
+  useEffect(() => {
+    if (connected) {
+      console.log('✅ NotificationBell: Socket.io connesso');
+    } else {
+      console.log('❌ NotificationBell: Socket.io disconnesso');
+    }
+  }, [connected]);
 
   const handleClickOutside = (event) => {
     if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -64,7 +105,21 @@ function NotificationBell() {
   const handleMarkAsRead = async (notificationId) => {
     try {
       await notificationService.markAsRead(notificationId);
-      loadNotifications();
+      
+      // Invia anche via Socket.io
+      markNotificationRead(notificationId);
+      
+      // Aggiorna la lista locale
+      setNotifications(prev => 
+        prev.map(n => 
+          n.id === notificationId 
+            ? { ...n, status: 'read', isRead: true } 
+            : n
+        )
+      );
+      
+      // Decrementa il contatore
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Errore nel segnare come letta:', error);
     }
@@ -73,8 +128,16 @@ function NotificationBell() {
   const handleMarkAllAsRead = async () => {
     try {
       await notificationService.markAllAsRead();
+      
+      // Invia anche via Socket.io
+      markAllNotificationsRead();
+      
+      // Aggiorna tutte le notifiche locali
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, status: 'read', isRead: true }))
+      );
+      
       setUnreadCount(0);
-      loadNotifications();
     } catch (error) {
       console.error('Errore nel segnare tutte come lette:', error);
     }
@@ -83,7 +146,15 @@ function NotificationBell() {
   const handleDelete = async (notificationId) => {
     try {
       await notificationService.deleteNotification(notificationId);
-      loadNotifications();
+      
+      // Rimuovi dalla lista locale
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      
+      // Se era non letta, decrementa il contatore
+      const notification = notifications.find(n => n.id === notificationId);
+      if (notification && !notification.isRead) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
     } catch (error) {
       console.error('Errore eliminazione notifica:', error);
     }
@@ -95,6 +166,7 @@ function NotificationBell() {
         className="notification-bell-button"
         onClick={handleToggle}
         aria-label="Notifiche"
+        title={connected ? 'Notifiche (Real-time attivo)' : 'Notifiche'}
       >
         <FaBell size={20} />
         {unreadCount > 0 && (
@@ -102,12 +174,43 @@ function NotificationBell() {
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
+        {/* Indicatore di connessione real-time */}
+        {connected && (
+          <span 
+            className="connection-indicator" 
+            style={{
+              position: 'absolute',
+              bottom: '-2px',
+              right: '-2px',
+              width: '8px',
+              height: '8px',
+              backgroundColor: '#10b981',
+              borderRadius: '50%',
+              border: '2px solid white',
+              animation: 'pulse 2s infinite'
+            }}
+            title="Real-time attivo"
+          />
+        )}
       </button>
 
       {isOpen && (
         <div className="notification-dropdown">
           <div className="notification-header">
-            <h3>Notifiche</h3>
+            <h3>
+              Notifiche 
+              {connected && (
+                <span 
+                  style={{
+                    fontSize: '12px',
+                    color: '#10b981',
+                    marginLeft: '8px'
+                  }}
+                >
+                  • Live
+                </span>
+              )}
+            </h3>
             {unreadCount > 0 && (
               <button 
                 className="mark-all-read-btn"
@@ -132,6 +235,11 @@ function NotificationBell() {
             ) : (
               <div className="notification-empty">
                 <p>Nessuna nuova notifica</p>
+                {connected && (
+                  <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                    Le notifiche appariranno qui in tempo reale
+                  </p>
+                )}
               </div>
             )}
           </div>

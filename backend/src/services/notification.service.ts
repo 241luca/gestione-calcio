@@ -3,6 +3,7 @@ import { PrismaClient, NotificationPriority, NotificationStatus } from '@prisma/
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import { ResponseFormatter } from '../utils/responseFormatter';
 import { addDays, subDays, startOfDay, endOfDay } from 'date-fns';
+import SocketService from './socket.service';
 
 const prisma = new PrismaClient();
 
@@ -35,6 +36,13 @@ export class NotificationService {
           isRead: false
         }
       });
+
+      // Invia notifica in tempo reale via Socket.io
+      SocketService.sendNotification(data.userId, notification);
+      
+      // Aggiorna anche il contatore
+      const unreadCount = await this.getUnreadCount(data.userId);
+      SocketService.sendNotificationCount(data.userId, unreadCount);
 
       return notification;
     } catch (error) {
@@ -70,6 +78,27 @@ export class NotificationService {
           isRead: false
         }))
       });
+
+      // Invia notifiche via Socket.io a tutti gli utenti
+      for (const userId of userIds) {
+        const notification = {
+          userId,
+          organizationId: notificationData.organizationId,
+          type: notificationData.type,
+          title: notificationData.title,
+          message: notificationData.message,
+          priority: notificationData.priority || 'normal',
+          link: notificationData.link,
+          data: notificationData.data || {},
+          createdAt: new Date()
+        };
+        
+        SocketService.sendNotification(userId, notification);
+        
+        // Aggiorna contatore
+        const unreadCount = await this.getUnreadCount(userId);
+        SocketService.sendNotificationCount(userId, unreadCount);
+      }
 
       return {
         created: notifications.count,
@@ -701,6 +730,24 @@ export class NotificationService {
       id: `custom_${Date.now()}`,
       createdAt: new Date()
     };
+  }
+
+  /**
+   * Conta le notifiche non lette di un utente
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    try {
+      const count = await prisma.notification.count({
+        where: {
+          userId,
+          status: 'unread'
+        }
+      });
+      return count;
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      return 0;
+    }
   }
 
   /**

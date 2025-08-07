@@ -2,12 +2,15 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { createServer } from 'http';
+import SocketService from './services/socket.service';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
 import athleteRoutes from './routes/athlete.routes';
 import transportRoutes from './routes/transport.routes';
 import notificationRoutes from './routes/notification.routes';
+import documentRoutes from './routes/document.routes';
 
 // Carica le variabili d'ambiente
 dotenv.config();
@@ -19,6 +22,12 @@ const prisma = new PrismaClient();
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
 
+// Crea server HTTP per Socket.io
+const httpServer = createServer(app);
+
+// Inizializza Socket.io
+SocketService.initialize(httpServer);
+
 // Middleware
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
@@ -27,13 +36,20 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve file statici dalla directory uploads
+app.use('/uploads', express.static('uploads'));
+
 // Route di test
 app.get('/', (req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'Soccer Management System API',
     version: '1.0.0',
-    timestamp: new Date()
+    timestamp: new Date(),
+    features: {
+      realtime: true,
+      socketio: 'enabled'
+    }
   });
 });
 
@@ -42,6 +58,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/athletes', athleteRoutes);
 app.use('/api/v1/transport', transportRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/documents', documentRoutes);
 
 // Route health check
 app.get('/health', async (req: Request, res: Response) => {
@@ -49,10 +66,15 @@ app.get('/health', async (req: Request, res: Response) => {
     // Verifica connessione database
     await prisma.$queryRaw`SELECT 1`;
     
+    // Ottieni info utenti online
+    const onlineUsers = SocketService.getOnlineUsersCount();
+    
     res.json({
       success: true,
       status: 'healthy',
       database: 'connected',
+      socketio: 'active',
+      onlineUsers: onlineUsers,
       timestamp: new Date()
     });
   } catch (error) {
@@ -63,6 +85,21 @@ app.get('/health', async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+});
+
+// Route per test Socket.io
+app.get('/api/v1/socket/test', (req: Request, res: Response) => {
+  // Invia un messaggio di test a tutti gli utenti connessi
+  SocketService.broadcast('test:message', {
+    message: 'Test broadcast da server',
+    timestamp: new Date()
+  });
+  
+  res.json({
+    success: true,
+    message: 'Messaggio di test inviato a tutti gli utenti connessi',
+    onlineUsers: SocketService.getOnlineUsersCount()
+  });
 });
 
 // Error handler globale
@@ -95,10 +132,12 @@ async function startServer() {
     await prisma.$connect();
     console.log('✅ Database connesso');
     
-    // Avvia il server
-    app.listen(PORT, () => {
+    // Avvia il server HTTP con Socket.io
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Server avviato su http://localhost:${PORT}`);
+      console.log(`🔌 Socket.io attivo su ws://localhost:${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
+      console.log(`🧪 Test Socket.io: http://localhost:${PORT}/api/v1/socket/test`);
     });
   } catch (error) {
     console.error('❌ Errore avvio server:', error);
