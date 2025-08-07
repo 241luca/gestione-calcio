@@ -1,0 +1,446 @@
+// Schema del database per il sistema di gestione società di calcio
+// Versione: 2.0.0
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// MODELLI PRINCIPALI
+// ==========================================
+
+// Organizzazione (Società di calcio)
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  taxCode   String?  @unique // Codice fiscale/P.IVA
+  address   String?
+  city      String?
+  province  String?
+  zipCode   String?
+  email     String?
+  phone     String?
+  website   String?
+  logo      String?  // URL logo
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relazioni
+  users      User[]
+  athletes   Athlete[]
+  teams      Team[]
+  documents  Document[]
+  payments   Payment[]
+  matches    Match[]
+  trainings  TrainingSession[]
+
+  @@map("organizations")
+}
+
+// Utenti del sistema
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  password       String
+  firstName      String
+  lastName       String
+  phone          String?
+  role           Role      @relation(fields: [roleId], references: [id])
+  roleId         String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  isActive       Boolean   @default(true)
+  lastLogin      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relazioni
+  uploadedDocuments Document[] @relation("UploadedBy")
+  verifiedDocuments Document[] @relation("VerifiedBy")
+  createdPayments   Payment[]  @relation("CreatedBy")
+
+  @@index([email])
+  @@index([organizationId])
+  @@map("users")
+}
+
+// Ruoli utente
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  permissions Json     // Array di permessi
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relazioni
+  users User[]
+
+  @@map("roles")
+}
+
+// Atleti
+model Athlete {
+  id             String        @id @default(uuid())
+  firstName      String
+  lastName       String
+  birthDate      DateTime
+  birthPlace     String?
+  nationality    String        @default("Italiana")
+  fiscalCode     String?       @unique
+  email          String?
+  phone          String?
+  address        String?
+  city           String?
+  province       String?
+  zipCode        String?
+  
+  // Dati sportivi
+  team           Team?         @relation(fields: [teamId], references: [id])
+  teamId         String?
+  position       Position?     @relation(fields: [positionId], references: [id])
+  positionId     String?
+  jerseyNumber   Int?
+  status         AthleteStatus @default(ACTIVE)
+  
+  // Dati genitori/tutori
+  parentName     String?
+  parentPhone    String?
+  parentEmail    String?
+  
+  // Dati medici
+  medicalNotes   String?
+  allergies      String?
+  
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organizationId String
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relazioni
+  documents      Document[]
+  payments       Payment[]
+  attendances    TrainingAttendance[]
+  matchRoster    MatchRoster[]
+  matchStats     MatchStats[]
+  injuries       Injury[]
+
+  @@index([organizationId])
+  @@index([teamId])
+  @@index([fiscalCode])
+  @@map("athletes")
+}
+
+// Stati atleta
+enum AthleteStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  INJURED
+}
+
+// Squadre
+model Team {
+  id             String       @id @default(uuid())
+  name           String
+  category       String       // Es: "Under 15", "Prima Squadra"
+  season         String       // Es: "2024/2025"
+  coach          String?
+  assistantCoach String?
+  
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relazioni
+  athletes       Athlete[]
+  homeMatches    Match[]      @relation("HomeTeam")
+  awayMatches    Match[]      @relation("AwayTeam")
+  trainings      TrainingSession[]
+
+  @@index([organizationId])
+  @@map("teams")
+}
+
+// Posizioni di gioco
+model Position {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  code        String    @unique // Es: "POR", "DIF", "CEN", "ATT"
+  description String?
+
+  // Relazioni
+  athletes    Athlete[]
+
+  @@map("positions")
+}
+
+// ==========================================
+// GESTIONE DOCUMENTI
+// ==========================================
+
+// Tipi di documento
+model DocumentType {
+  id           Int        @id @default(autoincrement())
+  name         String     @unique
+  description  String?
+  isRequired   Boolean    @default(false)
+  hasExpiry    Boolean    @default(false)
+  validityDays Int?       // Giorni di validità predefiniti
+
+  // Relazioni
+  documents    Document[]
+
+  @@map("document_types")
+}
+
+// Documenti
+model Document {
+  id             String         @id @default(uuid())
+  athlete        Athlete        @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  athleteId      String
+  type           DocumentType   @relation(fields: [typeId], references: [id])
+  typeId         Int
+  fileName       String
+  fileUrl        String
+  fileSize       Int
+  mimeType       String
+  issueDate      DateTime?
+  expiryDate     DateTime?
+  status         DocumentStatus @default(VALID)
+  notes          String?
+  
+  // Tracking upload e verifica
+  uploadedBy     User           @relation("UploadedBy", fields: [uploadedById], references: [id])
+  uploadedById   String
+  uploadedAt     DateTime       @default(now())
+  isVerified     Boolean        @default(false)
+  verifiedBy     User?          @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  verifiedById   String?
+  verifiedAt     DateTime?
+  
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  organizationId String
+  
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([athleteId])
+  @@index([organizationId])
+  @@index([expiryDate])
+  @@map("documents")
+}
+
+// Stati documento
+enum DocumentStatus {
+  VALID
+  EXPIRING  // In scadenza (< 30 giorni)
+  EXPIRED
+}
+
+// ==========================================
+// GESTIONE PAGAMENTI
+// ==========================================
+
+// Tipi di pagamento
+model PaymentType {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  amount      Float     // Importo standard
+  isRecurring Boolean   @default(false)
+  frequency   String?   // MONTHLY, YEARLY, ONE_TIME
+
+  // Relazioni
+  payments    Payment[]
+
+  @@map("payment_types")
+}
+
+// Pagamenti
+model Payment {
+  id             String        @id @default(uuid())
+  athlete        Athlete       @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  athleteId      String
+  type           PaymentType   @relation(fields: [typeId], references: [id])
+  typeId         Int
+  amount         Float
+  dueDate        DateTime
+  paidDate       DateTime?
+  status         PaymentStatus @default(PENDING)
+  paymentMethod  String?       // CASH, BANK_TRANSFER, CREDIT_CARD
+  transactionId  String?       // Riferimento transazione
+  notes          String?
+  
+  createdBy      User          @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById    String
+  
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organizationId String
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([athleteId])
+  @@index([organizationId])
+  @@index([dueDate])
+  @@index([status])
+  @@map("payments")
+}
+
+// Stati pagamento
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// ==========================================
+// GESTIONE PARTITE E ALLENAMENTI
+// ==========================================
+
+// Partite
+model Match {
+  id             String       @id @default(uuid())
+  homeTeam       Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  homeTeamId     String
+  awayTeam       Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  awayTeamId     String
+  date           DateTime
+  time           String?      // Orario separato
+  venue          String?
+  competition    String?      // Campionato, coppa, amichevole
+  homeScore      Int?
+  awayScore      Int?
+  status         MatchStatus  @default(SCHEDULED)
+  notes          String?
+  
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relazioni
+  roster         MatchRoster[]
+  stats          MatchStats[]
+
+  @@index([organizationId])
+  @@index([date])
+  @@map("matches")
+}
+
+// Stati partita
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  POSTPONED
+}
+
+// Convocazioni partita
+model MatchRoster {
+  id        String   @id @default(uuid())
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId   String
+  athlete   Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  athleteId String
+  isStarter Boolean  @default(false)
+  attended  Boolean  @default(false)
+  notes     String?
+
+  @@unique([matchId, athleteId])
+  @@map("match_rosters")
+}
+
+// Statistiche partita per atleta
+model MatchStats {
+  id          String  @id @default(uuid())
+  match       Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId     String
+  athlete     Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  athleteId   String
+  minutesPlayed Int   @default(0)
+  goals       Int     @default(0)
+  assists     Int     @default(0)
+  yellowCards Int     @default(0)
+  redCards    Int     @default(0)
+  notes       String?
+
+  @@unique([matchId, athleteId])
+  @@map("match_stats")
+}
+
+// Sessioni di allenamento
+model TrainingSession {
+  id             String       @id @default(uuid())
+  team           Team         @relation(fields: [teamId], references: [id])
+  teamId         String
+  date           DateTime
+  startTime      String
+  endTime        String
+  location       String?
+  type           String?      // TECHNICAL, TACTICAL, PHYSICAL
+  description    String?
+  
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relazioni
+  attendances    TrainingAttendance[]
+
+  @@index([teamId])
+  @@index([date])
+  @@map("training_sessions")
+}
+
+// Presenze allenamento
+model TrainingAttendance {
+  id        String          @id @default(uuid())
+  session   TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+  athlete   Athlete         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  athleteId String
+  present   Boolean         @default(false)
+  reason    String?         // Motivo assenza
+  notes     String?
+
+  @@unique([sessionId, athleteId])
+  @@map("training_attendances")
+}
+
+// ==========================================
+// GESTIONE INFORTUNI
+// ==========================================
+
+model Injury {
+  id           String    @id @default(uuid())
+  athlete      Athlete   @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  athleteId    String
+  injuryDate   DateTime
+  description  String
+  severity     String?   // MILD, MODERATE, SEVERE
+  estimatedRecovery Int? // Giorni stimati di recupero
+  isRecovered  Boolean   @default(false)
+  recoveryDate DateTime?
+  notes        String?
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([athleteId])
+  @@map("injuries")
+}
