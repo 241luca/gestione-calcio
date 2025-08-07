@@ -144,7 +144,8 @@ router.post('/',
         issueDate: req.body.issueDate,
         expiryDate: req.body.expiryDate,
         notes: req.body.notes,
-        organizationId: req.user.organizationId
+        organizationId: req.user.organizationId,
+        uploadedById: req.user.userId // Passiamo l'ID dell'utente autenticato
       };
 
       const document = await documentService.uploadDocument(
@@ -174,7 +175,7 @@ router.put('/:id/verify',
       const document = await documentService.verifyDocument(
         req.params.id,
         req.user.organizationId,
-        req.user.userId
+        req.user.userId // Passiamo l'ID dell'utente che verifica
       );
 
       res.json(
