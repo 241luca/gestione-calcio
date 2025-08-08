@@ -296,4 +296,58 @@ router.post('/send-reminders', authorize('transport:write'), async (req: AuthReq
   }
 });
 
+// GET /api/v1/transport/stats - Statistiche trasporti
+router.get('/stats', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const organizationId = req.user!.organizationId;
+    
+    // Statistiche di base (dati simulati per ora)
+    const stats = {
+      totalZones: 5,
+      activeRoutes: 12,
+      upcomingSchedules: 8,
+      todaySchedules: 3,
+      totalBookings: 45,
+      availableSeats: 120,
+      occupiedSeats: 78,
+      occupancyRate: 65,
+      weeklyTrips: [
+        { day: 'Lun', trips: 5, bookings: 42 },
+        { day: 'Mar', trips: 4, bookings: 35 },
+        { day: 'Mer', trips: 5, bookings: 48 },
+        { day: 'Gio', trips: 4, bookings: 38 },
+        { day: 'Ven', trips: 6, bookings: 52 },
+        { day: 'Sab', trips: 8, bookings: 65 },
+        { day: 'Dom', trips: 2, bookings: 15 }
+      ],
+      popularRoutes: [
+        { name: 'Centro - Campo Sportivo', bookings: 125 },
+        { name: 'Stazione - Palestra', bookings: 98 },
+        { name: 'Scuola - Campo Est', bookings: 87 }
+      ],
+      recentBookings: [
+        {
+          id: '1',
+          athleteName: 'Mario Rossi',
+          route: 'Centro - Campo',
+          date: new Date().toISOString(),
+          status: 'confirmed'
+        },
+        {
+          id: '2',
+          athleteName: 'Luigi Verdi',
+          route: 'Stazione - Palestra',
+          date: new Date().toISOString(),
+          status: 'confirmed'
+        }
+      ],
+      success: true
+    };
+    
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
