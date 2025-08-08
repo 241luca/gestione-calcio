@@ -117,8 +117,8 @@ router.post('/', async (req: AuthRequest, res, next) => {
         name,
         type,
         category,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        endDate: endDate ? new Date(endDate) : undefined,
         description
       }
     });
@@ -244,7 +244,7 @@ router.get('/:id/standings', async (req: AuthRequest, res, next) => {
     const matches = await prisma.match.findMany({
       where: {
         competitionId: id,
-        status: 'PLAYED'
+        status: 'COMPLETED'
       },
       include: {
         homeTeam: true,

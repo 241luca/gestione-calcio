@@ -46,6 +46,7 @@ model Organization {
   matches            Match[]
   trainings          TrainingSession[]
   transportZones     TransportZone[]
+  transportRoutes    TransportRoute[]
   notifications      Notification[]
   competitions       Competition[]
   venues             Venue[]
@@ -156,6 +157,7 @@ model Athlete {
   matchRoster    MatchRoster[]
   matchStats     MatchStats[]
   injuries       Injury[]
+  transportBookings TransportBooking[]
 
   @@index([organizationId])
   @@index([teamId])
@@ -409,6 +411,7 @@ model Match {
   // Relazioni
   roster          MatchRoster[]
   stats           MatchStats[]
+  transportSchedules TransportSchedule[]
 
   @@index([organizationId])
   @@index([date])
@@ -479,6 +482,7 @@ model TrainingSession {
 
   // Relazioni
   attendances    TrainingAttendance[]
+  transportSchedules TransportSchedule[]
 
   @@index([teamId])
   @@index([date])
@@ -623,4 +627,81 @@ model Sponsor {
   updatedAt      DateTime     @updatedAt
 
   @@map("sponsors")
+}
+
+// ==========================================
+// SISTEMA TRASPORTI COMPLETO
+// ==========================================
+
+// Route di trasporto
+model TransportRoute {
+  id             String       @id @default(uuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  name           String       // Nome della route (es. "Linea Centro", "Linea Nord")
+  description    String?
+  driver         String?      // Nome autista
+  vehiclePlate   String?      // Targa veicolo
+  capacity       Int          @default(8) // Capacità veicolo
+  startPoint     String?      // Punto di partenza
+  endPoint       String?      // Punto di arrivo
+  stops          Json?        // Array di fermate intermedie
+  distance       Float?       // Distanza in km
+  estimatedTime  Int?         // Tempo stimato in minuti
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relazioni
+  schedules      TransportSchedule[]
+
+  @@map("transport_routes")
+}
+
+// Programmazione trasporti
+model TransportSchedule {
+  id             String       @id @default(uuid())
+  route          TransportRoute @relation(fields: [routeId], references: [id])
+  routeId        String
+  
+  // Collegamenti opzionali a partite o allenamenti
+  match          Match?       @relation(fields: [matchId], references: [id])
+  matchId        String?
+  session        TrainingSession? @relation(fields: [sessionId], references: [id])
+  sessionId      String?
+  
+  // Orari
+  pickupTime     DateTime     // Orario partenza
+  returnTime     DateTime?    // Orario ritorno
+  
+  // Dettagli trasporto
+  status         String       @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+  notes          String?
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relazioni
+  bookings       TransportBooking[]
+
+  @@map("transport_schedules")
+}
+
+// Prenotazioni trasporto
+model TransportBooking {
+  id             String            @id @default(uuid())
+  schedule       TransportSchedule @relation(fields: [scheduleId], references: [id])
+  scheduleId     String
+  athlete        Athlete           @relation(fields: [athleteId], references: [id])
+  athleteId      String
+  bookingDate    DateTime          @default(now()) // Data della prenotazione
+  pickupPoint    String?           // Punto di salita
+  dropoffPoint   String?           // Punto di discesa
+  status         String            @default("CONFIRMED") // CONFIRMED, CANCELLED, COMPLETED
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([scheduleId, athleteId])
+  @@map("transport_bookings")
 }
