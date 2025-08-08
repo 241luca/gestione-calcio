@@ -52,6 +52,34 @@ npm run dev
 npm run dev
 ```
 
+## 🔔 Sistema Notifiche Completo (v3.0.0)
+
+### ✅ Implementato al 100%
+
+**Documentazione completa:** [SISTEMA-NOTIFICHE-DOCUMENTAZIONE.md](./SISTEMA-NOTIFICHE-DOCUMENTAZIONE.md)
+
+#### Funzionalità:
+- **Real-time:** Socket.io per notifiche istantanee
+- **Email:** Integrazione Brevo con API key criptata nel DB
+- **Scheduler:** Jobs automatici configurabili
+- **Template:** Personalizzabili con variabili dinamiche
+- **Preferenze:** Per utente con quiet hours
+- **Audit:** Log completo di tutte le azioni
+- **Statistiche:** Dashboard con metriche real-time
+
+#### Database:
+- `notifications` - Notifiche utenti
+- `notification_templates` - Template personalizzabili  
+- `organization_settings` - Settings con API key criptata
+- `email_logs` - Log email inviate
+- `audit_logs` - Audit trail completo
+
+#### Come configurare:
+1. Vai su Settings → Notifiche → Impostazioni Complete
+2. Inserisci API key Brevo
+3. Configura preferenze e template
+4. Sistema pronto!
+
 ## 👤 Autore
 
 **Luca Mambelli**
