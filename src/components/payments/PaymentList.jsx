@@ -3,10 +3,12 @@ import { FiPlus, FiFilter, FiDownload, FiSearch, FiDollarSign, FiAlertCircle, Fi
 import axios from 'axios';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import UniversalActions from '../common/UniversalActions';
 import toast from 'react-hot-toast';
 
 const PaymentList = () => {
   const [payments, setPayments] = useState([]);
+  const [selectedPayments, setSelectedPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     status: '',
@@ -163,6 +165,36 @@ const PaymentList = () => {
     return format(new Date(date), 'dd MMM yyyy', { locale: it });
   };
 
+  const handleBulkDelete = async (paymentsToDelete) => {
+    try {
+      // Simuliamo l'eliminazione multipla
+      toast.success(`${paymentsToDelete.length} pagamenti eliminati`);
+      setSelectedPayments([]);
+      fetchPayments();
+    } catch (error) {
+      toast.error('Errore nell\'eliminazione dei pagamenti');
+    }
+  };
+
+  const togglePaymentSelection = (payment) => {
+    setSelectedPayments(prev => {
+      const isSelected = prev.find(p => p.id === payment.id);
+      if (isSelected) {
+        return prev.filter(p => p.id !== payment.id);
+      } else {
+        return [...prev, payment];
+      }
+    });
+  };
+
+  const selectAllPayments = () => {
+    if (selectedPayments.length === payments.length) {
+      setSelectedPayments([]);
+    } else {
+      setSelectedPayments(payments);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -231,7 +263,7 @@ const PaymentList = () => {
         <div className="p-6 border-b border-gray-200">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-900">Gestione Pagamenti</h2>
-            <div className="flex space-x-3">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
@@ -239,13 +271,27 @@ const PaymentList = () => {
                 <FiFilter className="inline-block mr-2" />
                 Filtri
               </button>
-              <button
-                onClick={() => window.location.href = '/payments/new'}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                <FiPlus className="inline-block mr-2" />
-                Nuovo Pagamento
-              </button>
+              <UniversalActions
+                entityName="pagamento"
+                entityNamePlural="pagamenti"
+                selectedItems={selectedPayments}
+                allItems={payments}
+                onAdd={() => window.location.href = '/payments/new'}
+                onEdit={(payment) => window.location.href = `/payments/${payment.id}/edit`}
+                onDelete={handleBulkDelete}
+                exportConfig={{
+                  fields: [
+                    { key: 'athleteName', label: 'Atleta' },
+                    { key: 'typeName', label: 'Tipo' },
+                    { key: 'amount', label: 'Importo' },
+                    { key: 'dueDate', label: 'Scadenza' },
+                    { key: 'status', label: 'Stato' },
+                    { key: 'paidAmount', label: 'Pagato' }
+                  ],
+                  filename: 'pagamenti',
+                  title: 'Report Pagamenti'
+                }}
+              />
             </div>
           </div>
 
@@ -307,6 +353,14 @@ const PaymentList = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedPayments.length === payments.length && payments.length > 0}
+                    onChange={selectAllPayments}
+                    className="rounded border-gray-300"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Atleta
                 </th>
@@ -328,8 +382,21 @@ const PaymentList = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {payments.map((payment) => (
+              {payments.map((payment) => {
+                // Prepara i dati per l'export
+                payment.athleteName = `${payment.athlete?.firstName} ${payment.athlete?.lastName}`;
+                payment.typeName = payment.type?.name;
+                
+                return (
                 <tr key={payment.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedPayments.find(p => p.id === payment.id) ? true : false}
+                      onChange={() => togglePaymentSelection(payment)}
+                      className="rounded border-gray-300"
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
@@ -398,12 +465,13 @@ const PaymentList = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
 
           {payments.length === 0 && (
-            <div className="text-center py-8">
+            <div className="text-center py-8" colSpan="7">
               <p className="text-gray-500">Nessun pagamento trovato</p>
             </div>
           )}

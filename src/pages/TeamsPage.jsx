@@ -12,10 +12,12 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../services/api';
 import { exportService } from '../services/exportService';
+import UniversalActions from '../components/common/UniversalActions';
 import toast from 'react-hot-toast';
 
 const TeamsPage = () => {
   const [teams, setTeams] = useState([]);
+  const [selectedTeams, setSelectedTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -152,6 +154,27 @@ const TeamsPage = () => {
     }
   };
 
+  const handleBulkDelete = async (teamsToDelete) => {
+    try {
+      setTeams(teams.filter(t => !teamsToDelete.find(del => del.id === t.id)));
+      toast.success(`${teamsToDelete.length} squadre eliminate con successo`);
+      setSelectedTeams([]);
+    } catch (error) {
+      toast.error('Errore nell\'eliminazione delle squadre');
+    }
+  };
+
+  const toggleTeamSelection = (team) => {
+    setSelectedTeams(prev => {
+      const isSelected = prev.find(t => t.id === team.id);
+      if (isSelected) {
+        return prev.filter(t => t.id !== team.id);
+      } else {
+        return [...prev, team];
+      }
+    });
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -217,42 +240,54 @@ const TeamsPage = () => {
             <h1 className="text-3xl font-bold text-gray-900">Squadre</h1>
             <p className="text-gray-600 mt-2">Gestisci le squadre della società</p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={exportTeams}
-              className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              title="Esporta in Excel"
-            >
-              <DocumentArrowDownIcon className="w-5 h-5" />
-              <span className="ml-2 hidden sm:inline">Excel</span>
-            </button>
-            <button
-              onClick={() => window.print()}
-              className="flex items-center px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-              title="Stampa"
-            >
-              <PrinterIcon className="w-5 h-5" />
-              <span className="ml-2 hidden sm:inline">Stampa</span>
-            </button>
-            <button
-              onClick={() => {
-                setEditingTeam(null);
-                resetForm();
-                setShowModal(true);
-              }}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <PlusIcon className="w-5 h-5 mr-2" />
-              Nuova Squadra
-            </button>
-          </div>
+          <UniversalActions
+            entityName="squadra"
+            entityNamePlural="squadre"
+            selectedItems={selectedTeams}
+            allItems={teams}
+            onAdd={() => {
+              setEditingTeam(null);
+              resetForm();
+              setShowModal(true);
+            }}
+            onEdit={(team) => handleEdit(team)}
+            onDelete={handleBulkDelete}
+            exportConfig={{
+              fields: [
+                { key: 'name', label: 'Nome' },
+                { key: 'category', label: 'Categoria' },
+                { key: 'season', label: 'Stagione' },
+                { key: 'coachName', label: 'Allenatore' },
+                { key: 'athleteCount', label: 'N. Atleti' },
+                { key: 'status', label: 'Stato' }
+              ],
+              filename: 'squadre',
+              title: 'Report Squadre'
+            }}
+          />
         </div>
       </div>
 
-      {/* Grid Squadre */}
+      {/* Grid Squadre con selezione */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {teams.map((team) => (
-          <div key={team.id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+        {teams.map((team) => {
+          const isSelected = selectedTeams.find(t => t.id === team.id);
+          return (
+          <div 
+            key={team.id} 
+            className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow relative ${
+              isSelected ? 'ring-2 ring-blue-500' : ''
+            }`}
+          >
+            {/* Checkbox per selezione */}
+            <div className="absolute top-4 right-4 z-10">
+              <input
+                type="checkbox"
+                checked={isSelected ? true : false}
+                onChange={() => toggleTeamSelection(team)}
+                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </div>
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center">
@@ -292,7 +327,7 @@ const TeamsPage = () => {
                   {team.status === 'ACTIVE' ? 'Attiva' : 'Inattiva'}
                 </span>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <Link
                     to={`/teams/${team.id}`}
                     className="p-1 text-blue-600 hover:text-blue-700"
@@ -321,7 +356,8 @@ const TeamsPage = () => {
               </div>
             </div>
           </div>
-        ))}
+        );
+        })}
 
         {teams.length === 0 && (
           <div className="col-span-full text-center py-12">

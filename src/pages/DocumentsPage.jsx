@@ -18,6 +18,7 @@ import {
 import { documentService } from '../services/documentService';
 import { athleteService } from '../services/api';
 import { exportService } from '../services/exportService';
+import UniversalActions from '../components/common/UniversalActions';
 import toast from 'react-hot-toast';
 
 const DocumentsPage = () => {
@@ -30,6 +31,7 @@ const DocumentsPage = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState(null);
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [uploadForm, setUploadForm] = useState({
     athleteId: '',
     documentType: '',
@@ -193,6 +195,35 @@ const DocumentsPage = () => {
     }
   };
 
+  const handleBulkDelete = async (documentsToDelete) => {
+    try {
+      setDocuments(documents.filter(d => !documentsToDelete.find(del => del.id === d.id)));
+      toast.success(`${documentsToDelete.length} documenti eliminati con successo`);
+      setSelectedDocuments([]);
+    } catch (error) {
+      toast.error('Errore nell\'eliminazione dei documenti');
+    }
+  };
+
+  const toggleDocumentSelection = (doc) => {
+    setSelectedDocuments(prev => {
+      const isSelected = prev.find(d => d.id === doc.id);
+      if (isSelected) {
+        return prev.filter(d => d.id !== doc.id);
+      } else {
+        return [...prev, doc];
+      }
+    });
+  };
+
+  const selectAllDocuments = () => {
+    if (selectedDocuments.length === filteredDocuments.length) {
+      setSelectedDocuments([]);
+    } else {
+      setSelectedDocuments(filteredDocuments);
+    }
+  };
+
   const handleDownload = (document) => {
     // Simuliamo il download
     toast.success(`Download di ${document.fileName} avviato`);
@@ -302,29 +333,28 @@ const DocumentsPage = () => {
             <h1 className="text-3xl font-bold text-gray-900">Documenti</h1>
             <p className="text-gray-600 mt-2">Gestisci i documenti degli atleti</p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={exportDocuments}
-              className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              <DocumentArrowDownIcon className="w-5 h-5" />
-              <span className="ml-2 hidden sm:inline">Excel</span>
-            </button>
-            <button
-              onClick={() => window.print()}
-              className="flex items-center px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-            >
-              <PrinterIcon className="w-5 h-5" />
-              <span className="ml-2 hidden sm:inline">Stampa</span>
-            </button>
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <ArrowUpTrayIcon className="w-5 h-5 mr-2" />
-              Carica Documento
-            </button>
-          </div>
+          <UniversalActions
+            entityName="documento"
+            entityNamePlural="documenti"
+            selectedItems={selectedDocuments}
+            allItems={filteredDocuments}
+            onAdd={() => setShowUploadModal(true)}
+            onEdit={null}
+            onDelete={handleBulkDelete}
+            showEdit={false}
+            exportConfig={{
+              fields: [
+                { key: 'athleteName', label: 'Atleta' },
+                { key: 'type', label: 'Tipo' },
+                { key: 'fileName', label: 'File' },
+                { key: 'uploadDate', label: 'Caricato' },
+                { key: 'expiryDate', label: 'Scadenza' },
+                { key: 'status', label: 'Stato' }
+              ],
+              filename: 'documenti',
+              title: 'Report Documenti'
+            }}
+          />
         </div>
       </div>
 
@@ -417,6 +447,14 @@ const DocumentsPage = () => {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedDocuments.length === filteredDocuments.length && filteredDocuments.length > 0}
+                    onChange={selectAllDocuments}
+                    className="rounded border-gray-300"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Atleta
                 </th>
@@ -446,6 +484,14 @@ const DocumentsPage = () => {
                   const daysUntilExpiry = calculateDaysUntilExpiry(doc.expiryDate);
                   return (
                     <tr key={doc.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedDocuments.find(d => d.id === doc.id) ? true : false}
+                          onChange={() => toggleDocumentSelection(doc)}
+                          className="rounded border-gray-300"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {doc.athleteName}
@@ -506,7 +552,7 @@ const DocumentsPage = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
+                  <td colSpan="8" className="px-6 py-12 text-center">
                     <DocumentTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">Nessun documento trovato</p>
                     <p className="text-sm text-gray-400 mt-2">
