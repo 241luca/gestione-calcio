@@ -1,6 +1,7 @@
 // backend/src/services/athlete.service.ts - VERSIONE SEMPLIFICATA
 import { PrismaClient } from '@prisma/client';
 import { NotFoundError, BadRequestError, ConflictError } from '../utils/errors';
+import EventNotificationService from './event-notifications.service';
 
 const prisma = new PrismaClient();
 
@@ -172,6 +173,9 @@ export class AthleteService {
           transportZone: true
         }
       });
+
+      // NOTIFICA: Nuovo atleta registrato
+      await EventNotificationService.notifyNewAthlete(athlete, organizationId);
 
       return athlete;
     } catch (error) {

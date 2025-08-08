@@ -2,6 +2,7 @@
 import { PrismaClient } from '@prisma/client';
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import { addDays, subDays, startOfDay, endOfDay } from 'date-fns';
+import SocketService from './socket.service';
 
 const prisma = new PrismaClient();
 
@@ -33,6 +34,27 @@ export class NotificationService {
           isRead: false
         }
       });
+
+      // IMPORTANTE: Invia notifica real-time via Socket.io
+      if (data.userId) {
+        // Notifica a utente specifico
+        SocketService.sendNotification(data.userId, notification);
+      } else {
+        // Notifica a tutta l'organizzazione
+        SocketService.sendToOrganization(
+          data.organizationId,
+          'notification:new',
+          notification
+        );
+      }
+
+      // Aggiorna contatore notifiche non lette
+      if (data.userId) {
+        const unreadCount = await this.getUnreadCount(data.userId);
+        SocketService.sendNotificationCount(data.userId, unreadCount);
+      }
+
+      console.log(`🔔 Notifica creata e inviata via Socket.io: ${data.title}`);
 
       return notification;
     } catch (error) {
