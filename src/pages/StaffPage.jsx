@@ -11,9 +11,12 @@ import {
 import api from '../services/api';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import UniversalActions from '../components/common/UniversalActions';
+import toast from 'react-hot-toast';
 
 function StaffPage() {
   const [staff, setStaff] = useState([]);
+  const [selectedStaff, setSelectedStaff] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -130,9 +133,39 @@ function StaffPage() {
     try {
       await api.delete(`/staff/${id}`);
       setStaff(staff.filter(s => s.id !== id));
+      toast.success('Membro staff eliminato');
     } catch (error) {
       console.error('Errore eliminazione:', error);
-      alert('Errore nell\'eliminazione');
+      toast.error('Errore nell\'eliminazione');
+    }
+  };
+
+  const handleBulkDelete = async (staffToDelete) => {
+    try {
+      setStaff(staff.filter(s => !staffToDelete.find(del => del.id === s.id)));
+      toast.success(`${staffToDelete.length} membri eliminati`);
+      setSelectedStaff([]);
+    } catch (error) {
+      toast.error('Errore nell\'eliminazione');
+    }
+  };
+
+  const toggleStaffSelection = (member) => {
+    setSelectedStaff(prev => {
+      const isSelected = prev.find(s => s.id === member.id);
+      if (isSelected) {
+        return prev.filter(s => s.id !== member.id);
+      } else {
+        return [...prev, member];
+      }
+    });
+  };
+
+  const selectAllStaff = () => {
+    if (selectedStaff.length === staff.length) {
+      setSelectedStaff([]);
+    } else {
+      setSelectedStaff(staff);
     }
   };
 
@@ -192,13 +225,28 @@ function StaffPage() {
           <h1 className="text-3xl font-bold text-gray-900">Gestione Staff</h1>
           <p className="text-gray-600 mt-1">Gestisci allenatori, assistenti e staff tecnico</p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
-        >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Aggiungi Membro
-        </button>
+        <UniversalActions
+          entityName="membro staff"
+          entityNamePlural="membri staff"
+          selectedItems={selectedStaff}
+          allItems={staff}
+          onAdd={() => setShowModal(true)}
+          onEdit={(member) => handleEdit(member)}
+          onDelete={handleBulkDelete}
+          exportConfig={{
+            fields: [
+              { key: 'firstName', label: 'Nome' },
+              { key: 'lastName', label: 'Cognome' },
+              { key: 'role', label: 'Ruolo' },
+              { key: 'teamName', label: 'Squadra' },
+              { key: 'qualification', label: 'Qualifica' },
+              { key: 'email', label: 'Email' },
+              { key: 'phone', label: 'Telefono' }
+            ],
+            filename: 'staff',
+            title: 'Report Staff Tecnico'
+          }}
+        />
       </div>
 
       {/* Statistiche Staff */}
@@ -265,6 +313,14 @@ function StaffPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedStaff.length === staff.length && staff.length > 0}
+                    onChange={selectAllStaff}
+                    className="rounded border-gray-300"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Nome
                 </th>
@@ -286,8 +342,20 @@ function StaffPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {staff.map((member) => (
+              {staff.map((member) => {
+                // Prepara dati per export
+                member.teamName = member.team?.name || 'Non assegnato';
+                
+                return (
                 <tr key={member.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedStaff.find(s => s.id === member.id) ? true : false}
+                      onChange={() => toggleStaffSelection(member)}
+                      className="rounded border-gray-300"
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
                       {member.firstName} {member.lastName}
@@ -338,7 +406,8 @@ function StaffPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>

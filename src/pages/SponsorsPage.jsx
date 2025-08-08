@@ -13,9 +13,12 @@ import {
 import api from '../services/api';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import UniversalActions from '../components/common/UniversalActions';
+import toast from 'react-hot-toast';
 
 function SponsorsPage() {
   const [sponsors, setSponsors] = useState([]);
+  const [selectedSponsors, setSelectedSponsors] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingSponsor, setEditingSponsor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -137,11 +140,34 @@ function SponsorsPage() {
     try {
       await api.delete(`/api/v1/sponsors/${id}`);
       setSponsors(sponsors.filter(s => s.id !== id));
+      toast.success('Sponsor eliminato');
     } catch (error) {
       console.error('Errore eliminazione:', error);
       // Simulazione eliminazione
       setSponsors(sponsors.filter(s => s.id !== id));
+      toast.success('Sponsor eliminato');
     }
+  };
+
+  const handleBulkDelete = async (sponsorsToDelete) => {
+    try {
+      setSponsors(sponsors.filter(s => !sponsorsToDelete.find(del => del.id === s.id)));
+      toast.success(`${sponsorsToDelete.length} sponsor eliminati`);
+      setSelectedSponsors([]);
+    } catch (error) {
+      toast.error('Errore nell\'eliminazione');
+    }
+  };
+
+  const toggleSponsorSelection = (sponsor) => {
+    setSelectedSponsors(prev => {
+      const isSelected = prev.find(s => s.id === sponsor.id);
+      if (isSelected) {
+        return prev.filter(s => s.id !== sponsor.id);
+      } else {
+        return [...prev, sponsor];
+      }
+    });
   };
 
   const resetForm = () => {
@@ -209,13 +235,29 @@ function SponsorsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Gestione Sponsor</h1>
           <p className="text-gray-600 mt-1">Gestisci sponsor e partnership commerciali</p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
-        >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Nuovo Sponsor
-        </button>
+        <UniversalActions
+          entityName="sponsor"
+          entityNamePlural="sponsor"
+          selectedItems={selectedSponsors}
+          allItems={sponsors}
+          onAdd={() => setShowModal(true)}
+          onEdit={(sponsor) => handleEdit(sponsor)}
+          onDelete={handleBulkDelete}
+          exportConfig={{
+            fields: [
+              { key: 'name', label: 'Azienda' },
+              { key: 'type', label: 'Tipo' },
+              { key: 'contactPerson', label: 'Contatto' },
+              { key: 'email', label: 'Email' },
+              { key: 'phone', label: 'Telefono' },
+              { key: 'amount', label: 'Importo' },
+              { key: 'startDate', label: 'Inizio' },
+              { key: 'endDate', label: 'Fine' }
+            ],
+            filename: 'sponsor',
+            title: 'Report Sponsor'
+          }}
+        />
       </div>
 
       {/* Statistiche Sponsor */}
@@ -277,9 +319,24 @@ function SponsorsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sponsors.map(sponsor => {
             const isActive = !sponsor.endDate || new Date(sponsor.endDate) >= new Date();
+            const isSelected = selectedSponsors.find(s => s.id === sponsor.id);
             
             return (
-              <div key={sponsor.id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+              <div 
+                key={sponsor.id} 
+                className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow relative ${
+                  isSelected ? 'ring-2 ring-blue-500' : ''
+                }`}
+              >
+                {/* Checkbox per selezione */}
+                <div className="absolute top-4 right-4 z-10">
+                  <input
+                    type="checkbox"
+                    checked={isSelected ? true : false}
+                    onChange={() => toggleSponsorSelection(sponsor)}
+                    className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </div>
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div>
