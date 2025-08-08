@@ -11,7 +11,8 @@ import {
   CheckIcon,
   XMarkIcon,
   PhotoIcon,
-  EnvelopeIcon
+  EnvelopeIcon,
+  Cog6ToothIcon as SettingsIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 
@@ -427,27 +428,14 @@ const SettingsPage = () => {
                 {/* Link alle configurazioni avanzate */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <a
-                    href="/email-settings"
-                    className="p-4 border-2 border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                    href="/notification-settings"
+                    className="p-4 border-2 border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
                   >
                     <div className="flex items-center space-x-3">
-                      <EnvelopeIcon className="h-8 w-8 text-blue-600" />
+                      <SettingsIcon className="h-8 w-8 text-indigo-600" />
                       <div>
-                        <h4 className="font-semibold text-blue-900">Configurazione Email</h4>
-                        <p className="text-sm text-gray-600">Configura Brevo per l'invio email</p>
-                      </div>
-                    </div>
-                  </a>
-                  
-                  <a
-                    href="/notification-templates"
-                    className="p-4 border-2 border-green-200 rounded-lg hover:bg-green-50 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <BellIcon className="h-8 w-8 text-green-600" />
-                      <div>
-                        <h4 className="font-semibold text-green-900">Template Notifiche</h4>
-                        <p className="text-sm text-gray-600">Personalizza i messaggi</p>
+                        <h4 className="font-semibold text-indigo-900">Impostazioni Complete</h4>
+                        <p className="text-sm text-gray-600">Brevo, Preferenze, Template</p>
                       </div>
                     </div>
                   </a>

@@ -16,6 +16,7 @@ import TransportPage from './pages/TransportPage';
 import NotificationsPage from './pages/NotificationsPage';
 import TestNotifications from './pages/TestNotifications';
 import SchedulerPage from './pages/SchedulerPage';
+import NotificationSettingsPage from './pages/NotificationSettingsPage';
 import EmailSettingsPage from './pages/EmailSettingsPage';
 import NotificationTemplatesPage from './pages/NotificationTemplatesPage';
 import CompetitionsPage from './pages/CompetitionsPage';
@@ -83,6 +84,7 @@ function App() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="test-notifications" element={<TestNotifications />} />
           <Route path="scheduler" element={<SchedulerPage />} />
+          <Route path="notification-settings" element={<NotificationSettingsPage />} />
           <Route path="email-settings" element={<EmailSettingsPage />} />
           <Route path="notification-templates" element={<NotificationTemplatesPage />} />
           <Route path="calendar" element={<CalendarPage />} />
