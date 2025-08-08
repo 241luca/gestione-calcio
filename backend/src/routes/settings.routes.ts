@@ -4,55 +4,68 @@ import { authenticate, authorize } from '../middleware/auth.middleware';
 import { ResponseFormatter } from '../utils/responseFormatter';
 import { BadRequestError } from '../utils/errors';
 import EmailService from '../services/email.service';
+import OrganizationSettingsService from '../services/organization-settings.service';
 import UserPreferencesService from '../services/user-preferences.service';
 import NotificationTemplatesService from '../services/notification-templates.service';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
 const prisma = new PrismaClient();
+const emailService = new EmailService();
 
 // Tutti gli endpoint richiedono autenticazione
 router.use(authenticate);
 
 /**
  * GET /api/v1/settings/notifications
- * Recupera tutte le impostazioni notifiche
+ * Recupera tutte le impostazioni notifiche DAL DATABASE
  */
 router.get('/notifications', 
   authorize('settings:read'),
   async (req: any, res: Response, next: NextFunction) => {
     try {
-      // Recupera impostazioni salvate nel database o usa default
-      const organization = await prisma.organization.findUnique({
-        where: { id: req.user.organizationId }
-      });
+      // Recupera VERE impostazioni dal database
+      const settings = await OrganizationSettingsService.getAllSettings(
+        req.user.organizationId
+      );
 
-      const settings = {
-        email: {
-          provider: 'brevo',
-          apiKey: process.env.BREVO_API_KEY ? '***hidden***' : '',
-          senderEmail: process.env.BREVO_SENDER_EMAIL || 'noreply@soccermanager.com',
-          senderName: 'Soccer Manager',
-          enabled: process.env.EMAIL_ENABLED === 'true',
-          testMode: process.env.EMAIL_TEST_MODE === 'true'
-        },
-        preferences: await UserPreferencesService.getUserPreferences(req.user.userId),
-        stats: {
-          emailsSent: 0,
-          emailsFailed: 0,
-          notificationsSent: await prisma.notification.count({
-            where: { organizationId: req.user.organizationId }
-          }),
-          usersWithEmail: await prisma.user.count({
-            where: {
-              organizationId: req.user.organizationId,
-              email: { not: null }
-            }
-          })
-        }
+      // Aggiungi statistiche REALI
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const stats = {
+        emailsSent: await prisma.emailLog.count({
+          where: {
+            organizationId: req.user.organizationId,
+            status: 'SENT',
+            createdAt: { gte: thirtyDaysAgo }
+          }
+        }),
+        emailsFailed: await prisma.emailLog.count({
+          where: {
+            organizationId: req.user.organizationId,
+            status: 'FAILED',
+            createdAt: { gte: thirtyDaysAgo }
+          }
+        }),
+        notificationsSent: await prisma.notification.count({
+          where: {
+            organizationId: req.user.organizationId,
+            createdAt: { gte: thirtyDaysAgo }
+          }
+        }),
+        usersWithEmail: await prisma.user.count({
+          where: {
+            organizationId: req.user.organizationId,
+            email: { not: null }
+          }
+        })
       };
 
-      res.json(ResponseFormatter.success(settings));
+      res.json(ResponseFormatter.success({
+        ...settings,
+        stats
+      }));
     } catch (error) {
       next(error);
     }
@@ -61,7 +74,7 @@ router.get('/notifications',
 
 /**
  * POST /api/v1/settings/notifications/email
- * Salva configurazione email (Brevo)
+ * Salva configurazione email NEL DATABASE
  */
 router.post('/notifications/email',
   authorize('settings:write'),
@@ -69,20 +82,34 @@ router.post('/notifications/email',
     try {
       const { apiKey, senderEmail, senderName, enabled, testMode } = req.body;
 
-      // In produzione, salvare in database invece che env
-      // Per ora simuliamo il salvataggio
-      const settings = {
-        apiKey: apiKey ? '***saved***' : '',
-        senderEmail,
-        senderName,
-        enabled,
-        testMode,
-        message: 'Impostazioni email salvate con successo'
-      };
+      // SALVA DAVVERO nel database
+      const savedSettings = await OrganizationSettingsService.saveEmailSettings(
+        req.user.organizationId,
+        {
+          apiKey,
+          senderEmail,
+          senderName,
+          emailEnabled: enabled
+        }
+      );
 
-      // TODO: Salvare in database tabella OrganizationSettings
+      // Log l'azione
+      await prisma.auditLog.create({
+        data: {
+          organizationId: req.user.organizationId,
+          userId: req.user.userId,
+          action: 'UPDATE',
+          entityType: 'EMAIL_SETTINGS',
+          newValues: { emailEnabled: enabled },
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        }
+      });
       
-      res.json(ResponseFormatter.success(settings));
+      res.json(ResponseFormatter.success(
+        savedSettings,
+        { message: 'Impostazioni email salvate con successo nel database' }
+      ));
     } catch (error) {
       next(error);
     }

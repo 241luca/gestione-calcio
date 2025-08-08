@@ -49,6 +49,9 @@ model Organization {
   transportRoutes    TransportRoute[]
   notifications      Notification[]
   notificationTemplates NotificationTemplate[]
+  organizationSettings OrganizationSettings?
+  auditLogs          AuditLog[]
+  emailLogs          EmailLog[]
   competitions       Competition[]
   venues             Venue[]
   staffMembers       Staff[]
@@ -83,6 +86,7 @@ model User {
   // Relazioni
   createdPayments   Payment[]  @relation("CreatedBy")
   notifications     Notification[]
+  auditLogs         AuditLog[]
 
   @@index([email])
   @@index([organizationId])
@@ -603,6 +607,94 @@ model NotificationTemplate {
 
   @@unique([organizationId, type])
   @@map("notification_templates")
+}
+
+// ==========================================
+// IMPOSTAZIONI E CONFIGURAZIONI
+// ==========================================
+
+// Impostazioni organizzazione
+model OrganizationSettings {
+  id             String       @id @default(uuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String       @unique
+  
+  // Email Settings
+  emailProvider  String?      @default("brevo") // brevo, sendgrid, smtp
+  emailApiKey    String?      // Encrypted
+  emailFrom      String?      @default("noreply@soccermanager.com")
+  emailFromName  String?      @default("Soccer Manager")
+  emailEnabled   Boolean      @default(false)
+  
+  // Notification Preferences (default per nuovi utenti)
+  defaultPreferences Json?    @default("{}")
+  
+  // Other Settings
+  timezone       String       @default("Europe/Rome")
+  dateFormat     String       @default("DD/MM/YYYY")
+  currency       String       @default("EUR")
+  language       String       @default("it")
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("organization_settings")
+}
+
+// ==========================================
+// AUDIT E LOGGING
+// ==========================================
+
+// Audit log per tracciamento modifiche
+model AuditLog {
+  id             String       @id @default(uuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  user           User?        @relation(fields: [userId], references: [id])
+  userId         String?
+  
+  action         String       // CREATE, UPDATE, DELETE, LOGIN, LOGOUT
+  entityType     String       // ATHLETE, DOCUMENT, PAYMENT, etc.
+  entityId       String?      // ID dell'entità modificata
+  
+  oldValues      Json?        // Valori precedenti
+  newValues      Json?        // Nuovi valori
+  
+  ipAddress      String?
+  userAgent      String?
+  
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Log delle email inviate
+model EmailLog {
+  id             String       @id @default(uuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  
+  to             String       // Email destinatario
+  subject        String
+  body           String?      @db.Text
+  
+  status         String       // SENT, FAILED, BOUNCED
+  provider       String?      // brevo, sendgrid, etc.
+  providerId     String?      // ID del provider
+  
+  error          String?      // Errore se fallito
+  
+  sentAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([to])
+  @@index([status])
+  @@map("email_logs")
 }
 
 // ==========================================

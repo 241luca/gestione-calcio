@@ -1,20 +1,25 @@
 // backend/src/services/email.service.ts
 import { PrismaClient } from '@prisma/client';
 import * as SibApiV3Sdk from '@sendinblue/client';
+import OrganizationSettingsService from './organization-settings.service';
 
 const prisma = new PrismaClient();
 
 export class EmailService {
   private apiInstance: any;
-  private sender = {
-    name: 'Soccer Manager',
-    email: process.env.BREVO_SENDER_EMAIL || 'noreply@soccermanager.com'
-  };
-
-  constructor() {
-    // Configura Brevo API
-    const apiKey = SibApiV3Sdk.ApiClient.instance.authentications['api-key'];
-    apiKey.apiKey = process.env.BREVO_API_KEY || 'YOUR-API-KEY';
+  
+  /**
+   * Inizializza Brevo con API key dal database
+   */
+  private async initializeBrevo(organizationId: string) {
+    const apiKey = await OrganizationSettingsService.getEmailApiKey(organizationId);
+    
+    if (!apiKey) {
+      throw new Error('API Key Brevo non configurata');
+    }
+    
+    const apiKeyObj = SibApiV3Sdk.ApiClient.instance.authentications['api-key'];
+    apiKeyObj.apiKey = apiKey;
     
     this.apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
   }
@@ -22,23 +27,89 @@ export class EmailService {
   /**
    * Invia email transazionale
    */
-  async sendEmail(to: string, subject: string, htmlContent: string, textContent?: string) {
+  async sendEmail(
+    organizationId: string,
+    to: string, 
+    subject: string, 
+    htmlContent: string, 
+    textContent?: string
+  ) {
     try {
+      // Verifica se email è abilitata
+      const isEnabled = await OrganizationSettingsService.isEmailEnabled(organizationId);
+      if (!isEnabled) {
+        console.log('📧 Email disabilitate per questa organizzazione');
+        return null;
+      }
+      
+      // Inizializza Brevo con settings dal database
+      await this.initializeBrevo(organizationId);
+      
+      // Recupera settings
+      const settings = await OrganizationSettingsService.getSettings(organizationId);
+      
       const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
       
       sendSmtpEmail.subject = subject;
       sendSmtpEmail.htmlContent = htmlContent;
       sendSmtpEmail.textContent = textContent || this.stripHtml(htmlContent);
-      sendSmtpEmail.sender = this.sender;
+      sendSmtpEmail.sender = {
+        name: settings.emailFromName || 'Soccer Manager',
+        email: settings.emailFrom || 'noreply@soccermanager.com'
+      };
       sendSmtpEmail.to = [{ email: to }];
       
       const result = await this.apiInstance.sendTransacEmail(sendSmtpEmail);
       
+      // Log email inviata
+      await this.logEmail(organizationId, {
+        to,
+        subject,
+        body: htmlContent,
+        status: 'SENT',
+        provider: 'brevo',
+        providerId: result.messageId,
+        sentAt: new Date()
+      });
+      
       console.log(`📧 Email inviata a ${to}: ${subject}`);
       return result;
-    } catch (error) {
+    } catch (error: any) {
+      // Log errore
+      await this.logEmail(organizationId, {
+        to,
+        subject,
+        body: htmlContent,
+        status: 'FAILED',
+        provider: 'brevo',
+        error: error.message
+      });
+      
       console.error('Errore invio email:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Log email nel database
+   */
+  private async logEmail(organizationId: string, data: any) {
+    try {
+      await prisma.emailLog.create({
+        data: {
+          organizationId,
+          to: data.to,
+          subject: data.subject,
+          body: data.body,
+          status: data.status,
+          provider: data.provider,
+          providerId: data.providerId,
+          error: data.error,
+          sentAt: data.sentAt
+        }
+      });
+    } catch (error) {
+      console.error('Errore log email:', error);
     }
   }
 
