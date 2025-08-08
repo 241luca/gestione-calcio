@@ -646,10 +646,10 @@ class StaffService {
     return {
       summary: {
         total: totalStaff,
-        active: byStatus['ACTIVE'] || 0,
-        inactive: byStatus['INACTIVE'] || 0,
+        active: (byStatus as any)['ACTIVE'] || 0,
+        inactive: (byStatus as any)['INACTIVE'] || 0,
         withLicense: await this.countStaffWithLicense(organizationId),
-        volunteers: byContract['VOLUNTEER'] || 0
+        volunteers: (byContract as any)['VOLUNTEER'] || 0
       },
       byRole,
       byContract,
@@ -743,7 +743,7 @@ class StaffService {
     console.log(`Invio email benvenuto a ${staff.email}`);
   }
 
-  private async getStaffByRoleCount(organizationId: string) {
+  private async getStaffByRoleCount(organizationId: string): Promise<Record<string, number>> {
     const result = await prisma.staff.groupBy({
       by: ['staffRole'],
       where: {
@@ -759,7 +759,7 @@ class StaffService {
     }), {});
   }
 
-  private async getStaffByContractCount(organizationId: string) {
+  private async getStaffByContractCount(organizationId: string): Promise<Record<string, number>> {
     const result = await prisma.staff.groupBy({
       by: ['contractType'],
       where: {
@@ -775,7 +775,7 @@ class StaffService {
     }), {});
   }
 
-  private async getStaffByStatusCount(organizationId: string) {
+  private async getStaffByStatusCount(organizationId: string): Promise<Record<string, number>> {
     const result = await prisma.staff.groupBy({
       by: ['status'],
       where: {
