@@ -541,9 +541,8 @@ export class PaymentService {
       throw new NotFoundError('Pagamento non trovato o non ancora pagato');
     }
 
-    // Qui andrebbe integrato un servizio di generazione PDF
-    // Per ora restituiamo i dati formattati
-    const receipt = {
+    // Genera dati ricevuta
+    const receiptData = {
       receiptNumber: `RIC-${payment.organization.id.slice(0, 4)}-${Date.now()}`,
       date: new Date(),
       organization: {
@@ -562,17 +561,138 @@ export class PaymentService {
         type: payment.type.name,
         description: payment.description,
         amount: payment.amount,
-        paidAmount: payment.paidAmount,
-        paidDate: payment.paidDate,
+        paidAmount: payment.paidAmount || payment.amount,
+        paidDate: payment.paidDate || new Date(),
         paymentMethod: payment.paymentMethod
       }
     };
 
-    console.log('✅ Ricevuta generata:', receipt.receiptNumber);
-    return receipt;
+    // Genera PDF
+    const pdfBuffer = await PDFService.generatePaymentReceipt(receiptData);
+
+    console.log('✅ Ricevuta generata:', receiptData.receiptNumber);
+    
+    return {
+      ...receiptData,
+      pdf: pdfBuffer.toString('base64')
+    };
   }
 
-  // Metodi helper privati
+  /**
+   * Genera report mensile in PDF
+   */
+  async generateMonthlyReport(organizationId: string, month: Date) {
+    console.log('💰 Generazione report mensile');
+
+    const monthStart = startOfMonth(month);
+    const monthEnd = endOfMonth(month);
+
+    // Recupera organizzazione
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId }
+    });
+
+    if (!organization) {
+      throw new NotFoundError('Organizzazione non trovata');
+    }
+
+    // Recupera pagamenti del mese
+    const payments = await prisma.payment.findMany({
+      where: {
+        organizationId,
+        dueDate: {
+          gte: monthStart,
+          lte: monthEnd
+        }
+      },
+      include: {
+        athlete: true,
+        type: true
+      },
+      orderBy: [
+        { status: 'asc' },
+        { dueDate: 'asc' }
+      ]
+    });
+
+    // Calcola statistiche
+    const stats = await this.getPaymentStats(organizationId, month);
+
+    // Prepara dati per report
+    const reportData = {
+      organization,
+      month: format(month, 'MMMM yyyy', { locale: it }),
+      payments: payments.map(p => ({
+        athlete: {
+          name: `${p.athlete.firstName} ${p.athlete.lastName}`,
+          fiscalCode: p.athlete.fiscalCode
+        },
+        type: p.type.name,
+        amount: p.amount,
+        paidAmount: p.paidAmount || 0,
+        dueDate: p.dueDate,
+        paidDate: p.paidDate,
+        status: p.status,
+        paymentMethod: p.paymentMethod
+      })),
+      stats
+    };
+
+    // Genera PDF
+    const pdfBuffer = await PDFService.generateMonthlyPaymentReport(reportData);
+
+    console.log('✅ Report mensile generato');
+    
+    return {
+      month: format(month, 'yyyy-MM'),
+      pdf: pdfBuffer.toString('base64'),
+      stats
+    };
+  }
+
+  /**
+   * Esporta pagamenti in Excel per commercialista
+   */
+  async exportToExcel(organizationId: string, fromDate: Date, toDate: Date) {
+    console.log('💰 Export Excel pagamenti');
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        organizationId,
+        dueDate: {
+          gte: fromDate,
+          lte: toDate
+        }
+      },
+      include: {
+        athlete: true,
+        type: true
+      },
+      orderBy: [
+        { dueDate: 'asc' },
+        { athlete: { lastName: 'asc' } }
+      ]
+    });
+
+    const exportData = {
+      payments,
+      period: {
+        from: fromDate,
+        to: toDate
+      }
+    };
+
+    // Genera Excel/CSV
+    const excelBuffer = await PDFService.generateExcelExport(exportData);
+
+    console.log('✅ Export Excel generato');
+    
+    return {
+      filename: `pagamenti_${format(fromDate, 'yyyy-MM-dd')}_${format(toDate, 'yyyy-MM-dd')}.csv`,
+      data: excelBuffer.toString('base64'),
+      mimeType: 'text/csv'
+    };
+  }
 
   private groupPaymentsByAthlete(payments: any[]) {
     const grouped: { [key: string]: any } = {};

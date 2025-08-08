@@ -295,5 +295,52 @@ router.post('/check-overdue', authorize('payments:admin'), async (req: AuthReque
   }
 });
 
+/**
+ * GET /api/v1/payments/report/monthly
+ * Genera report mensile PDF
+ */
+router.get('/report/monthly', authorize('payments:read'), async (req: AuthRequest, res, next) => {
+  try {
+    console.log('💰 GET /payments/report/monthly - Generazione report mensile');
+    const organizationId = req.user!.organizationId;
+    const month = req.query.month ? new Date(req.query.month as string) : new Date();
+
+    const report = await paymentService.generateMonthlyReport(organizationId, month);
+
+    res.json(ResponseFormatter.success(report, {
+      message: 'Report mensile generato'
+    }));
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/payments/export/excel
+ * Esporta pagamenti in Excel/CSV
+ */
+router.get('/export/excel', authorize('payments:read'), async (req: AuthRequest, res, next) => {
+  try {
+    console.log('💰 GET /payments/export/excel - Export Excel');
+    const organizationId = req.user!.organizationId;
+    
+    const fromDate = req.query.fromDate 
+      ? new Date(req.query.fromDate as string)
+      : startOfMonth(new Date());
+    
+    const toDate = req.query.toDate
+      ? new Date(req.query.toDate as string)
+      : endOfMonth(new Date());
+
+    const exportData = await paymentService.exportToExcel(organizationId, fromDate, toDate);
+
+    res.json(ResponseFormatter.success(exportData, {
+      message: 'Export generato con successo'
+    }));
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Export del router
 export default router;
