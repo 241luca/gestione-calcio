@@ -226,14 +226,41 @@ export class AthleteService {
         }
       }
 
+      // Prepara i dati per l'aggiornamento - rimuovi campi che non esistono nel DB
+      const updateData: any = {};
+      
+      // Campi base sempre presenti nel modello Athlete
+      if (data.firstName !== undefined) updateData.firstName = data.firstName;
+      if (data.lastName !== undefined) updateData.lastName = data.lastName;
+      if (data.birthDate !== undefined) updateData.birthDate = new Date(data.birthDate);
+      if (data.fiscalCode !== undefined) updateData.fiscalCode = data.fiscalCode;
+      if (data.email !== undefined) updateData.email = data.email;
+      if (data.phone !== undefined) updateData.phone = data.phone;
+      if (data.address !== undefined) updateData.address = data.address;
+      if (data.city !== undefined) updateData.city = data.city;
+      if (data.postalCode !== undefined) updateData.postalCode = data.postalCode;
+      if (data.parentName !== undefined) updateData.parentName = data.parentName;
+      if (data.parentPhone !== undefined) updateData.parentPhone = data.parentPhone;
+      if (data.parentEmail !== undefined) updateData.parentEmail = data.parentEmail;
+      if (data.notes !== undefined) updateData.notes = data.notes;
+      if (data.status !== undefined) updateData.status = data.status;
+      if (data.teamId !== undefined) updateData.teamId = data.teamId;
+      if (data.positionId !== undefined) updateData.positionId = data.positionId;
+      if (data.jerseyNumber !== undefined) updateData.jerseyNumber = data.jerseyNumber;
+      if (data.transportZoneId !== undefined) updateData.transportZoneId = data.transportZoneId;
+      
+      // Campo medicalExpiryDate esiste nel modello
+      if (data.medicalExpiryDate !== undefined) {
+        updateData.medicalExpiryDate = data.medicalExpiryDate ? new Date(data.medicalExpiryDate) : null;
+      }
+      
+      // IGNORA campi che non esistono nel modello
+      // medicalCertificateDate e medicalCertificateExpiry NON esistono nel modello Athlete
+
       // Aggiorna l'atleta
       const updated = await prisma.athlete.update({
         where: { id },
-        data: {
-          ...data,
-          birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
-          medicalExpiryDate: data.medicalExpiryDate ? new Date(data.medicalExpiryDate) : undefined
-        },
+        data: updateData,
         include: {
           team: true,
           position: true,
