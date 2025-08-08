@@ -10,6 +10,7 @@ import SchedulerService from './services/scheduler.service';
 import authRoutes from './routes/auth.routes';
 import athleteRoutes from './routes/athlete.routes';
 import notificationRoutes from './routes/notification.routes';
+import notificationTemplatesRoutes from './routes/notification-templates.routes';
 import documentRoutes from './routes/document.routes';
 import paymentRoutes from './routes/payment.routes';
 import teamsRoutes from './routes/teams.routes';
@@ -21,6 +22,7 @@ import sponsorRoutes from './routes/sponsors.routes';
 import venueRoutes from './routes/venues.routes';
 import reportRoutes from './routes/reports.routes';
 import schedulerRoutes from './routes/scheduler.routes';
+import settingsRoutes from './routes/settings.routes';
 
 // Carica le variabili d'ambiente
 dotenv.config();
@@ -73,6 +75,7 @@ app.get('/', (req: Request, res: Response) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/athletes', athleteRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/notification-templates', notificationTemplatesRoutes);
 app.use('/api/v1/documents', documentRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/teams', teamsRoutes);
@@ -84,6 +87,7 @@ app.use('/api/v1/sponsors', sponsorRoutes);
 app.use('/api/v1/venues', venueRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/scheduler', schedulerRoutes);
+app.use('/api/v1/settings', settingsRoutes);
 
 // Route health check
 app.get('/health', async (req: Request, res: Response) => {
