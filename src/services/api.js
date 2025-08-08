@@ -84,7 +84,12 @@ export const authService = {
 export const athleteService = {
   getAll: async (params = {}) => {
     try {
-      const response = await api.get('/athletes', { params });
+      // Imposta un limite più alto per vedere più atleti
+      const defaultParams = {
+        limit: 500,  // Mostra fino a 500 atleti
+        ...params
+      };
+      const response = await api.get('/athletes', { params: defaultParams });
       return response.data;
     } catch (error) {
       console.error('Errore nel recupero atleti:', error);

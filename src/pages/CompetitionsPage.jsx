@@ -24,7 +24,7 @@ function CompetitionsPage() {
   const loadCompetitions = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/v1/competitions');
+      const response = await api.get('/competitions');
       if (response.data.success) {
         setCompetitions(response.data.data || []);
       }
@@ -38,7 +38,7 @@ function CompetitionsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await api.post('/api/v1/competitions', formData);
+      const response = await api.post('/competitions', formData);
       if (response.data.success) {
         setCompetitions([...competitions, response.data.data]);
         setShowModal(false);
