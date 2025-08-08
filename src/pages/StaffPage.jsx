@@ -44,35 +44,20 @@ function StaffPage() {
       setLoading(true);
       const response = await api.get('/staff');
       if (response.data.success) {
-        setStaff(response.data.data || []);
+        // Gestisce sia formato array che formato con pagination
+        const staffData = response.data.data;
+        if (Array.isArray(staffData)) {
+          setStaff(staffData);
+        } else if (staffData && staffData.staffMembers) {
+          setStaff(staffData.staffMembers || []);
+        } else {
+          setStaff([]);
+        }
       }
     } catch (error) {
       console.error('Errore caricamento staff:', error);
-      // Dati di esempio se l'API non è ancora pronta
-      setStaff([
-        {
-          id: '1',
-          firstName: 'Mario',
-          lastName: 'Rossi',
-          role: 'ALLENATORE',
-          email: 'mario.rossi@team.com',
-          phone: '+39 333 1234567',
-          qualification: 'UEFA A',
-          team: { name: 'Under 14' },
-          startDate: '2024-01-01'
-        },
-        {
-          id: '2',
-          firstName: 'Luigi',
-          lastName: 'Verdi',
-          role: 'ASSISTENTE',
-          email: 'luigi.verdi@team.com',
-          phone: '+39 333 7654321',
-          qualification: 'UEFA B',
-          team: { name: 'Under 12' },
-          startDate: '2024-02-01'
-        }
-      ]);
+      toast.error('Errore nel caricamento dello staff');
+      setStaff([]);
     } finally {
       setLoading(false);
     }
