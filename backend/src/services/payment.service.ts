@@ -173,6 +173,48 @@ export class PaymentService {
   }
 
   /**
+   * Recupera tutti i pagamenti dell'organizzazione con filtri
+   */
+  async getPaymentsByOrganization(
+    organizationId: string,
+    filters?: {
+      status?: PaymentStatus;
+      athleteId?: string;
+      typeId?: number;
+      fromDate?: Date;
+      toDate?: Date;
+    }
+  ) {
+    console.log('💰 Recupero pagamenti organizzazione con filtri:', filters);
+
+    const where: any = { organizationId };
+
+    if (filters) {
+      if (filters.status) where.status = filters.status;
+      if (filters.athleteId) where.athleteId = filters.athleteId;
+      if (filters.typeId) where.typeId = filters.typeId;
+      if (filters.fromDate || filters.toDate) {
+        where.dueDate = {};
+        if (filters.fromDate) where.dueDate.gte = filters.fromDate;
+        if (filters.toDate) where.dueDate.lte = filters.toDate;
+      }
+    }
+
+    const payments = await prisma.payment.findMany({
+      where,
+      include: {
+        athlete: true,
+        type: true
+      },
+      orderBy: {
+        dueDate: 'desc'
+      }
+    });
+
+    return payments;
+  }
+
+  /**
    * Aggiorna lo stato di un pagamento
    */
   async updatePaymentStatus(id: string, status: PaymentStatus, organizationId: string) {
