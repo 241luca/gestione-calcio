@@ -3,7 +3,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate, authorize } from '../middleware/auth.middleware';
 import { ResponseFormatter } from '../utils/responseFormatter';
 import { BadRequestError } from '../utils/errors';
-import EmailService from '../services/email.service';
+import { EmailService } from '../services/email.service';
 import OrganizationSettingsService from '../services/organization-settings.service';
 import UserPreferencesService from '../services/user-preferences.service';
 import NotificationTemplatesService from '../services/notification-templates.service';
@@ -57,7 +57,7 @@ router.get('/notifications',
         usersWithEmail: await prisma.user.count({
           where: {
             organizationId: req.user.organizationId,
-            email: { not: null }
+            email: { not: '' }
           }
         })
       };
@@ -140,10 +140,12 @@ router.post('/notifications/test-email',
         <p><small>Inviata il ${new Date().toLocaleString('it-IT')}</small></p>
       `;
 
-      await EmailService.sendEmail(
+      await emailService.sendEmail(
+        req.user.organizationId,
         to || req.user.email,
         'Test Configurazione Email - Soccer Manager',
-        testEmail
+        testEmail,
+        'Email di test dal sistema Soccer Manager'
       );
 
       res.json(ResponseFormatter.success({
@@ -213,7 +215,7 @@ router.get('/notifications/stats',
         usersWithEmail: await prisma.user.count({
           where: {
             organizationId: req.user.organizationId,
-            email: { not: null }
+            email: { not: '' }
           }
         }),
         activeUsers: await prisma.user.count({

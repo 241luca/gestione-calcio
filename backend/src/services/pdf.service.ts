@@ -108,9 +108,9 @@ export class PDFService {
       
       if (data.payment.paidAmount < data.payment.amount) {
         const remaining = data.payment.amount - data.payment.paidAmount;
-        doc.text(`Rimanente: € ${remaining.toFixed(2)}`, { 
-          color: 'red' 
-        });
+        doc.fillColor('red')
+           .text(`Rimanente: € ${remaining.toFixed(2)}`)
+           .fillColor('black');
       }
       
       doc.text(`Data pagamento: ${format(data.payment.paidDate, 'dd/MM/yyyy')}`);

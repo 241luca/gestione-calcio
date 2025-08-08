@@ -18,8 +18,10 @@ export class EmailService {
       throw new Error('API Key Brevo non configurata');
     }
     
-    const apiKeyObj = SibApiV3Sdk.ApiClient.instance.authentications['api-key'];
-    apiKeyObj.apiKey = apiKey;
+    // Inizializza API client in modo diverso
+    const defaultClient = require('@sendinblue/client');
+    const apiKeyAuth = defaultClient.authentications['api-key'];
+    apiKeyAuth.apiKey = apiKey;
     
     this.apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
   }
@@ -117,6 +119,7 @@ export class EmailService {
    * Invia email di notifica per documenti in scadenza
    */
   async sendDocumentExpiryEmail(
+    organizationId: string,
     userEmail: string,
     athleteName: string,
     documentType: string,
@@ -172,13 +175,14 @@ export class EmailService {
       </html>
     `;
     
-    return this.sendEmail(userEmail, subject, htmlContent);
+    return this.sendEmail(organizationId, userEmail, subject, htmlContent);
   }
 
   /**
    * Invia email di notifica per pagamenti scaduti
    */
   async sendPaymentOverdueEmail(
+    organizationId: string,
     userEmail: string,
     athleteName: string,
     amount: number,
@@ -225,13 +229,13 @@ export class EmailService {
       </html>
     `;
     
-    return this.sendEmail(userEmail, subject, htmlContent);
+    return this.sendEmail(organizationId, userEmail, subject, htmlContent);
   }
 
   /**
    * Invia digest giornaliero delle notifiche
    */
-  async sendDailyDigest(userEmail: string, notifications: any[]) {
+  async sendDailyDigest(organizationId: string, userEmail: string, notifications: any[]) {
     if (notifications.length === 0) return;
     
     const subject = `Riepilogo giornaliero - ${notifications.length} notifiche`;
@@ -280,13 +284,14 @@ export class EmailService {
       </html>
     `;
     
-    return this.sendEmail(userEmail, subject, htmlContent);
+    return this.sendEmail(organizationId, userEmail, subject, htmlContent);
   }
 
   /**
    * Invia email di benvenuto per nuovo atleta
    */
   async sendWelcomeEmail(
+    organizationId: string,
     parentEmail: string,
     athleteName: string,
     teamName: string
@@ -341,7 +346,7 @@ export class EmailService {
       </html>
     `;
     
-    return this.sendEmail(parentEmail, subject, htmlContent);
+    return this.sendEmail(organizationId, parentEmail, subject, htmlContent);
   }
 
   /**
