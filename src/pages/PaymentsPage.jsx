@@ -126,7 +126,15 @@ const PaymentsPage = () => {
             }
           }
         );
-        setAthletes(athletesRes.data.data || []);
+        // Gestisci sia il formato con pagination che l'array diretto
+        const athletesData = athletesRes.data.data;
+        if (Array.isArray(athletesData)) {
+          setAthletes(athletesData);
+        } else if (athletesData && athletesData.athletes) {
+          setAthletes(athletesData.athletes);
+        } else {
+          setAthletes([]);
+        }
       }
       
       // Carica tipi pagamento (solo una volta)
@@ -595,7 +603,7 @@ const PaymentsPage = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tutti</option>
-              {athletes.map(athlete => (
+              {Array.isArray(athletes) && athletes.map(athlete => (
                 <option key={athlete.id} value={athlete.id}>
                   {athlete.firstName} {athlete.lastName}
                 </option>
@@ -808,7 +816,7 @@ const PaymentsPage = () => {
                     required
                   >
                     <option value="">Seleziona atleta...</option>
-                    {athletes.map(athlete => (
+                    {Array.isArray(athletes) && athletes.map(athlete => (
                       <option key={athlete.id} value={athlete.id}>
                         {athlete.firstName} {athlete.lastName}
                       </option>
@@ -1050,7 +1058,7 @@ const PaymentsPage = () => {
                         Deseleziona tutti
                       </button>
                     </div>
-                    {athletes.map(athlete => (
+                    {Array.isArray(athletes) && athletes.map(athlete => (
                       <label key={athlete.id} className="flex items-center py-1">
                         <input
                           type="checkbox"
