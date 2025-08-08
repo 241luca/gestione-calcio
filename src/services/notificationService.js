@@ -1,7 +1,5 @@
 // src/services/notificationService.js
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+import api from './api';
 
 class NotificationService {
   /**
@@ -9,18 +7,13 @@ class NotificationService {
    */
   async getNotifications(filters = {}, page = 1, limit = 20) {
     try {
-      const params = new URLSearchParams({
+      const params = {
         page: page.toString(),
         limit: limit.toString(),
         ...filters
-      });
+      };
 
-      const response = await axios.get(`${API_URL}/notifications?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
+      const response = await api.get('/notifications', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -33,16 +26,7 @@ class NotificationService {
    */
   async markAsRead(notificationId) {
     try {
-      const response = await axios.put(
-        `${API_URL}/notifications/${notificationId}/read`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
+      const response = await api.put(`/notifications/${notificationId}/read`, {});
       return response.data;
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -55,16 +39,7 @@ class NotificationService {
    */
   async markAllAsRead() {
     try {
-      const response = await axios.put(
-        `${API_URL}/notifications/mark-all-read`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
+      const response = await api.put('/notifications/mark-all-read', {});
       return response.data;
     } catch (error) {
       console.error('Error marking all as read:', error);
@@ -77,15 +52,7 @@ class NotificationService {
    */
   async deleteNotification(notificationId) {
     try {
-      const response = await axios.delete(
-        `${API_URL}/notifications/${notificationId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
+      const response = await api.delete(`/notifications/${notificationId}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -98,16 +65,7 @@ class NotificationService {
    */
   async createNotification(data) {
     try {
-      const response = await axios.post(
-        `${API_URL}/notifications`,
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
+      const response = await api.post('/notifications', data);
       return response.data;
     } catch (error) {
       console.error('Error creating notification:', error);
@@ -120,19 +78,10 @@ class NotificationService {
    */
   async sendBulkNotifications(userIds, notificationData) {
     try {
-      const response = await axios.post(
-        `${API_URL}/notifications/send-bulk`,
-        {
-          userIds,
-          ...notificationData
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
+      const response = await api.post('/notifications/send-bulk', {
+        userIds,
+        ...notificationData
+      });
       return response.data;
     } catch (error) {
       console.error('Error sending bulk notifications:', error);
@@ -145,16 +94,7 @@ class NotificationService {
    */
   async sendToOrganization(notificationData) {
     try {
-      const response = await axios.post(
-        `${API_URL}/notifications/send-to-organization`,
-        notificationData,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
+      const response = await api.post('/notifications/send-to-organization', notificationData);
       return response.data;
     } catch (error) {
       console.error('Error sending to organization:', error);
@@ -167,16 +107,7 @@ class NotificationService {
    */
   async sendToTeam(teamId, notificationData) {
     try {
-      const response = await axios.post(
-        `${API_URL}/notifications/send-to-team/${teamId}`,
-        notificationData,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
+      const response = await api.post(`/notifications/send-to-team/${teamId}`, notificationData);
       return response.data;
     } catch (error) {
       console.error('Error sending to team:', error);
@@ -189,15 +120,7 @@ class NotificationService {
    */
   async getTemplates() {
     try {
-      const response = await axios.get(
-        `${API_URL}/notifications/templates`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
+      const response = await api.get('/notifications/templates');
       return response.data;
     } catch (error) {
       console.error('Error fetching templates:', error);
@@ -210,16 +133,7 @@ class NotificationService {
    */
   async sendReminders(type = 'all') {
     try {
-      const response = await axios.post(
-        `${API_URL}/notifications/send-reminders`,
-        { type },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
+      const response = await api.post('/notifications/send-reminders', { type });
       return response.data;
     } catch (error) {
       console.error('Error sending reminders:', error);
@@ -232,15 +146,7 @@ class NotificationService {
    */
   async getStats() {
     try {
-      const response = await axios.get(
-        `${API_URL}/notifications/stats`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
+      const response = await api.get('/notifications/stats');
       return response.data;
     } catch (error) {
       console.error('Error fetching stats:', error);
