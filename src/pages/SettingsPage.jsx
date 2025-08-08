@@ -10,7 +10,8 @@ import {
   PencilIcon,
   CheckIcon,
   XMarkIcon,
-  PhotoIcon
+  PhotoIcon,
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 
@@ -422,6 +423,61 @@ const SettingsPage = () => {
 
               <div className="space-y-4">
                 <h3 className="font-medium text-gray-700">Eventi da Notificare</h3>
+                
+                {/* Link alle configurazioni avanzate */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <a
+                    href="/email-settings"
+                    className="p-4 border-2 border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <EnvelopeIcon className="h-8 w-8 text-blue-600" />
+                      <div>
+                        <h4 className="font-semibold text-blue-900">Configurazione Email</h4>
+                        <p className="text-sm text-gray-600">Configura Brevo per l'invio email</p>
+                      </div>
+                    </div>
+                  </a>
+                  
+                  <a
+                    href="/notification-templates"
+                    className="p-4 border-2 border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <BellIcon className="h-8 w-8 text-green-600" />
+                      <div>
+                        <h4 className="font-semibold text-green-900">Template Notifiche</h4>
+                        <p className="text-sm text-gray-600">Personalizza i messaggi</p>
+                      </div>
+                    </div>
+                  </a>
+                  
+                  <a
+                    href="/scheduler"
+                    className="p-4 border-2 border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <CogIcon className="h-8 w-8 text-purple-600" />
+                      <div>
+                        <h4 className="font-semibold text-purple-900">Scheduler</h4>
+                        <p className="text-sm text-gray-600">Gestisci job automatici</p>
+                      </div>
+                    </div>
+                  </a>
+                  
+                  <a
+                    href="/test-notifications"
+                    className="p-4 border-2 border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <BellIcon className="h-8 w-8 text-orange-600" />
+                      <div>
+                        <h4 className="font-semibold text-orange-900">Test Notifiche</h4>
+                        <p className="text-sm text-gray-600">Prova il sistema notifiche</p>
+                      </div>
+                    </div>
+                  </a>
+                </div>
                 
                 <label className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                   <div>

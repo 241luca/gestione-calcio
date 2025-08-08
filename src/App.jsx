@@ -16,6 +16,8 @@ import TransportPage from './pages/TransportPage';
 import NotificationsPage from './pages/NotificationsPage';
 import TestNotifications from './pages/TestNotifications';
 import SchedulerPage from './pages/SchedulerPage';
+import EmailSettingsPage from './pages/EmailSettingsPage';
+import NotificationTemplatesPage from './pages/NotificationTemplatesPage';
 import CompetitionsPage from './pages/CompetitionsPage';
 import StaffPage from './pages/StaffPage';
 import SponsorsPage from './pages/SponsorsPage';
@@ -81,6 +83,8 @@ function App() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="test-notifications" element={<TestNotifications />} />
           <Route path="scheduler" element={<SchedulerPage />} />
+          <Route path="email-settings" element={<EmailSettingsPage />} />
+          <Route path="notification-templates" element={<NotificationTemplatesPage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="reports" element={<ReportsPage />} />
