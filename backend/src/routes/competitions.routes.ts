@@ -117,6 +117,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
         name,
         type,
         category,
+        season: '2024/2025', // Default season
         startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : undefined,
         description

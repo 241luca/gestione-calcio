@@ -254,7 +254,7 @@ router.get('/stats/summary', async (req: AuthRequest, res, next) => {
 
     res.json(ResponseFormatter.success({
       activeSponsors,
-      totalRevenue: totalRevenue._sum.amount || 0,
+      totalRevenue: totalRevenue?._sum?.amount || 0,
       expiringSponsors,
       lastUpdated: new Date()
     }));

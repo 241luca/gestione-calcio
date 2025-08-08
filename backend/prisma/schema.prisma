@@ -340,6 +340,7 @@ model Competition {
   id             String       @id @default(uuid())
   name           String
   type           String       // CAMPIONATO, COPPA, TORNEO, AMICHEVOLE
+  category       String       // U12, U14, U16, etc.
   season         String
   startDate      DateTime
   endDate        DateTime?
@@ -364,8 +365,10 @@ model Venue {
   province       String?
   capacity       Int?
   type           String       @default("HOME") // HOME, AWAY, NEUTRAL
+  isHome         Boolean      @default(false) // Campo di casa
   surface        String?      // ERBA_NATURALE, ERBA_SINTETICA, TERRA
   hasLighting    Boolean      @default(false)
+  notes          String?      // Note aggiuntive
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   createdAt      DateTime     @default(now())
@@ -592,7 +595,10 @@ model Staff {
   teamId         String?
   email          String?
   phone          String?
+  licenseNumber  String?      // Numero tesserino/licenza
+  licenseExpiry  DateTime?    // Scadenza licenza
   qualification  String?      // Qualifiche (es. "UEFA A", "Laurea Scienze Motorie")
+  qualifications String?      // Qualifiche multiple
   startDate      DateTime?
   contractEnd    DateTime?
   salary         Float?
@@ -614,14 +620,18 @@ model Sponsor {
   name           String
   type           String       // MAIN, SECONDARY, TECHNICAL
   contactPerson  String?
+  contactEmail   String?      // Email contatto
+  contactPhone   String?      // Telefono contatto
   email          String?
   phone          String?
   website        String?
   logoUrl        String?
   amount         Float?       // Importo annuale
+  status         String       @default("ACTIVE") // ACTIVE, INACTIVE, EXPIRED
   startDate      DateTime?
   endDate        DateTime?
   description    String?
+  notes          String?      // Note aggiuntive
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
