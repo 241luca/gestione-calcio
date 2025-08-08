@@ -1,5 +1,5 @@
 // backend/src/services/scheduler.service.ts
-import cron from 'node-cron';
+import * as cron from 'node-cron';
 import { NotificationService } from './notification.service';
 import { PrismaClient } from '@prisma/client';
 
@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 const notificationService = new NotificationService();
 
 class SchedulerService {
-  private jobs: Map<string, cron.ScheduledTask> = new Map();
+  private jobs: Map<string, any> = new Map();
 
   /**
    * Inizializza tutti i job schedulati

@@ -5,14 +5,17 @@ import SocketService from './socket.service';
 import { ResponseFormatter } from '../utils/responseFormatter';
 import { addDays, differenceInDays, startOfMonth, endOfMonth, format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { PDFService } from './pdf.service';
 
 const prisma = new PrismaClient();
 
 export class PaymentService {
   private notificationService: NotificationService;
+  private pdfService: PDFService;
 
   constructor() {
     this.notificationService = new NotificationService();
+    this.pdfService = new PDFService();
     console.log('💰 Payment Service inizializzato');
   }
 
@@ -547,28 +550,28 @@ export class PaymentService {
       date: new Date(),
       organization: {
         name: payment.organization.name,
-        taxCode: payment.organization.taxCode,
-        address: payment.organization.address,
-        phone: payment.organization.phone,
-        email: payment.organization.email
+        taxCode: payment.organization.taxCode || '',
+        address: payment.organization.address || undefined,
+        phone: payment.organization.phone || undefined,
+        email: payment.organization.email || undefined
       },
       athlete: {
         name: `${payment.athlete.firstName} ${payment.athlete.lastName}`,
-        fiscalCode: payment.athlete.fiscalCode,
+        fiscalCode: payment.athlete.fiscalCode || undefined,
         birthDate: payment.athlete.birthDate
       },
       payment: {
         type: payment.type.name,
-        description: payment.description,
+        description: payment.description || '',
         amount: payment.amount,
         paidAmount: payment.paidAmount || payment.amount,
         paidDate: payment.paidDate || new Date(),
-        paymentMethod: payment.paymentMethod
+        paymentMethod: payment.paymentMethod || undefined
       }
     };
 
     // Genera PDF
-    const pdfBuffer = await PDFService.generatePaymentReceipt(receiptData);
+    const pdfBuffer = await this.pdfService.generatePaymentReceipt(receiptData);
 
     console.log('✅ Ricevuta generata:', receiptData.receiptNumber);
     
@@ -639,7 +642,7 @@ export class PaymentService {
     };
 
     // Genera PDF
-    const pdfBuffer = await PDFService.generateMonthlyPaymentReport(reportData);
+    const pdfBuffer = await this.pdfService.generateMonthlyPaymentReport(reportData);
 
     console.log('✅ Report mensile generato');
     
@@ -683,7 +686,7 @@ export class PaymentService {
     };
 
     // Genera Excel/CSV
-    const excelBuffer = await PDFService.generateExcelExport(exportData);
+    const excelBuffer = await this.pdfService.generateExcelExport(exportData);
 
     console.log('✅ Export Excel generato');
     
