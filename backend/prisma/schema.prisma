@@ -298,14 +298,54 @@ model PaymentType {
   id          Int       @id @default(autoincrement())
   name        String    @unique
   description String?
-  amount      Float     // Importo standard
+  amount      Float     @default(0)
   isRecurring Boolean   @default(false)
   frequency   String?   // MONTHLY, YEARLY, ONE_TIME
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relazioni
   payments    Payment[]
 
   @@map("payment_types")
+}
+
+// Pagamenti
+model Payment {
+  id             String         @id @default(uuid())
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  organizationId String
+  athlete        Athlete        @relation(fields: [athleteId], references: [id])
+  athleteId      String
+  type           PaymentType    @relation(fields: [typeId], references: [id])
+  typeId         Int
+  amount         Float
+  paidAmount     Float?         @default(0)
+  dueDate        DateTime
+  paidDate       DateTime?
+  status         PaymentStatus  @default(PENDING)
+  paymentMethod  String?
+  description    String?
+  notes          String?
+  createdBy      User          @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById    String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@index([athleteId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("payments")
+}
+
+// Stati pagamento
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
 }
 
 // Pagamenti

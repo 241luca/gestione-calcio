@@ -45,7 +45,9 @@ router.use(authenticate);
 router.get('/', async (req: AuthRequest, res, next) => {
   try {
     console.log('💰 GET /payments - Recupero pagamenti organizzazione');
+    console.log('User:', req.user);
     const organizationId = req.user!.organizationId;
+    console.log('Organization ID:', organizationId);
     
     // Parsing dei filtri dalla query string
     const filters: any = {};
@@ -62,6 +64,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       filters
     }));
   } catch (error) {
+    console.error('❌ Errore in GET /payments:', error);
     next(error);
   }
 });
@@ -192,13 +195,16 @@ router.get('/overdue', authorize('payments:read'), async (req: AuthRequest, res,
 router.get('/stats', async (req: AuthRequest, res, next) => {
   try {
     console.log('💰 GET /payments/stats - Statistiche pagamenti');
+    console.log('User:', req.user);
     const organizationId = req.user!.organizationId;
+    console.log('Organization ID:', organizationId);
     const month = req.query.month ? new Date(req.query.month as string) : undefined;
 
     const stats = await paymentService.getPaymentStats(organizationId, month);
 
     res.json(ResponseFormatter.success(stats));
   } catch (error) {
+    console.error('❌ Errore in GET /payments/stats:', error);
     next(error);
   }
 });

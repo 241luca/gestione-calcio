@@ -83,7 +83,9 @@ class AuthService {
           userId: user.id,
           email: user.email,
           organizationId: user.organizationId,
-          roleId: user.roleId
+          roleId: user.roleId,
+          roleName: user.role?.name,
+          permissions: user.role?.permissions || []
         },
         process.env.JWT_SECRET!,
         {
@@ -186,7 +188,9 @@ class AuthService {
           userId: user.id,
           email: user.email,
           organizationId: user.organizationId,
-          roleId: user.roleId
+          roleId: user.roleId,
+          roleName: user.role?.name,
+          permissions: user.role?.permissions || []
         },
         process.env.JWT_SECRET!,
         {
