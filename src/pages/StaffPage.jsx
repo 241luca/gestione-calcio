@@ -39,7 +39,7 @@ function StaffPage() {
   const loadStaff = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/v1/staff');
+      const response = await api.get('/staff');
       if (response.data.success) {
         setStaff(response.data.data || []);
       }
@@ -77,7 +77,7 @@ function StaffPage() {
 
   const loadTeams = async () => {
     try {
-      const response = await api.get('/api/v1/teams');
+      const response = await api.get('/teams');
       if (response.data.success) {
         setTeams(response.data.data || []);
       }
@@ -90,12 +90,12 @@ function StaffPage() {
     e.preventDefault();
     try {
       if (editingStaff) {
-        const response = await api.put(`/api/v1/staff/${editingStaff.id}`, formData);
+        const response = await api.put(`/staff/${editingStaff.id}`, formData);
         if (response.data.success) {
           setStaff(staff.map(s => s.id === editingStaff.id ? response.data.data : s));
         }
       } else {
-        const response = await api.post('/api/v1/staff', formData);
+        const response = await api.post('/staff', formData);
         if (response.data.success) {
           setStaff([...staff, response.data.data]);
         }
@@ -128,7 +128,7 @@ function StaffPage() {
     if (!confirm('Sei sicuro di voler eliminare questo membro dello staff?')) return;
     
     try {
-      await api.delete(`/api/v1/staff/${id}`);
+      await api.delete(`/staff/${id}`);
       setStaff(staff.filter(s => s.id !== id));
     } catch (error) {
       console.error('Errore eliminazione:', error);

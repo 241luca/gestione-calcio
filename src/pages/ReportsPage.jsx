@@ -71,7 +71,7 @@ const ReportsPage = () => {
 
       // Statistiche pagamenti
       try {
-        const paymentsResponse = await api.get('/api/v1/payments/stats');
+        const paymentsResponse = await api.get('/payments/stats');
         if (paymentsResponse.data.success) {
           setPaymentStats(paymentsResponse.data.data);
         }

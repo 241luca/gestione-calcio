@@ -40,7 +40,7 @@ function SponsorsPage() {
   const loadSponsors = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/v1/sponsors');
+      const response = await api.get('/sponsors');
       if (response.data.success) {
         setSponsors(response.data.data || []);
       }
@@ -89,7 +89,7 @@ function SponsorsPage() {
           setSponsors(sponsors.map(s => s.id === editingSponsor.id ? response.data.data : s));
         }
       } else {
-        const response = await api.post('/api/v1/sponsors', formData);
+        const response = await api.post('/sponsors', formData);
         if (response.data.success) {
           setSponsors([...sponsors, response.data.data]);
         }
