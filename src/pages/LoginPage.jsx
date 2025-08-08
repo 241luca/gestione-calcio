@@ -48,8 +48,8 @@ const LoginPage = ({ setIsAuthenticated }) => {
   // Funzione per riempire automaticamente i campi per test
   const fillTestCredentials = () => {
     setFormData({
-      email: 'demo@soccermanager.com',
-      password: 'demo123456'
+      email: 'admin@juventusacademymilano.it',
+      password: 'password123'
     });
     toast.success('Credenziali di test inserite');
   };
@@ -130,8 +130,8 @@ const LoginPage = ({ setIsAuthenticated }) => {
               Usa credenziali di test
             </button>
             <p className="mt-2 text-center text-xs text-gray-500">
-              Email: demo@soccermanager.com<br />
-              Password: demo123456
+              Email: admin@juventusacademymilano.it<br />
+              Password: password123
             </p>
           </div>
         </div>

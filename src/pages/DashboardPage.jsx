@@ -57,7 +57,7 @@ const DashboardPage = () => {
 
       // Carica documenti in scadenza
       try {
-        const docsResponse = await api.get('/api/v1/documents/expiring?days=30');
+        const docsResponse = await api.get('/documents/expiring?days=30');
         if (docsResponse.data.success) {
           const docs = docsResponse.data.data || [];
           setExpiringDocs(docs.slice(0, 5)); // Prendi i primi 5
@@ -72,7 +72,7 @@ const DashboardPage = () => {
 
       // Carica pagamenti scaduti
       try {
-        const paymentsResponse = await api.get('/api/v1/payments/overdue');
+        const paymentsResponse = await api.get('/payments/overdue');
         if (paymentsResponse.data.success && paymentsResponse.data.data) {
           const overdueData = paymentsResponse.data.data;
           setOverduePayments({
@@ -91,7 +91,7 @@ const DashboardPage = () => {
 
       // Carica prossime partite
       try {
-        const matchesResponse = await api.get('/api/v1/matches/upcoming?limit=5');
+        const matchesResponse = await api.get('/matches/upcoming?limit=5');
         if (matchesResponse.data.success) {
           const matches = matchesResponse.data.data || [];
           setUpcomingMatches(matches);
