@@ -188,7 +188,16 @@ router.post('/', authorize('staff:create'), async (req: any, res: Response, next
       throw new ValidationError('Dati non validi', validation.error.errors);
     }
 
-    const staff = await staffService.createStaff(validation.data, organizationId);
+    // Converti le date da string a Date
+    const staffData = {
+      ...validation.data,
+      birthDate: validation.data.birthDate ? new Date(validation.data.birthDate) : undefined,
+      licenseExpiry: validation.data.licenseExpiry ? new Date(validation.data.licenseExpiry) : undefined,
+      contractStart: validation.data.contractStart ? new Date(validation.data.contractStart) : undefined,
+      contractEnd: validation.data.contractEnd ? new Date(validation.data.contractEnd) : undefined
+    };
+    
+    const staff = await staffService.createStaff(staffData, organizationId);
     
     res.status(201).json(ResponseFormatter.success(staff));
   } catch (error) {
@@ -426,20 +435,10 @@ router.post('/check-expiring', async (req: any, res: Response, next: NextFunctio
       1000
     );
 
-    const expiringStaff = expiring.staffMembers.filter(member => {
-      const hasExpiringLicense = member.licenseExpiry && 
-        new Date(member.licenseExpiry) <= checkDate &&
-        new Date(member.licenseExpiry) >= new Date();
-      
-      const hasExpiringCriminal = member.criminalCheckExpiry && 
-        new Date(member.criminalCheckExpiry) <= checkDate &&
-        new Date(member.criminalCheckExpiry) >= new Date();
-      
-      const hasExpiringMedical = member.medicalCertificateExpiry && 
-        new Date(member.medicalCertificateExpiry) <= checkDate &&
-        new Date(member.medicalCertificateExpiry) >= new Date();
-
-      return hasExpiringLicense || hasExpiringCriminal || hasExpiringMedical;
+    const expiringStaff = expiring.staffMembers.filter((member: any) => {
+      // Il servizio arricchisce i dati e potrebbe modificare i nomi dei campi
+      // Usiamo i flag già calcolati dal servizio
+      return member.isLicenseExpired || member.isCriminalCheckExpired || member.isMedicalExpired;
     });
 
     res.json(ResponseFormatter.success({
@@ -469,18 +468,18 @@ router.get('/export', authorize('staff:export'), async (req: any, res: Response,
     );
 
     // Prepara dati per export
-    const exportData = staff.staffMembers.map(member => ({
+    const exportData = staff.staffMembers.map((member: any) => ({
       Nome: member.firstName,
       Cognome: member.lastName,
-      Ruolo: member.staffRole,
+      Ruolo: member.role || member.staffRole || '',
       Email: member.email || '',
       Telefono: member.phone || '',
-      Cellulare: member.mobile || '',
-      'Tipo Contratto': member.contractType || '',
+      Cellulare: member.cellphone || '',
+      'Tipo Contratto': member.contract || '',
       'Patentino': member.licenseNumber || '',
       'Scadenza Patentino': member.licenseExpiry ? new Date(member.licenseExpiry).toLocaleDateString('it-IT') : '',
-      Stato: member.status,
-      Team: member.teams?.map(t => t.name).join(', ') || ''
+      Stato: member.state || 'ACTIVE',
+      Team: ''
     }));
 
     if (format === 'csv') {

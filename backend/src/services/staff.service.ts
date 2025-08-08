@@ -165,15 +165,18 @@ class StaffService {
       prisma.staff.count({ where })
     ]);
 
-    // Arricchisci i dati
-    const enrichedStaff = staffMembers.map(member => ({
-      ...member,
-      fullName: `${member.firstName} ${member.lastName}`,
-      isLicenseExpired: member.licenseExpiry ? new Date(member.licenseExpiry) < new Date() : false,
-      isCriminalCheckExpired: member.criminalCheckExpiry ? new Date(member.criminalCheckExpiry) < new Date() : false,
-      isMedicalExpired: member.medicalCertificateExpiry ? new Date(member.medicalCertificateExpiry) < new Date() : false,
-      hasIssues: this.checkStaffIssues(member)
-    }));
+    // Arricchisci i dati mantenendo tutti i campi originali
+    const enrichedStaff = staffMembers.map(member => {
+      const enriched = {
+        ...member,
+        fullName: `${member.firstName} ${member.lastName}`,
+        isLicenseExpired: member.licenseExpiry ? new Date(member.licenseExpiry) < new Date() : false,
+        isCriminalCheckExpired: member.criminalCheckExpiry ? new Date(member.criminalCheckExpiry) < new Date() : false,
+        isMedicalExpired: member.medicalCertificateExpiry ? new Date(member.medicalCertificateExpiry) < new Date() : false,
+        hasIssues: this.checkStaffIssues(member)
+      };
+      return enriched;
+    });
 
     return {
       staffMembers: enrichedStaff,
