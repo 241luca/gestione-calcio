@@ -1,36 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   MagnifyingGlassIcon,
-  FunnelIcon,
   UserGroupIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  EyeIcon,
+  PencilIcon
 } from '@heroicons/react/24/outline';
 import { athleteService } from '../services/api';
 import toast from 'react-hot-toast';
 import UniversalActions from '../components/common/UniversalActions';
-import { SelectionCheckbox, QuickSelection, useSelection } from '../components/common/SelectionHelpers';
 
 const AthletesPage = () => {
+  const navigate = useNavigate();
   const [athletes, setAthletes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingAthlete, setEditingAthlete] = useState(null);
-
-  // Usa il custom hook per gestire la selezione
-  const {
-    selectedItems,
-    setSelectedItems,
-    selectAll,
-    selectNone,
-    toggleItem,
-    isSelected,
-    hasSelection,
-    selectionCount
-  } = useSelection(athletes);
+  const [selectedAthletes, setSelectedAthletes] = useState([]);
 
   useEffect(() => {
     loadAthletes();
@@ -52,12 +39,15 @@ const AthletesPage = () => {
 
   // Handler CRUD
   const handleAdd = () => {
-    setShowAddModal(true);
+    navigate('/athletes/new');
   };
 
   const handleEdit = (athlete) => {
-    setEditingAthlete(athlete);
-    setShowEditModal(true);
+    navigate(`/athletes/${athlete.id}/edit`);
+  };
+
+  const handleView = (athlete) => {
+    navigate(`/athletes/${athlete.id}`);
   };
 
   const handleDelete = async (athletesToDelete) => {
@@ -67,10 +57,10 @@ const AthletesPage = () => {
       }
       
       setAthletes(athletes.filter(a => !athletesToDelete.includes(a)));
-      selectNone();
+      setSelectedAthletes([]);
       
       toast.success(`${athletesToDelete.length} atlet${athletesToDelete.length === 1 ? 'a' : 'i'} eliminat${athletesToDelete.length === 1 ? 'o' : 'i'}`);
-      loadAthletes(); // Ricarica lista
+      loadAthletes();
     } catch (error) {
       toast.error('Errore durante l\'eliminazione');
     }
@@ -104,6 +94,19 @@ const AthletesPage = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // Toggle selezione
+  const toggleSelection = (athlete) => {
+    if (selectedAthletes.find(a => a.id === athlete.id)) {
+      setSelectedAthletes(selectedAthletes.filter(a => a.id !== athlete.id));
+    } else {
+      setSelectedAthletes([...selectedAthletes, athlete]);
+    }
+  };
+
+  const isSelected = (athlete) => {
+    return selectedAthletes.find(a => a.id === athlete.id) !== undefined;
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -133,6 +136,7 @@ const AthletesPage = () => {
             <h1 className="text-3xl font-bold text-gray-900">Gestione Atleti</h1>
             <p className="text-gray-600 mt-1">
               {athletes.length} atleti totali • {filteredAthletes.length} visualizzati
+              {selectedAthletes.length > 0 && ` • ${selectedAthletes.length} selezionati`}
             </p>
           </div>
           
@@ -151,21 +155,32 @@ const AthletesPage = () => {
           </div>
         </div>
 
-        {/* Barra azioni principale con UniversalActions */}
+        {/* Barra azioni principale */}
         <div className="bg-white rounded-lg shadow p-4 mb-4">
           <div className="flex items-center justify-between">
             {/* Selezione rapida */}
-            <QuickSelection
-              items={filteredAthletes}
-              selectedItems={selectedItems}
-              onSelectionChange={setSelectedItems}
-            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedAthletes(filteredAthletes)}
+                className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+              >
+                Seleziona tutti
+              </button>
+              {selectedAthletes.length > 0 && (
+                <button
+                  onClick={() => setSelectedAthletes([])}
+                  className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                >
+                  Deseleziona
+                </button>
+              )}
+            </div>
             
-            {/* Azioni universali */}
+            {/* Azioni universali con solo icone */}
             <UniversalActions
               entityName="atleta"
               entityNamePlural="atleti"
-              selectedItems={selectedItems}
+              selectedItems={selectedAthletes}
               allItems={filteredAthletes}
               onAdd={handleAdd}
               onEdit={handleEdit}
@@ -233,13 +248,6 @@ const AthletesPage = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left">
-                  <SelectionCheckbox
-                    items={filteredAthletes}
-                    selectedItems={selectedItems}
-                    onSelectionChange={setSelectedItems}
-                  />
-                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Atleta
                 </th>
@@ -253,7 +261,7 @@ const AthletesPage = () => {
                   Stato
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Documenti
+                  Doc
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Azioni
@@ -264,21 +272,13 @@ const AthletesPage = () => {
               {filteredAthletes.map((athlete) => (
                 <tr 
                   key={athlete.id} 
-                  className={`hover:bg-gray-50 ${isSelected(athlete) ? 'bg-blue-50' : ''}`}
+                  className={`hover:bg-gray-50 cursor-pointer transition-colors ${
+                    isSelected(athlete) ? 'bg-blue-50 hover:bg-blue-100' : ''
+                  }`}
+                  onClick={() => handleView(athlete)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={isSelected(athlete)}
-                      onChange={() => toggleItem(athlete)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Link 
-                      to={`/athletes/${athlete.id}`}
-                      className="flex items-center hover:text-blue-600"
-                    >
+                    <div className="flex items-center">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {athlete.firstName} {athlete.lastName}
@@ -287,7 +287,7 @@ const AthletesPage = () => {
                           {athlete.fiscalCode || 'CF non inserito'}
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
@@ -331,18 +331,38 @@ const AthletesPage = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <Link
-                        to={`/athletes/${athlete.id}`}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Dettagli
-                      </Link>
-                      <span className="text-gray-300">|</span>
                       <button
-                        onClick={() => handleEdit(athlete)}
-                        className="text-yellow-600 hover:text-yellow-900"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleView(athlete);
+                        }}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                        title="Visualizza"
                       >
-                        Modifica
+                        <EyeIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(athlete);
+                        }}
+                        className="p-1 text-yellow-600 hover:bg-yellow-50 rounded"
+                        title="Modifica"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSelection(athlete);
+                        }}
+                        className={`px-2 py-1 text-xs rounded ${
+                          isSelected(athlete)
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {isSelected(athlete) ? 'Selezionato' : 'Seleziona'}
                       </button>
                     </div>
                   </td>
@@ -352,8 +372,6 @@ const AthletesPage = () => {
           </table>
         </div>
       )}
-
-      {/* TODO: Modals per Add/Edit andrebbero implementati */}
     </div>
   );
 };

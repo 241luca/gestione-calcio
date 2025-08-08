@@ -258,10 +258,10 @@ const UniversalActions = ({
         {showAdd && onAdd && (
           <button
             onClick={onAdd}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            title={`Aggiungi ${entityName}`}
           >
             <PlusIcon className="h-5 w-5" />
-            <span>Aggiungi {entityName}</span>
           </button>
         )}
 
@@ -275,7 +275,7 @@ const UniversalActions = ({
               onEdit(selectedItems[0]);
             }}
             disabled={!singleSelection}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`p-2 rounded-lg transition-colors ${
               singleSelection 
                 ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -283,7 +283,6 @@ const UniversalActions = ({
             title={!hasSelection ? 'Seleziona un elemento da modificare' : multipleSelection ? 'Seleziona solo un elemento' : 'Modifica elemento selezionato'}
           >
             <PencilIcon className="h-5 w-5" />
-            <span>Modifica</span>
           </button>
         )}
 
@@ -299,7 +298,7 @@ const UniversalActions = ({
               }
             }}
             disabled={!hasSelection}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`p-2 rounded-lg transition-colors ${
               hasSelection 
                 ? 'bg-red-600 text-white hover:bg-red-700' 
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -307,7 +306,6 @@ const UniversalActions = ({
             title={!hasSelection ? 'Seleziona elementi da eliminare' : `Elimina ${selectedItems.length} ${selectedItems.length === 1 ? entityName : entityNamePlural}`}
           >
             <TrashIcon className="h-5 w-5" />
-            <span>Elimina {hasSelection && `(${selectedItems.length})`}</span>
           </button>
         )}
 
@@ -320,11 +318,10 @@ const UniversalActions = ({
         <button
           onClick={handlePrint}
           disabled={exporting}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+          className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
           title="Stampa"
         >
           <PrinterIcon className="h-5 w-5" />
-          <span className="hidden md:inline">Stampa</span>
         </button>
 
         {/* Menu Export */}
@@ -333,10 +330,10 @@ const UniversalActions = ({
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
               disabled={exporting}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              title="Esporta"
             >
               <DocumentArrowDownIcon className="h-5 w-5" />
-              <span className="hidden md:inline">Esporta</span>
             </button>
 
             {showExportMenu && (
@@ -372,10 +369,10 @@ const UniversalActions = ({
           <div className="relative">
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              title="Condividi"
             >
               <ShareIcon className="h-5 w-5" />
-              <span className="hidden md:inline">Condividi</span>
             </button>
 
             {showShareMenu && (
