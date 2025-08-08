@@ -673,6 +673,8 @@ export class PaymentService {
     return trend;
   }
 
+
+
   /**
    * Controlla e aggiorna i pagamenti scaduti (da eseguire con cron job)
    */
@@ -736,4 +738,4 @@ export class PaymentService {
   }
 }
 
-export default PaymentService;
+

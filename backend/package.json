@@ -10,7 +10,9 @@
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "ts-node prisma/seed.ts",
-    "generate": "prisma generate"
+    "generate": "prisma generate",
+    "create-demo-user": "ts-node src/scripts/create-demo-user.ts",
+    "create-demo-payments": "ts-node src/scripts/create-demo-payments.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.8.0",
