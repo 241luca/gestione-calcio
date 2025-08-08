@@ -11,7 +11,8 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
-  TruckIcon
+  TruckIcon,
+  TrophyIcon
 } from '@heroicons/react/24/outline';
 import { authService } from '../services/api';
 import NotificationBell from './notifications/NotificationBell';
@@ -25,6 +26,7 @@ const Layout = ({ setIsAuthenticated }) => {
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Atleti', href: '/athletes', icon: UsersIcon },
     { name: 'Squadre', href: '/teams', icon: UsersIcon },
+    { name: 'Competizioni', href: '/competitions', icon: TrophyIcon },
     { name: 'Documenti', href: '/documents', icon: DocumentTextIcon },
     { name: 'Pagamenti', href: '/payments', icon: CurrencyEuroIcon },
     { name: 'Trasporti', href: '/transport', icon: TruckIcon },

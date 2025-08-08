@@ -17,6 +17,16 @@ async function createDemoPayments() {
       return;
     }
 
+    // Trova un utente demo per createdById
+    const demoUser = await prisma.user.findFirst({
+      where: { organizationId: organization.id }
+    });
+
+    if (!demoUser) {
+      console.log('❌ Utente demo non trovato. Esegui prima create-demo-user.ts');
+      return;
+    }
+
     // Trova o crea alcuni atleti demo
     let athletes = await prisma.athlete.findMany({
       where: { organizationId: organization.id },
@@ -88,9 +98,10 @@ async function createDemoPayments() {
             amount: 150,
             paidAmount: 150,
             dueDate: new Date(currentYear, 8, 15), // 15 settembre
-            paymentDate: new Date(currentYear, 8, 10),
+            paidDate: new Date(currentYear, 8, 10),
             status: 'PAID',
             description: 'Quota iscrizione stagione 2024/2025',
+            createdById: demoUser.id,
             paymentMethod: 'BANK_TRANSFER'
           }
         });
@@ -121,7 +132,8 @@ async function createDemoPayments() {
                 amount: 50,
                 paidAmount: 50,
                 dueDate: new Date(currentYear, month, 10),
-                paymentDate: new Date(currentYear, month, 5),
+                paidDate: new Date(currentYear, month, 5),
+                createdById: demoUser.id,
                 status: 'PAID',
                 description: `Quota mensile ${month + 1}/${currentYear}`,
                 paymentMethod: 'CASH'
@@ -152,9 +164,10 @@ async function createDemoPayments() {
               amount: 50,
               paidAmount: isPaid ? 50 : null,
               dueDate: new Date(currentYear, currentMonth, 10),
-              paymentDate: isPaid ? new Date() : null,
+              paidDate: isPaid ? new Date() : null,
               status: isPaid ? 'PAID' : 'PENDING',
               description: `Quota mensile ${currentMonth + 1}/${currentYear}`,
+              createdById: demoUser.id,
               paymentMethod: isPaid ? 'CASH' : null
             }
           });
@@ -184,7 +197,8 @@ async function createDemoPayments() {
               amount: 50,
               dueDate: new Date(nextYear, nextMonth, 10),
               status: 'PENDING',
-              description: `Quota mensile ${nextMonth + 1}/${nextYear}`
+              description: `Quota mensile ${nextMonth + 1}/${nextYear}`,
+              createdById: demoUser.id
             }
           });
         }
@@ -208,7 +222,8 @@ async function createDemoPayments() {
               amount: 80,
               dueDate: new Date(currentYear, currentMonth - 2, 15), // 2 mesi fa
               status: 'OVERDUE',
-              description: 'Kit divisa da gioco - SCADUTO'
+              description: 'Kit divisa da gioco - SCADUTO',
+              createdById: demoUser.id
             }
           });
         }

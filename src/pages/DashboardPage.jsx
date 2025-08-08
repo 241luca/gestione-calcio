@@ -7,9 +7,14 @@ import {
   CalendarDaysIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  ClockIcon
+  ClockIcon,
+  CalendarIcon,
+  TrophyIcon
 } from '@heroicons/react/24/outline';
 import { athleteService } from '../services/api';
+import api from '../services/api';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 const DashboardPage = () => {
   const [stats, setStats] = useState({
@@ -22,6 +27,9 @@ const DashboardPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [recentAthletes, setRecentAthletes] = useState([]);
+  const [expiringDocs, setExpiringDocs] = useState([]);
+  const [overduePayments, setOverduePayments] = useState({ amount: 0, count: 0, payments: [] });
+  const [upcomingMatches, setUpcomingMatches] = useState([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -37,18 +45,65 @@ const DashboardPage = () => {
       if (athletesResponse.success && athletesResponse.data) {
         const athletes = athletesResponse.data.athletes || [];
         
-        setStats({
+        setStats(prev => ({
+          ...prev,
           totalAthletes: athletes.length,
           activeAthletes: athletes.filter(a => a.status === 'ACTIVE').length,
-          documentsExpiring: 3, // Per ora valori di esempio
-          pendingPayments: 5,
-          upcomingMatches: 2,
-          todayTrainings: 1
-        });
+        }));
 
         // Prendi gli ultimi 5 atleti
         setRecentAthletes(athletes.slice(0, 5));
       }
+
+      // Carica documenti in scadenza
+      try {
+        const docsResponse = await api.get('/api/v1/documents/expiring?days=30');
+        if (docsResponse.data.success) {
+          const docs = docsResponse.data.data || [];
+          setExpiringDocs(docs.slice(0, 5)); // Prendi i primi 5
+          setStats(prev => ({
+            ...prev,
+            documentsExpiring: docs.length
+          }));
+        }
+      } catch (error) {
+        console.log('Documenti in scadenza non disponibili');
+      }
+
+      // Carica pagamenti scaduti
+      try {
+        const paymentsResponse = await api.get('/api/v1/payments/overdue');
+        if (paymentsResponse.data.success && paymentsResponse.data.data) {
+          const overdueData = paymentsResponse.data.data;
+          setOverduePayments({
+            amount: overdueData.stats?.totalAmount || 0,
+            count: overdueData.stats?.count || 0,
+            payments: overdueData.payments || []
+          });
+          setStats(prev => ({
+            ...prev,
+            pendingPayments: overdueData.stats?.count || 0
+          }));
+        }
+      } catch (error) {
+        console.log('Pagamenti scaduti non disponibili');
+      }
+
+      // Carica prossime partite
+      try {
+        const matchesResponse = await api.get('/api/v1/matches/upcoming?limit=5');
+        if (matchesResponse.data.success) {
+          const matches = matchesResponse.data.data || [];
+          setUpcomingMatches(matches);
+          setStats(prev => ({
+            ...prev,
+            upcomingMatches: matches.length
+          }));
+        }
+      } catch (error) {
+        console.log('Partite non disponibili');
+      }
+
     } catch (error) {
       console.error('Errore nel caricamento dashboard:', error);
     } finally {
@@ -141,7 +196,94 @@ const DashboardPage = () => {
         />
       </div>
 
-      {/* Sezioni */}
+      {/* Widget Avanzati - Prima riga */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Widget Documenti in Scadenza */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Documenti in Scadenza</h3>
+            <DocumentTextIcon className="h-6 w-6 text-yellow-500" />
+          </div>
+          {expiringDocs.length > 0 ? (
+            <div className="space-y-3">
+              {expiringDocs.map(doc => (
+                <div key={doc.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {doc.athlete?.firstName} {doc.athlete?.lastName}
+                    </p>
+                    <p className="text-xs text-gray-500">{doc.type?.name || 'Documento'}</p>
+                  </div>
+                  <span className="text-xs text-red-600 font-medium">
+                    {doc.daysUntilExpiry ? `${doc.daysUntilExpiry}g` : 'Scade oggi'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-4">Nessun documento in scadenza</p>
+          )}
+          <Link to="/documents" className="mt-4 block text-sm text-blue-600 hover:text-blue-800 font-medium">
+            Vedi tutti →
+          </Link>
+        </div>
+
+        {/* Widget Pagamenti Scaduti */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Pagamenti Scaduti</h3>
+            <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
+          </div>
+          <div className="text-3xl font-bold text-red-600">
+            €{overduePayments.amount.toFixed(2)}
+          </div>
+          <p className="text-sm text-gray-600 mt-1">
+            {overduePayments.count} pagamenti in ritardo
+          </p>
+          {overduePayments.payments.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {overduePayments.payments.slice(0, 3).map(payment => (
+                <div key={payment.id} className="text-xs text-gray-600">
+                  {payment.athlete?.firstName} {payment.athlete?.lastName} - €{payment.amount}
+                </div>
+              ))}
+            </div>
+          )}
+          <Link to="/payments" className="mt-4 block text-sm text-blue-600 hover:text-blue-800 font-medium">
+            Gestisci pagamenti →
+          </Link>
+        </div>
+
+        {/* Widget Prossime Partite */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Prossime Partite</h3>
+            <CalendarIcon className="h-6 w-6 text-blue-500" />
+          </div>
+          {upcomingMatches.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingMatches.slice(0, 3).map(match => (
+                <div key={match.id} className="border-l-4 border-blue-500 pl-3">
+                  <p className="text-sm font-medium text-gray-900">
+                    {match.homeTeam} vs {match.awayTeam}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {format(new Date(match.date), 'dd MMM HH:mm', { locale: it })}
+                  </p>
+                  <p className="text-xs text-gray-400">{match.venue}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-4">Nessuna partita programmata</p>
+          )}
+          <Link to="/calendar" className="mt-4 block text-sm text-blue-600 hover:text-blue-800 font-medium">
+            Calendario completo →
+          </Link>
+        </div>
+      </div>
+
+      {/* Sezioni esistenti */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Atleti Recenti */}
         <div className="bg-white rounded-lg shadow">
@@ -194,27 +336,35 @@ const DashboardPage = () => {
           </div>
           <div className="p-6">
             <div className="space-y-3">
-              <div className="flex items-start p-3 bg-yellow-50 rounded-lg">
-                <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600 mt-0.5" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">3 documenti in scadenza</p>
-                  <p className="text-sm text-gray-600">Controlla i documenti degli atleti</p>
+              {stats.documentsExpiring > 0 && (
+                <div className="flex items-start p-3 bg-yellow-50 rounded-lg">
+                  <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600 mt-0.5" />
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-900">{stats.documentsExpiring} documenti in scadenza</p>
+                    <p className="text-sm text-gray-600">Controlla i documenti degli atleti</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start p-3 bg-red-50 rounded-lg">
-                <ExclamationTriangleIcon className="w-5 h-5 text-red-600 mt-0.5" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">5 pagamenti in ritardo</p>
-                  <p className="text-sm text-gray-600">Verifica i pagamenti non effettuati</p>
+              )}
+              {overduePayments.count > 0 && (
+                <div className="flex items-start p-3 bg-red-50 rounded-lg">
+                  <ExclamationTriangleIcon className="w-5 h-5 text-red-600 mt-0.5" />
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-900">{overduePayments.count} pagamenti in ritardo</p>
+                    <p className="text-sm text-gray-600">Totale: €{overduePayments.amount.toFixed(2)}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start p-3 bg-blue-50 rounded-lg">
-                <CalendarDaysIcon className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">Partita domani</p>
-                  <p className="text-sm text-gray-600">Under 15 vs Juventus - ore 15:00</p>
+              )}
+              {upcomingMatches.length > 0 && (
+                <div className="flex items-start p-3 bg-blue-50 rounded-lg">
+                  <CalendarDaysIcon className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-900">Prossima partita</p>
+                    <p className="text-sm text-gray-600">
+                      {upcomingMatches[0].homeTeam} vs {upcomingMatches[0].awayTeam}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

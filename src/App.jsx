@@ -14,6 +14,7 @@ import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
 import TransportPage from './pages/TransportPage';
 import NotificationsPage from './pages/NotificationsPage';
+import CompetitionsPage from './pages/CompetitionsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -67,6 +68,7 @@ function App() {
           <Route path="athletes/:id" element={<AthleteDetailPage />} />
           <Route path="athletes/:id/edit" element={<AthleteFormPage />} />
           <Route path="teams" element={<TeamsPage />} />
+          <Route path="competitions" element={<CompetitionsPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="transport" element={<TransportPage />} />

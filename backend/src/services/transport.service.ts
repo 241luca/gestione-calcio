@@ -1,4 +1,4 @@
-          route: true,import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { 
   NotFoundError, 
   BadRequestError, 
@@ -16,11 +16,6 @@ export class TransportService {
   async getTransportZones(organizationId: string) {
     const zones = await prisma.transportZone.findMany({
       where: { organizationId },
-      include: {
-        _count: {
-          select: { athletes: true }
-        }
-      },
       orderBy: { name: 'asc' }
     });
 
@@ -29,17 +24,7 @@ export class TransportService {
 
   async getTransportZoneById(id: string, organizationId: string) {
     const zone = await prisma.transportZone.findFirst({
-      where: { id, organizationId },
-      include: {
-        athletes: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            address: true
-          }
-        }
-      }
+      where: { id, organizationId }
     });
 
     if (!zone) {
@@ -50,7 +35,12 @@ export class TransportService {
   }
 
   async createTransportZone(data: any, organizationId: string) {
-    // Check for duplicate name
+    // Validazione
+    if (!data.name) {
+      throw new ValidationError('Nome zona richiesto');
+    }
+
+    // Verifica unicità nome
     const existing = await prisma.transportZone.findFirst({
       where: {
         organizationId,
@@ -59,18 +49,14 @@ export class TransportService {
     });
 
     if (existing) {
-      throw new ConflictError('Zona trasporto con questo nome già esistente');
+      throw new ConflictError('Esiste già una zona con questo nome');
     }
 
     const zone = await prisma.transportZone.create({
       data: {
-        ...data,
-        organizationId
-      },
-      include: {
-        _count: {
-          select: { athletes: true }
-        }
+        organizationId,
+        name: data.name,
+        description: data.description
       }
     });
 
@@ -78,36 +64,29 @@ export class TransportService {
   }
 
   async updateTransportZone(id: string, data: any, organizationId: string) {
-    const zone = await prisma.transportZone.findFirst({
-      where: { id, organizationId }
-    });
+    // Verifica esistenza
+    await this.getTransportZoneById(id, organizationId);
 
-    if (!zone) {
-      throw new NotFoundError('Zona trasporto non trovata');
-    }
-
-    // Check for duplicate name if changing
-    if (data.name && data.name !== zone.name) {
+    // Se cambia nome, verifica unicità
+    if (data.name) {
       const existing = await prisma.transportZone.findFirst({
         where: {
           organizationId,
           name: data.name,
-          NOT: { id }
+          id: { not: id }
         }
       });
 
       if (existing) {
-        throw new ConflictError('Zona trasporto con questo nome già esistente');
+        throw new ConflictError('Esiste già una zona con questo nome');
       }
     }
 
     const updated = await prisma.transportZone.update({
       where: { id },
-      data,
-      include: {
-        _count: {
-          select: { athletes: true }
-        }
+      data: {
+        name: data.name,
+        description: data.description
       }
     });
 
@@ -115,49 +94,27 @@ export class TransportService {
   }
 
   async deleteTransportZone(id: string, organizationId: string) {
-    const zone = await prisma.transportZone.findFirst({
-      where: { id, organizationId },
-      include: {
-        _count: {
-          select: { athletes: true }
-        }
-      }
-    });
+    // Verifica esistenza
+    await this.getTransportZoneById(id, organizationId);
 
-    if (!zone) {
-      throw new NotFoundError('Zona trasporto non trovata');
-    }
-
-    if (zone._count.athletes > 0) {
-      throw new BadRequestError(
-        `Impossibile eliminare: ${zone._count.athletes} atleti assegnati a questa zona`
-      );
-    }
+    // Nota: Non possiamo verificare routes associate perché non c'è relazione diretta nel DB
+    // Ma possiamo comunque procedere con l'eliminazione
 
     await prisma.transportZone.delete({
       where: { id }
     });
 
-    return { success: true, message: 'Zona trasporto eliminata con successo' };
+    return { success: true, message: 'Zona eliminata con successo' };
   }
 
   /**
-   * GESTIONE PERCORSI (ROUTES)
+   * GESTIONE ROUTE TRASPORTO
    */
   async getTransportRoutes(organizationId: string, filters?: any) {
     const where: any = { organizationId };
 
-    if (filters?.isActive !== undefined) {
-      where.isActive = filters.isActive;
-    }
-
     const routes = await prisma.transportRoute.findMany({
       where,
-      include: {
-        _count: {
-          select: { schedules: true }
-        }
-      },
       orderBy: { name: 'asc' }
     });
 
@@ -170,46 +127,32 @@ export class TransportService {
       include: {
         schedules: {
           include: {
-            match: true,
-            session: true,
-            _count: {
-              select: { bookings: true }
-            }
-          },
-          orderBy: { pickupTime: 'desc' },
-          take: 10
+            bookings: true
+          }
         }
       }
     });
 
     if (!route) {
-      throw new NotFoundError('Percorso non trovato');
+      throw new NotFoundError('Route trasporto non trovata');
     }
 
     return route;
   }
 
   async createTransportRoute(data: any, organizationId: string) {
-    // Validate capacity
-    if (data.capacity && data.capacity < 1) {
-      throw new ValidationError('La capacità deve essere almeno 1');
+    // Validazione
+    if (!data.name) {
+      throw new ValidationError('Nome route richiesto');
     }
 
     const route = await prisma.transportRoute.create({
       data: {
+        organizationId,
         name: data.name,
-        // description: data.description, // Campo non esiste nel DB
-        startLocation: data.startLocation,
-        endLocation: data.endLocation,
-        stops: data.stops || [],
-        estimatedDuration: data.estimatedDuration,
-        capacity: data.capacity || 50,
-        vehicleType: data.vehicleType,
-        driverName: data.driverName,
-        driverPhone: data.driverPhone,
-        notes: data.notes,
-        isActive: data.isActive !== false,
-        organizationId
+        driver: data.driver,
+        vehiclePlate: data.vehiclePlate,
+        capacity: data.capacity || 8
       }
     });
 
@@ -217,343 +160,176 @@ export class TransportService {
   }
 
   async updateTransportRoute(id: string, data: any, organizationId: string) {
-    const route = await prisma.transportRoute.findFirst({
-      where: { id, organizationId }
-    });
-
-    if (!route) {
-      throw new NotFoundError('Percorso non trovato');
-    }
-
-    // Validate capacity if changing
-    if (data.capacity !== undefined && data.capacity < 1) {
-      throw new ValidationError('La capacità deve essere almeno 1');
-    }
+    // Verifica esistenza
+    await this.getTransportRouteById(id, organizationId);
 
     const updated = await prisma.transportRoute.update({
       where: { id },
-      data
+      data: {
+        name: data.name,
+        driver: data.driver,
+        vehiclePlate: data.vehiclePlate,
+        capacity: data.capacity
+      }
     });
 
     return updated;
   }
 
   async deleteTransportRoute(id: string, organizationId: string) {
-    const route = await prisma.transportRoute.findFirst({
-      where: { id, organizationId },
-      include: {
-        _count: {
-          select: { 
-            schedules: {
-              where: {
-                pickupTime: { gte: new Date() }
-              }
-            }
-          }
-        }
+    // Verifica esistenza
+    await this.getTransportRouteById(id, organizationId);
+
+    // Verifica che non ci siano schedule futuri
+    const futureSchedules = await prisma.transportSchedule.count({
+      where: {
+        routeId: id,
+        pickupTime: { gte: new Date() }
       }
     });
 
-    if (!route) {
-      throw new NotFoundError('Percorso non trovato');
-    }
-
-    if (route._count.schedules > 0) {
-      throw new BadRequestError(
-        `Impossibile eliminare: ci sono ${route._count.schedules} viaggi programmati futuri`
-      );
+    if (futureSchedules > 0) {
+      throw new BadRequestError('Non puoi eliminare una route con viaggi programmati');
     }
 
     await prisma.transportRoute.delete({
       where: { id }
     });
 
-    return { success: true, message: 'Percorso eliminato con successo' };
-  }
-
-  async assignDriverToRoute(routeId: string, driverName: string, driverPhone?: string, organizationId?: string) {
-    const where: any = { id: routeId };
-    if (organizationId) {
-      where.organizationId = organizationId;
-    }
-
-    const route = await prisma.transportRoute.findFirst({ where });
-
-    if (!route) {
-      throw new NotFoundError('Percorso non trovato');
-    }
-
-    const updated = await prisma.transportRoute.update({
-      where: { id: routeId },
-      data: {
-        // driverName, // Campo non esiste nel DB
-        driverPhone
-      }
-    });
-
-    return updated;
+    return { success: true, message: 'Route eliminata con successo' };
   }
 
   /**
-   * GESTIONE SCHEDULE (PROGRAMMAZIONE VIAGGI)
+   * GESTIONE SCHEDULE TRASPORTI
    */
   async getTransportSchedules(organizationId: string, filters?: any) {
     const where: any = {};
-
-    // Filter by match
-    if (filters?.matchId) {
-      where.matchId = filters.matchId;
-    }
-
-    // Filter by training session
-    if (filters?.sessionId) {
-      where.sessionId = filters.sessionId;
-    }
-
-    // Filter by route
+    
+    // Join con route per filtrare per organization
+    where.route = { organizationId };
+    
     if (filters?.routeId) {
       where.routeId = filters.routeId;
     }
-
-    // Filter by status
-    if (filters?.status) {
-      where.status = filters.status;
+    
+    if (filters?.matchId) {
+      where.matchId = filters.matchId;
     }
-
-    // Filter by date
-    if (filters?.date) {
-      const startOfDay = new Date(filters.date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(filters.date);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      where.pickupTime = {
-        gte: startOfDay,
-        lte: endOfDay
-      };
+    
+    if (filters?.sessionId) {
+      where.sessionId = filters.sessionId;
     }
-
-    // Filter by date range
+    
     if (filters?.fromDate) {
-      where.pickupTime = {
+      where.pickupTime = { 
         ...where.pickupTime,
-        gte: new Date(filters.fromDate)
+        gte: new Date(filters.fromDate) 
       };
     }
-
+    
     if (filters?.toDate) {
-      where.pickupTime = {
+      where.pickupTime = { 
         ...where.pickupTime,
-        lte: new Date(filters.toDate)
+        lte: new Date(filters.toDate) 
       };
     }
 
     const schedules = await prisma.transportSchedule.findMany({
-      where: {
-        ...where,
-        route: {
-          organizationId
-        }
-      },
+      where,
       include: {
         route: true,
         match: {
           include: {
             homeTeam: true,
-            awayTeam: true,
-            // venue: true // Relazione non esiste
+            awayTeam: true
           }
         },
-        session: {
-          include: {
-            team: true
-          }
-        },
+        session: true,
         bookings: {
           include: {
             athlete: {
               select: {
                 id: true,
                 firstName: true,
-                lastName: true,
-                phone: true
+                lastName: true
               }
             }
           }
-        },
-        _count: {
-          select: { bookings: true }
         }
       },
       orderBy: { pickupTime: 'asc' }
     });
 
-    // Add computed fields
-    const enrichedSchedules = schedules.map(schedule => ({
-      ...schedule,
-      availableSeats: schedule.route.capacity - schedule._count.bookings,
-      isFull: schedule._count.bookings >= schedule.route.capacity
-    }));
-
-    return enrichedSchedules;
+    return schedules;
   }
 
   async getUpcomingSchedules(organizationId: string, days: number = 7) {
-    const toDate = addDays(new Date(), days);
+    const fromDate = new Date();
+    const toDate = addDays(fromDate, days);
 
     return this.getTransportSchedules(organizationId, {
-      fromDate: new Date(),
-      toDate
+      fromDate: fromDate.toISOString(),
+      toDate: toDate.toISOString()
     });
   }
 
   async createTransportSchedule(data: any, organizationId: string) {
-    // Validate route belongs to organization
+    // Validazione
+    if (!data.routeId || !data.pickupTime) {
+      throw new ValidationError('Route e orario partenza sono richiesti');
+    }
+
+    if (!data.matchId && !data.sessionId) {
+      throw new ValidationError('Devi specificare una partita o un allenamento');
+    }
+
+    // Verifica che la route esista
     const route = await prisma.transportRoute.findFirst({
-      where: {
+      where: { 
         id: data.routeId,
         organizationId
       }
     });
 
     if (!route) {
-      throw new NotFoundError('Percorso non trovato');
+      throw new NotFoundError('Route non trovata');
     }
 
-    if (!route.isActive) {
-      throw new BadRequestError('Il percorso non è attivo');
-    }
-
-    // Validate match or session (must have one)
-    if (!data.matchId && !data.sessionId) {
-      throw new ValidationError('Devi specificare una partita o una sessione di allenamento');
-    }
-
-    if (data.matchId && data.sessionId) {
-      throw new ValidationError('Non puoi specificare sia partita che allenamento');
-    }
-
-    // Validate match if provided
-    if (data.matchId) {
-      const match = await prisma.match.findFirst({
-        where: {
-          id: data.matchId,
-          organizationId
-        }
-      });
-
-      if (!match) {
-        throw new NotFoundError('Partita non trovata');
-      }
-    }
-
-    // Validate session if provided
-    if (data.sessionId) {
-      const session = await prisma.trainingSession.findFirst({
-        where: {
-          id: data.sessionId,
-          organizationId
-        }
-      });
-
-      if (!session) {
-        throw new NotFoundError('Sessione di allenamento non trovata');
-      }
-    }
-
-    // Check for duplicate schedule
-    const existing = await prisma.transportSchedule.findFirst({
-      where: {
-        routeId: data.routeId,
-        pickupTime: new Date(data.pickupTime),
-        OR: [
-          { matchId: data.matchId || undefined },
-          { sessionId: data.sessionId || undefined }
-        ]
-      }
-    });
-
-    if (existing) {
-      throw new ConflictError('Esiste già un viaggio programmato per questo percorso e orario');
-    }
+    // Calcola orario di ritorno
+    const pickupTime = new Date(data.pickupTime);
+    const returnTime = data.returnTime 
+      ? new Date(data.returnTime)
+      : addDays(pickupTime, 0.5); // Default: +12 ore
 
     const schedule = await prisma.transportSchedule.create({
       data: {
         routeId: data.routeId,
         matchId: data.matchId || null,
         sessionId: data.sessionId || null,
-        pickupTime: new Date(data.pickupTime),
-        returnTime: data.returnTime ? new Date(data.returnTime) : null,
-        notes: data.notes,
-        status: 'scheduled'
+        pickupTime,
+        returnTime,
+        status: 'SCHEDULED',
+        notes: data.notes
       },
       include: {
-        route: true,
-        match: true,
-        session: true
+        route: true
       }
     });
 
     return schedule;
   }
 
-  async updateTransportSchedule(id: string, data: any, organizationId: string) {
-    const schedule = await prisma.transportSchedule.findFirst({
-      where: {
-        id,
-        route: {
-          organizationId
-        }
-      }
-    });
-
-    if (!schedule) {
-      throw new NotFoundError('Programmazione trasporto non trovata');
-    }
-
-    // Check if schedule is in the past
-    if (isBefore(new Date(schedule.pickupTime), new Date())) {
-      throw new BadRequestError('Non puoi modificare un viaggio già effettuato');
-    }
-
-    const updated = await prisma.transportSchedule.update({
-      where: { id },
-      data: {
-        pickupTime: data.pickupTime ? new Date(data.pickupTime) : undefined,
-        returnTime: data.returnTime ? new Date(data.returnTime) : undefined,
-        notes: data.notes,
-        status: data.status
-      },
-      include: {
-        route: true,
-        match: true,
-        session: true,
-        _count: {
-          select: { bookings: true }
-        }
-      }
-    });
-
-    return updated;
-  }
-
   async updateScheduleStatus(id: string, status: string, organizationId: string) {
+    // Verifica che lo schedule esista
     const schedule = await prisma.transportSchedule.findFirst({
-      where: {
+      where: { 
         id,
-        route: {
-          organizationId
-        }
+        route: { organizationId }
       }
     });
 
     if (!schedule) {
-      throw new NotFoundError('Programmazione trasporto non trovata');
-    }
-
-    const validStatuses = ['scheduled', 'departed', 'arrived', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      throw new ValidationError(`Stato non valido. Stati validi: ${validStatuses.join(', ')}`);
+      throw new NotFoundError('Schedule non trovato');
     }
 
     const updated = await prisma.transportSchedule.update({
@@ -561,120 +337,85 @@ export class TransportService {
       data: { status }
     });
 
-    // If cancelled, notify all booked athletes
-    if (status === 'cancelled') {
-      // TODO: Send notifications to all athletes with bookings
-      const bookings = await prisma.transportBooking.findMany({
-        where: { scheduleId: id },
-        include: { athlete: true }
-      });
-
-      // Here you would send notifications
-      console.log(`Notifying ${bookings.length} athletes about cancellation`);
-    }
-
     return updated;
   }
 
   async deleteTransportSchedule(id: string, organizationId: string) {
+    // Verifica che lo schedule esista
     const schedule = await prisma.transportSchedule.findFirst({
-      where: {
+      where: { 
         id,
-        route: {
-          organizationId
-        }
+        route: { organizationId }
       },
       include: {
-        _count: {
-          select: { bookings: true }
-        }
+        bookings: true
       }
     });
 
     if (!schedule) {
-      throw new NotFoundError('Programmazione trasporto non trovata');
+      throw new NotFoundError('Schedule non trovato');
     }
 
-    if (schedule._count.bookings > 0) {
-      throw new BadRequestError(
-        `Impossibile eliminare: ci sono ${schedule._count.bookings} prenotazioni attive`
-      );
+    if (schedule.bookings.length > 0) {
+      throw new BadRequestError('Non puoi eliminare uno schedule con prenotazioni');
     }
 
     await prisma.transportSchedule.delete({
       where: { id }
     });
 
-    return { success: true, message: 'Programmazione eliminata con successo' };
+    return { success: true, message: 'Schedule eliminato con successo' };
   }
 
   /**
-   * GESTIONE PRENOTAZIONI (BOOKINGS)
+   * GESTIONE PRENOTAZIONI
    */
-  async bookTransport(athleteId: string, scheduleId: string, data: any, organizationId: string) {
-    // Validate athlete
-    const athlete = await prisma.athlete.findFirst({
-      where: {
-        id: athleteId,
-        organizationId
-      }
-    });
-
-    if (!athlete) {
-      throw new NotFoundError('Atleta non trovato');
+  async bookTransport(data: any, organizationId: string) {
+    // Validazione
+    if (!data.athleteId || !data.scheduleId) {
+      throw new ValidationError('Atleta e schedule sono richiesti');
     }
 
-    // Validate schedule
+    // Verifica che lo schedule esista
     const schedule = await prisma.transportSchedule.findFirst({
-      where: {
-        id: scheduleId,
-        route: {
-          organizationId
-        }
+      where: { 
+        id: data.scheduleId,
+        route: { organizationId }
       },
       include: {
         route: true,
-        _count: {
-          select: { bookings: true }
-        }
+        bookings: true
       }
     });
 
     if (!schedule) {
-      throw new NotFoundError('Programmazione trasporto non trovata');
+      throw new NotFoundError('Schedule non trovato');
     }
 
-    // Check if schedule is in the past
-    if (isBefore(new Date(schedule.pickupTime), new Date())) {
-      throw new BadRequestError('Non puoi prenotare un viaggio già partito');
+    // Verifica capacità
+    if (schedule.bookings.length >= schedule.route.capacity) {
+      throw new BadRequestError('Trasporto al completo');
     }
 
-    // Check capacity
-    if (schedule._count.bookings >= schedule.route.capacity) {
-      throw new BadRequestError('Il mezzo è già pieno');
-    }
-
-    // Check for duplicate booking
+    // Verifica che l'atleta non sia già prenotato
     const existingBooking = await prisma.transportBooking.findFirst({
       where: {
-        athleteId,
-        scheduleId
+        scheduleId: data.scheduleId,
+        athleteId: data.athleteId
       }
     });
 
     if (existingBooking) {
-      throw new ConflictError('Atleta già prenotato per questo viaggio');
+      throw new ConflictError('Atleta già prenotato per questo trasporto');
     }
 
     const booking = await prisma.transportBooking.create({
       data: {
-        athleteId,
-        scheduleId,
-        pickupPoint: data.pickupPoint || schedule.route.startLocation,
-        dropoffPoint: data.dropoffPoint || schedule.route.endLocation,
-        notes: data.notes,
-        status: 'confirmed' as TransportBookingStatus,
-        bookedBy: data.bookedBy
+        scheduleId: data.scheduleId,
+        athleteId: data.athleteId,
+        status: 'CONFIRMED',
+        pickupPoint: data.pickupPoint || 'Da definire',
+        notes: data.notes
       },
       include: {
         athlete: {
@@ -686,9 +427,7 @@ export class TransportService {
         },
         schedule: {
           include: {
-            route: true,
-            match: true,
-            session: true
+            route: true
           }
         }
       }
@@ -697,18 +436,14 @@ export class TransportService {
     return booking;
   }
 
-  async cancelBooking(bookingId: string, organizationId: string, reason?: string) {
+  async cancelBooking(bookingId: string, organizationId: string) {
+    // Verifica che la prenotazione esista
     const booking = await prisma.transportBooking.findFirst({
-      where: {
+      where: { 
         id: bookingId,
         schedule: {
-          route: {
-            organizationId
-          }
+          route: { organizationId }
         }
-      },
-      include: {
-        schedule: true
       }
     });
 
@@ -716,42 +451,28 @@ export class TransportService {
       throw new NotFoundError('Prenotazione non trovata');
     }
 
-    // Check if schedule is in the past
-    if (isBefore(new Date(booking.schedule.pickupTime), new Date())) {
-      throw new BadRequestError('Non puoi cancellare una prenotazione per un viaggio già effettuato');
-    }
-
-    const updated = await prisma.transportBooking.update({
-      where: { id: bookingId },
-      data: {
-        status: 'cancelled' as TransportBookingStatus,
-        notes: reason ? `Cancellato: ${reason}` : 'Cancellato'
-      }
+    await prisma.transportBooking.delete({
+      where: { id: bookingId }
     });
 
     return { success: true, message: 'Prenotazione cancellata con successo' };
   }
 
   async getBookingsBySchedule(scheduleId: string, organizationId: string) {
-    // Verify schedule belongs to organization
+    // Verifica che lo schedule esista
     const schedule = await prisma.transportSchedule.findFirst({
-      where: {
+      where: { 
         id: scheduleId,
-        route: {
-          organizationId
-        }
+        route: { organizationId }
       }
     });
 
     if (!schedule) {
-      throw new NotFoundError('Programmazione trasporto non trovata');
+      throw new NotFoundError('Schedule non trovato');
     }
 
     const bookings = await prisma.transportBooking.findMany({
-      where: {
-        scheduleId,
-        status: { not: 'cancelled' }
-      },
+      where: { scheduleId },
       include: {
         athlete: {
           select: {
@@ -759,46 +480,25 @@ export class TransportService {
             firstName: true,
             lastName: true,
             phone: true,
-            parentPhone: true,
-            transportZone: true
+            parentPhone: true
           }
         }
       },
-      orderBy: [
-        { pickupPoint: 'asc' },
-        { athlete: { lastName: 'asc' } }
-      ]
+      orderBy: { createdAt: 'asc' }
     });
 
     return bookings;
   }
 
-  async getAthleteBookings(athleteId: string, organizationId: string, includeHistory: boolean = false) {
-    // Verify athlete belongs to organization
-    const athlete = await prisma.athlete.findFirst({
-      where: {
-        id: athleteId,
-        organizationId
-      }
-    });
-
-    if (!athlete) {
-      throw new NotFoundError('Atleta non trovato');
-    }
-
-    const where: any = {
-      athleteId,
-      status: { not: 'cancelled' }
-    };
-
-    if (!includeHistory) {
-      where.schedule = {
-        pickupTime: { gte: new Date() }
-      };
-    }
-
+  async getAthleteBookings(athleteId: string, organizationId: string) {
     const bookings = await prisma.transportBooking.findMany({
-      where,
+      where: { 
+        athleteId,
+        schedule: {
+          route: { organizationId },
+          pickupTime: { gte: new Date() } // Solo futuri
+        }
+      },
       include: {
         schedule: {
           include: {
@@ -806,21 +506,16 @@ export class TransportService {
             match: {
               include: {
                 homeTeam: true,
-                awayTeam: true,
-                venue: true
+                awayTeam: true
               }
             },
-            session: {
-              include: {
-                team: true
-              }
-            }
+            session: true
           }
         }
       },
       orderBy: {
         schedule: {
-          pickupTime: 'desc'
+          pickupTime: 'asc'
         }
       }
     });
@@ -829,156 +524,45 @@ export class TransportService {
   }
 
   /**
-   * FUNZIONI DI UTILITÀ E NOTIFICHE
+   * UTILITY E NOTIFICHE
    */
-  async sendTransportReminders(hoursBeforeDeparture: number = 24) {
-    const reminderTime = new Date();
-    reminderTime.setHours(reminderTime.getHours() + hoursBeforeDeparture);
+  async sendTransportReminders() {
+    // Trova tutti i trasporti del giorno dopo
+    const tomorrow = addDays(new Date(), 1);
+    const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0));
+    const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999));
 
-    const upcomingSchedules = await prisma.transportSchedule.findMany({
+    const schedules = await prisma.transportSchedule.findMany({
       where: {
         pickupTime: {
-          gte: new Date(),
-          lte: reminderTime
+          gte: tomorrowStart,
+          lte: tomorrowEnd
         },
-        status: 'scheduled'
+        status: 'SCHEDULED'
       },
       include: {
-        route: true,
-        match: true,
-        session: true,
         bookings: {
-          where: {
-            status: 'confirmed'
-          },
           include: {
             athlete: true
           }
-        }
+        },
+        route: true
       }
     });
 
-    const reminders = [];
+    let remindersSent = 0;
 
-    for (const schedule of upcomingSchedules) {
+    for (const schedule of schedules) {
       for (const booking of schedule.bookings) {
-        reminders.push({
-          athleteId: booking.athlete.id,
-          athleteName: `${booking.athlete.firstName} ${booking.athlete.lastName}`,
-          scheduleId: schedule.id,
-          pickupTime: schedule.pickupTime,
-          pickupPoint: booking.pickupPoint,
-          destination: schedule.match 
-            ? `Partita: ${schedule.match.homeTeam?.name || 'Casa'} vs ${schedule.match.awayTeam?.name || 'Trasferta'}`
-            : `Allenamento: ${schedule.session?.team?.name || 'Squadra'}`,
-          driverName: schedule.route.driverName,
-          driverPhone: schedule.route.driverPhone
-        });
+        // Qui andrebbe implementato l'invio notifica
+        console.log(`📧 Promemoria trasporto per ${booking.athlete.firstName} ${booking.athlete.lastName}`);
+        remindersSent++;
       }
     }
 
-    // TODO: Integrate with notification service to send actual reminders
-    console.log(`Sending ${reminders.length} transport reminders`);
-
-    return {
-      schedulesChecked: upcomingSchedules.length,
-      remindersSent: reminders.length,
-      reminders
-    };
-  }
-
-  /**
-   * STATISTICHE E REPORT
-   */
-  async getTransportStats(organizationId: string, dateRange?: { from: Date; to: Date }) {
-    const where: any = {
-      route: {
-        organizationId
-      }
-    };
-
-    if (dateRange) {
-      where.pickupTime = {
-        gte: dateRange.from,
-        lte: dateRange.to
-      };
-    }
-
-    const [totalSchedules, totalBookings, routeUsage, athleteUsage] = await Promise.all([
-      // Total schedules
-      prisma.transportSchedule.count({ where }),
-
-      // Total bookings
-      prisma.transportBooking.count({
-        where: {
-          schedule: where
-        }
-      }),
-
-      // Route usage
-      prisma.transportRoute.findMany({
-        where: { organizationId },
-        include: {
-          _count: {
-            select: {
-              schedules: {
-                where: dateRange ? {
-                  pickupTime: where.pickupTime
-                } : undefined
-              }
-            }
-          }
-        }
-      }),
-
-      // Most frequent travelers
-      prisma.transportBooking.groupBy({
-        by: ['athleteId'],
-        where: {
-          schedule: where,
-          status: 'confirmed'
-        },
-        _count: true,
-        orderBy: {
-          _count: {
-            athleteId: 'desc'
-          }
-        },
-        take: 10
-      })
-    ]);
-
-    // Get athlete details for top travelers
-    const topTravelers = await Promise.all(
-      athleteUsage.map(async (usage) => {
-        const athlete = await prisma.athlete.findUnique({
-          where: { id: usage.athleteId },
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true
-          }
-        });
-        return {
-          athlete,
-          tripCount: usage._count
-        };
-      })
-    );
-
-    return {
-      totalSchedules,
-      totalBookings,
-      averageOccupancy: totalSchedules > 0 ? (totalBookings / totalSchedules).toFixed(1) : 0,
-      routeUsage: routeUsage.map(route => ({
-        id: route.id,
-        name: route.name,
-        usageCount: route._count.schedules
-      })),
-      topTravelers,
-      dateRange
+    return { 
+      schedules: schedules.length,
+      remindersSent 
     };
   }
 }
-
-export default TransportService;

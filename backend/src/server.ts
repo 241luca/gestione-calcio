@@ -12,6 +12,9 @@ import notificationRoutes from './routes/notification.routes';
 import documentRoutes from './routes/document.routes';
 import paymentRoutes from './routes/payment.routes';
 import teamsRoutes from './routes/teams.routes';
+import transportRoutes from './routes/transport.routes';
+import matchRoutes from './routes/match.routes';
+import competitionRoutes from './routes/competition.routes';
 
 // Carica le variabili d'ambiente
 dotenv.config();
@@ -67,6 +70,9 @@ app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/documents', documentRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/teams', teamsRoutes);
+app.use('/api/v1/transport', transportRoutes);
+app.use('/api/v1/matches', matchRoutes);
+app.use('/api/v1/competitions', competitionRoutes);
 
 // Route health check
 app.get('/health', async (req: Request, res: Response) => {
@@ -89,7 +95,7 @@ app.get('/health', async (req: Request, res: Response) => {
         documents: 'active',
         payments: 'active',
         notifications: 'active',
-        transport: 'disabled'
+        transport: 'active'
       },
       timestamp: new Date()
     });
@@ -161,8 +167,7 @@ async function startServer() {
       console.log('  ✅ Pagamenti');
       console.log('  ✅ Notifiche');
       console.log('  ✅ Socket.io (Real-time)');
-      console.log('\n⚠️  SERVIZI DISABILITATI:');
-      console.log('  ❌ Trasporti (da implementare)');
+      console.log('  ✅ Trasporti');
     });
   } catch (error) {
     console.error('❌ Errore avvio server:', error);
