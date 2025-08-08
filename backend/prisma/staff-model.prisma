@@ -1,0 +1,97 @@
+// Aggiunta del modello Staff completo allo schema Prisma
+// Da aggiungere al file schema.prisma
+
+model Staff {
+  id             String   @id @default(uuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  
+  // Collegamento opzionale a User per accesso sistema
+  user           User?    @relation(fields: [userId], references: [id])
+  userId         String?
+  
+  // Dati anagrafici
+  firstName      String
+  lastName       String
+  fiscalCode     String?  @unique
+  birthDate      DateTime?
+  birthPlace     String?
+  nationality    String   @default("Italiana")
+  
+  // Contatti
+  email          String?  @unique
+  phone          String?
+  mobile         String?
+  address        String?
+  city           String?
+  province       String?
+  zipCode        String?
+  
+  // Informazioni professionali
+  staffRole      String   // COACH, ASSISTANT_COACH, MEDICAL, etc.
+  qualification  String?  // Qualifica professionale
+  licenseNumber  String?  // Numero patentino
+  licenseType    String?  // Tipo patentino (UEFA A, UEFA B, etc.)
+  licenseExpiry  DateTime? // Scadenza patentino
+  specialization String?  // Specializzazione
+  
+  // Informazioni contrattuali
+  contractType   String   @default("VOLUNTEER") // EMPLOYEE, CONTRACTOR, VOLUNTEER
+  contractStart  DateTime?
+  contractEnd    DateTime?
+  salary         Float?
+  paymentFrequency String? // MONTHLY, WEEKLY, HOURLY
+  
+  // Assegnazioni team
+  teams          Team[]   @relation("StaffTeams")
+  primaryTeam    Team?    @relation("PrimaryCoach", fields: [primaryTeamId], references: [id])
+  primaryTeamId  String?
+  
+  // Permessi
+  canAccessSystem      Boolean @default(false)
+  canManageAthletes    Boolean @default(false)
+  canManagePayments    Boolean @default(false)
+  canManageDocuments   Boolean @default(false)
+  canViewReports       Boolean @default(false)
+  canSendNotifications Boolean @default(false)
+  permissions          Json?   // Permessi custom aggiuntivi
+  
+  // Certificazioni
+  hasCriminalCheck     Boolean @default(false)
+  criminalCheckDate    DateTime?
+  criminalCheckExpiry  DateTime?
+  hasMedicalCertificate Boolean @default(false)
+  medicalCertificateDate DateTime?
+  medicalCertificateExpiry DateTime?
+  
+  // Informazioni emergenza
+  emergencyContact String?
+  emergencyPhone   String?
+  bloodType        String?
+  allergies        String?
+  medicalNotes     String?
+  
+  // Metadata
+  status         String   @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED, TERMINATED
+  profilePhoto   String?
+  notes          String?
+  tags           String[]
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+  
+  // Relazioni
+  documents      Document[]
+  trainingSessions TrainingSession[]
+  managedMatches Match[]  @relation("MatchCoach")
+  assistedMatches Match[] @relation("MatchAssistantCoach")
+  notifications  Notification[]
+  
+  @@index([organizationId])
+  @@index([userId])
+  @@index([staffRole])
+  @@index([status])
+  @@index([primaryTeamId])
+  @@map("staff")
+}
