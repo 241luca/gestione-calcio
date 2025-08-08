@@ -93,24 +93,56 @@ const AthleteFormPage = () => {
     setLoading(true);
 
     try {
+      // Prepara i dati rimuovendo campi vuoti e formattando le date
       const dataToSend = {
-        ...formData,
-        birthDate: new Date(formData.birthDate).toISOString(),
-        medicalCertificateDate: formData.medicalCertificateDate ? new Date(formData.medicalCertificateDate).toISOString() : null,
-        medicalCertificateExpiry: formData.medicalCertificateExpiry ? new Date(formData.medicalCertificateExpiry).toISOString() : null
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        birthDate: formData.birthDate, // Mantieni formato YYYY-MM-DD
+        status: formData.status
       };
 
+      // Aggiungi solo i campi opzionali se hanno un valore
+      if (formData.fiscalCode) dataToSend.fiscalCode = formData.fiscalCode;
+      if (formData.email) dataToSend.email = formData.email;
+      if (formData.phone) dataToSend.phone = formData.phone;
+      if (formData.address) dataToSend.address = formData.address;
+      if (formData.city) dataToSend.city = formData.city;
+      if (formData.postalCode) dataToSend.postalCode = formData.postalCode;
+      if (formData.parentName) dataToSend.parentName = formData.parentName;
+      if (formData.parentPhone) dataToSend.parentPhone = formData.parentPhone;
+      if (formData.parentEmail) dataToSend.parentEmail = formData.parentEmail;
+      if (formData.notes) dataToSend.notes = formData.notes;
+      
+      // Date opzionali
+      if (formData.medicalCertificateDate) {
+        dataToSend.medicalCertificateDate = formData.medicalCertificateDate;
+      }
+      if (formData.medicalCertificateExpiry) {
+        dataToSend.medicalCertificateExpiry = formData.medicalCertificateExpiry;
+      }
+
+      console.log('Dati da inviare:', dataToSend);
+
+      let response;
       if (isEdit) {
-        await athleteService.update(id, dataToSend);
+        response = await athleteService.update(id, dataToSend);
         toast.success('Atleta aggiornato con successo!');
       } else {
-        await athleteService.create(dataToSend);
+        response = await athleteService.create(dataToSend);
         toast.success('Atleta creato con successo!');
       }
 
       navigate('/athletes');
     } catch (error) {
-      toast.error(isEdit ? 'Errore nell\'aggiornamento dell\'atleta' : 'Errore nella creazione dell\'atleta');
+      console.error('Errore nel salvataggio:', error);
+      
+      // Mostra errore più specifico se disponibile
+      const errorMessage = error.response?.data?.error?.message || 
+                          error.response?.data?.message || 
+                          error.message ||
+                          (isEdit ? 'Errore nell\'aggiornamento dell\'atleta' : 'Errore nella creazione dell\'atleta');
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

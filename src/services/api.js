@@ -27,6 +27,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log dettagliato dell'errore per debug
+    console.error('API Error Details:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      data: error.config?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      responseData: error.response?.data
+    });
+
     if (error.response?.status === 401) {
       // Token scaduto o non valido
       localStorage.removeItem('token');
@@ -37,7 +47,14 @@ api.interceptors.response.use(
       toast.error('Non hai i permessi per questa azione');
     } else if (error.response?.status === 404) {
       toast.error('Risorsa non trovata');
-    } else if (error.response?.status >= 500) {
+    } else if (error.response?.status === 500) {
+      // Per errore 500, mostra dettagli se disponibili
+      const errorMsg = error.response?.data?.error?.message || 
+                      error.response?.data?.message || 
+                      'Errore del server, riprova più tardi';
+      console.error('Errore 500 dettagliato:', errorMsg);
+      toast.error(errorMsg);
+    } else if (error.response?.status > 500) {
       toast.error('Errore del server, riprova più tardi');
     }
     return Promise.reject(error);
