@@ -1,28 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  PlusIcon, 
   MagnifyingGlassIcon,
-  PencilIcon,
-  TrashIcon,
-  EyeIcon,
   FunnelIcon,
-  ArrowDownTrayIcon,
-  ShareIcon,
-  PrinterIcon,
-  DocumentArrowDownIcon
+  UserGroupIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { athleteService } from '../services/api';
-import { exportService } from '../services/exportService';
 import toast from 'react-hot-toast';
+import UniversalActions from '../components/common/UniversalActions';
+import { SelectionCheckbox, QuickSelection, useSelection } from '../components/common/SelectionHelpers';
 
 const AthletesPage = () => {
   const [athletes, setAthletes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [athleteToDelete, setAthleteToDelete] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAthlete, setEditingAthlete] = useState(null);
+
+  // Usa il custom hook per gestire la selezione
+  const {
+    selectedItems,
+    setSelectedItems,
+    selectAll,
+    selectNone,
+    toggleItem,
+    isSelected,
+    hasSelection,
+    selectionCount
+  } = useSelection(athletes);
 
   useEffect(() => {
     loadAthletes();
@@ -42,77 +50,73 @@ const AthletesPage = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!athleteToDelete) return;
-    
+  // Handler CRUD
+  const handleAdd = () => {
+    setShowAddModal(true);
+  };
+
+  const handleEdit = (athlete) => {
+    setEditingAthlete(athlete);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = async (athletesToDelete) => {
     try {
-      await athleteService.delete(athleteToDelete.id);
-      setAthletes(athletes.filter(a => a.id !== athleteToDelete.id));
-      setShowDeleteModal(false);
-      setAthleteToDelete(null);
-      toast.success('Atleta eliminato con successo');
+      for (const athlete of athletesToDelete) {
+        await athleteService.delete(athlete.id);
+      }
+      
+      setAthletes(athletes.filter(a => !athletesToDelete.includes(a)));
+      selectNone();
+      
+      toast.success(`${athletesToDelete.length} atlet${athletesToDelete.length === 1 ? 'a' : 'i'} eliminat${athletesToDelete.length === 1 ? 'o' : 'i'}`);
+      loadAthletes(); // Ricarica lista
     } catch (error) {
-      toast.error('Errore nell\'eliminazione dell\'atleta');
+      toast.error('Errore durante l\'eliminazione');
     }
   };
 
-  // Filtra gli atleti in base alla ricerca e allo stato
+  // Configurazione export
+  const exportConfig = {
+    fields: [
+      { key: 'firstName', label: 'Nome' },
+      { key: 'lastName', label: 'Cognome' },
+      { key: 'fiscalCode', label: 'Codice Fiscale' },
+      { key: 'birthDate', label: 'Data Nascita' },
+      { key: 'email', label: 'Email' },
+      { key: 'phone', label: 'Telefono' },
+      { key: 'team', label: 'Squadra' },
+      { key: 'status', label: 'Stato' }
+    ],
+    filename: 'atleti_export',
+    title: 'Report Atleti - ASD Juventus Academy Milano'
+  };
+
+  // Filtra atleti
   const filteredAthletes = athletes.filter(athlete => {
-    const matchesSearch = 
-      athlete.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      athlete.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (athlete.fiscalCode && athlete.fiscalCode.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = searchTerm === '' || 
+      `${athlete.firstName} ${athlete.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      athlete.fiscalCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      athlete.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = 
-      filterStatus === 'all' || 
-      (filterStatus === 'active' && athlete.status === 'ACTIVE') ||
-      (filterStatus === 'inactive' && athlete.status !== 'ACTIVE');
+    const matchesStatus = filterStatus === 'all' || athlete.status === filterStatus;
     
     return matchesSearch && matchesStatus;
   });
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      'ACTIVE': 'bg-green-100 text-green-800',
-      'INACTIVE': 'bg-gray-100 text-gray-800',
-      'INJURED': 'bg-red-100 text-red-800',
-      'SUSPENDED': 'bg-yellow-100 text-yellow-800'
-    };
-    
-    const labels = {
-      'ACTIVE': 'Attivo',
-      'INACTIVE': 'Inattivo',
-      'INJURED': 'Infortunato',
-      'SUSPENDED': 'Sospeso'
-    };
-    
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full font-medium ${badges[status] || badges['INACTIVE']}`}>
-        {labels[status] || status}
-      </span>
-    );
-  };
-
-  const calculateAge = (birthDate) => {
-    if (!birthDate) return '-';
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
 
   if (loading) {
     return (
       <div className="p-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+          <div className="bg-white rounded-lg shadow p-4 mb-4">
+            <div className="h-10 bg-gray-200 rounded"></div>
+          </div>
+          <div className="bg-white rounded-lg shadow">
+            {[1,2,3,4,5].map(i => (
+              <div key={i} className="p-4 border-b">
+                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+              </div>
             ))}
           </div>
         </div>
@@ -124,115 +128,157 @@ const AthletesPage = () => {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Atleti</h1>
-            <p className="text-gray-600 mt-2">Gestisci gli atleti della società</p>
+            <h1 className="text-3xl font-bold text-gray-900">Gestione Atleti</h1>
+            <p className="text-gray-600 mt-1">
+              {athletes.length} atleti totali • {filteredAthletes.length} visualizzati
+            </p>
           </div>
-          <div className="flex gap-2">
-            {/* Pulsanti Export */}
-            <button
-              onClick={() => exportService.exportAthletes(filteredAthletes)}
-              className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              title="Esporta in Excel"
-            >
-              <DocumentArrowDownIcon className="w-5 h-5" />
-              <span className="ml-2 hidden sm:inline">Excel</span>
-            </button>
-            <button
-              onClick={() => {
-                document.title = 'Lista Atleti - ' + new Date().toLocaleDateString('it-IT');
-                window.print();
-              }}
-              className="flex items-center px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              title="Stampa"
-            >
-              <PrinterIcon className="w-5 h-5" />
-              <span className="ml-2 hidden sm:inline">Stampa</span>
-            </button>
-            <button
-              onClick={() => exportService.shareAthletes(filteredAthletes)}
-              className="flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              title="Condividi"
-            >
-              <ShareIcon className="w-5 h-5" />
-              <span className="ml-2 hidden sm:inline">Condividi</span>
-            </button>
-            <Link
-              to="/athletes/new"
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="w-5 h-5 mr-2" />
-              Nuovo Atleta
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Filtri e Ricerca */}
-      <div className="bg-white rounded-lg shadow mb-6 p-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Cerca per nome o codice fiscale..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+          
+          {/* Statistiche rapide */}
+          <div className="flex gap-4">
+            <div className="bg-green-50 px-4 py-2 rounded-lg">
+              <span className="text-green-800 font-medium">
+                {athletes.filter(a => a.status === 'ACTIVE').length} Attivi
+              </span>
+            </div>
+            <div className="bg-red-50 px-4 py-2 rounded-lg">
+              <span className="text-red-800 font-medium">
+                {athletes.filter(a => a.status === 'INJURED').length} Infortunati
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <FunnelIcon className="w-5 h-5 text-gray-500" />
+        </div>
+
+        {/* Barra azioni principale con UniversalActions */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4">
+          <div className="flex items-center justify-between">
+            {/* Selezione rapida */}
+            <QuickSelection
+              items={filteredAthletes}
+              selectedItems={selectedItems}
+              onSelectionChange={setSelectedItems}
+            />
+            
+            {/* Azioni universali */}
+            <UniversalActions
+              entityName="atleta"
+              entityNamePlural="atleti"
+              selectedItems={selectedItems}
+              allItems={filteredAthletes}
+              onAdd={handleAdd}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              exportConfig={exportConfig}
+              variant="toolbar"
+            />
+          </div>
+        </div>
+
+        {/* Filtri */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex gap-4">
+            {/* Ricerca */}
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cerca per nome, codice fiscale o email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Filtro stato */}
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">Tutti gli stati</option>
-              <option value="active">Solo attivi</option>
-              <option value="inactive">Solo inattivi</option>
+              <option value="ACTIVE">Attivi</option>
+              <option value="INJURED">Infortunati</option>
+              <option value="SUSPENDED">Sospesi</option>
+              <option value="INACTIVE">Inattivi</option>
             </select>
           </div>
-        </div>
-        <div className="mt-2 text-sm text-gray-600">
-          Trovati {filteredAthletes.length} atleti su {athletes.length} totali
         </div>
       </div>
 
       {/* Tabella Atleti */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      {filteredAthletes.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <UserGroupIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {searchTerm || filterStatus !== 'all' ? 'Nessun atleta trovato' : 'Nessun atleta registrato'}
+          </h3>
+          <p className="text-gray-500 mb-4">
+            {searchTerm || filterStatus !== 'all' 
+              ? 'Prova a modificare i filtri di ricerca' 
+              : 'Inizia aggiungendo il primo atleta'}
+          </p>
+          {!searchTerm && filterStatus === 'all' && (
+            <button
+              onClick={handleAdd}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Aggiungi Primo Atleta
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Atleta
+                <th className="px-6 py-3 text-left">
+                  <SelectionCheckbox
+                    items={filteredAthletes}
+                    selectedItems={selectedItems}
+                    onSelectionChange={setSelectedItems}
+                  />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Età
+                  Atleta
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Squadra
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ruolo
+                  Contatti
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Stato
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Documenti
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Azioni
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAthletes.length > 0 ? (
-                filteredAthletes.map((athlete) => (
-                  <tr key={athlete.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+              {filteredAthletes.map((athlete) => (
+                <tr 
+                  key={athlete.id} 
+                  className={`hover:bg-gray-50 ${isSelected(athlete) ? 'bg-blue-50' : ''}`}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={isSelected(athlete)}
+                      onChange={() => toggleItem(athlete)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Link 
+                      to={`/athletes/${athlete.id}`}
+                      className="flex items-center hover:text-blue-600"
+                    >
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {athlete.firstName} {athlete.lastName}
@@ -241,100 +287,73 @@ const AthletesPage = () => {
                           {athlete.fiscalCode || 'CF non inserito'}
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {calculateAge(athlete.birthDate)} anni
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {athlete.team?.name || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {athlete.position?.name || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(athlete.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/athletes/${athlete.id}`}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Visualizza"
-                        >
-                          <EyeIcon className="w-5 h-5" />
-                        </Link>
-                        <Link
-                          to={`/athletes/${athlete.id}/edit`}
-                          className="text-yellow-600 hover:text-yellow-900"
-                          title="Modifica"
-                        >
-                          <PencilIcon className="w-5 h-5" />
-                        </Link>
-                        <button
-                          onClick={() => {
-                            setAthleteToDelete(athlete);
-                            setShowDeleteModal(true);
-                          }}
-                          className="text-red-600 hover:text-red-900"
-                          title="Elimina"
-                        >
-                          <TrashIcon className="w-5 h-5" />
-                        </button>
+                    </Link>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {athlete.team?.name || 'Non assegnato'}
+                    </div>
+                    {athlete.jerseyNumber && (
+                      <div className="text-sm text-gray-500">
+                        Maglia #{athlete.jerseyNumber}
                       </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
-                    <div className="text-gray-500">
-                      <p className="text-lg font-medium mb-2">Nessun atleta trovato</p>
-                      <p className="text-sm">
-                        {searchTerm || filterStatus !== 'all' 
-                          ? 'Prova a modificare i filtri di ricerca' 
-                          : 'Clicca su "Nuovo Atleta" per aggiungere il primo atleta'}
-                      </p>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {athlete.email || '-'}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {athlete.phone || '-'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      athlete.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                      athlete.status === 'INJURED' ? 'bg-red-100 text-red-800' :
+                      athlete.status === 'SUSPENDED' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {athlete.status === 'ACTIVE' ? 'Attivo' :
+                       athlete.status === 'INJURED' ? 'Infortunato' :
+                       athlete.status === 'SUSPENDED' ? 'Sospeso' :
+                       'Inattivo'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    {athlete._count?.documents > 0 ? (
+                      <span className="text-green-600 font-medium">
+                        {athlete._count.documents}
+                      </span>
+                    ) : (
+                      <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500 mx-auto" />
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <Link
+                        to={`/athletes/${athlete.id}`}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        Dettagli
+                      </Link>
+                      <span className="text-gray-300">|</span>
+                      <button
+                        onClick={() => handleEdit(athlete)}
+                        className="text-yellow-600 hover:text-yellow-900"
+                      >
+                        Modifica
+                      </button>
                     </div>
                   </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Modal di conferma eliminazione */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={() => setShowDeleteModal(false)} />
-            
-            <div className="relative bg-white rounded-lg max-w-md w-full p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Conferma eliminazione
-              </h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Sei sicuro di voler eliminare l'atleta {athleteToDelete?.firstName} {athleteToDelete?.lastName}?
-                Questa azione non può essere annullata.
-              </p>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
-                >
-                  Elimina
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
+
+      {/* TODO: Modals per Add/Edit andrebbero implementati */}
     </div>
   );
 };

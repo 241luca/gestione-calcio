@@ -265,27 +265,49 @@ const UniversalActions = ({
           </button>
         )}
 
-        {showEdit && onEdit && singleSelection && (
+        {showEdit && onEdit && (
           <button
-            onClick={() => onEdit(selectedItems[0])}
-            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+            onClick={() => {
+              if (!singleSelection) {
+                toast.error('Seleziona un solo elemento per modificare');
+                return;
+              }
+              onEdit(selectedItems[0]);
+            }}
+            disabled={!singleSelection}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              singleSelection 
+                ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+            title={!hasSelection ? 'Seleziona un elemento da modificare' : multipleSelection ? 'Seleziona solo un elemento' : 'Modifica elemento selezionato'}
           >
             <PencilIcon className="h-5 w-5" />
             <span>Modifica</span>
           </button>
         )}
 
-        {showDelete && onDelete && hasSelection && (
+        {showDelete && onDelete && (
           <button
             onClick={() => {
+              if (!hasSelection) {
+                toast.error('Seleziona almeno un elemento da eliminare');
+                return;
+              }
               if (confirm(`Eliminare ${selectedItems.length} ${selectedItems.length === 1 ? entityName : entityNamePlural}?`)) {
                 onDelete(selectedItems);
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            disabled={!hasSelection}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              hasSelection 
+                ? 'bg-red-600 text-white hover:bg-red-700' 
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+            title={!hasSelection ? 'Seleziona elementi da eliminare' : `Elimina ${selectedItems.length} ${selectedItems.length === 1 ? entityName : entityNamePlural}`}
           >
             <TrashIcon className="h-5 w-5" />
-            <span>Elimina {multipleSelection && `(${selectedItems.length})`}</span>
+            <span>Elimina {hasSelection && `(${selectedItems.length})`}</span>
           </button>
         )}
 
