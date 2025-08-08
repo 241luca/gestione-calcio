@@ -100,7 +100,7 @@ async function main() {
 
     for (const position of positions) {
       await prisma.position.upsert({
-        where: { code: position.code },
+        where: { id: position.id },
         update: {},
         create: position
       });
@@ -167,7 +167,7 @@ async function main() {
         birthPlace: 'Milano',
         fiscalCode: 'RSSMRC14C15F205X',
         teamId: createdTeams[0].id, // Under 10
-        positionId: (await prisma.position.findFirst({ where: { code: 'ATT' } }))?.id,
+        positionId: (await prisma.position.findFirst({ where: { abbreviation: 'ATT' } }))?.id,
         jerseyNumber: 9,
         status: AthleteStatus.ACTIVE,
         parentName: 'Giovanni Rossi',
@@ -182,7 +182,7 @@ async function main() {
         birthPlace: 'Roma',
         fiscalCode: 'BNCLCU14L22H501X',
         teamId: createdTeams[0].id, // Under 10
-        positionId: (await prisma.position.findFirst({ where: { code: 'CC' } }))?.id,
+        positionId: (await prisma.position.findFirst({ where: { abbreviation: 'CC' } }))?.id,
         jerseyNumber: 8,
         status: AthleteStatus.ACTIVE,
         parentName: 'Maria Bianchi',
@@ -197,7 +197,7 @@ async function main() {
         birthPlace: 'Napoli',
         fiscalCode: 'VRDLSN12A10F839X',
         teamId: createdTeams[1].id, // Under 12
-        positionId: (await prisma.position.findFirst({ where: { code: 'POR' } }))?.id,
+        positionId: (await prisma.position.findFirst({ where: { abbreviation: 'POR' } }))?.id,
         jerseyNumber: 1,
         status: AthleteStatus.ACTIVE,
         parentName: 'Antonio Verdi',

@@ -207,7 +207,7 @@ async function main() {
     const createdPositions = [];
     for (const position of positions) {
       const created = await prisma.position.upsert({
-        where: { code: position.code },
+        where: { id: position.id },
         update: {},
         create: position
       });
@@ -339,16 +339,16 @@ async function main() {
         let positionId = createdPositions[Math.floor(Math.random() * createdPositions.length)].id;
         if (i === 0 || i === 12) {
           // Portieri
-          positionId = createdPositions.find(p => p.code === 'POR')?.id || positionId;
+          positionId = createdPositions.find(p => p.abbreviation === 'POR')?.id || positionId;
         } else if (i < 5) {
           // Difensori
-          positionId = createdPositions.find(p => ['DC', 'TD', 'TS'].includes(p.code))?.id || positionId;
+          positionId = createdPositions.find(p => p.abbreviation && ['DC', 'TD', 'TS'].includes(p.abbreviation))?.id || positionId;
         } else if (i < 10) {
           // Centrocampisti
-          positionId = createdPositions.find(p => ['CC', 'MED', 'TRQ'].includes(p.code))?.id || positionId;
+          positionId = createdPositions.find(p => p.abbreviation && ['CC', 'MED', 'TRQ'].includes(p.abbreviation))?.id || positionId;
         } else {
           // Attaccanti
-          positionId = createdPositions.find(p => ['ATT', 'AD', 'AS', 'SP'].includes(p.code))?.id || positionId;
+          positionId = createdPositions.find(p => p.abbreviation && ['ATT', 'AD', 'AS', 'SP'].includes(p.abbreviation))?.id || positionId;
         }
 
         const status = Math.random() > 0.95 ? AthleteStatus.INJURED : 
@@ -431,7 +431,7 @@ async function main() {
             issueDate,
             expiryDate,
             status,
-            uploadedById: createdUsers[Math.floor(Math.random() * createdUsers.length)].id,
+            uploadedBy: createdUsers[Math.floor(Math.random() * createdUsers.length)].id,
             isVerified: Math.random() > 0.2,
             verifiedById: Math.random() > 0.2 ? createdUsers[0].id : null,
             verifiedAt: Math.random() > 0.2 ? new Date() : null,
@@ -458,7 +458,7 @@ async function main() {
               mimeType: 'application/pdf',
               issueDate: randomDate(new Date(2023, 0, 1), new Date()),
               status: DocumentStatus.VALID,
-              uploadedById: createdUsers[Math.floor(Math.random() * createdUsers.length)].id,
+              uploadedBy: createdUsers[Math.floor(Math.random() * createdUsers.length)].id,
               isVerified: Math.random() > 0.3,
               organizationId: organization.id
             }
@@ -489,7 +489,7 @@ async function main() {
             status: Math.random() > 0.1 ? PaymentStatus.PAID : 
                    Math.random() > 0.5 ? PaymentStatus.OVERDUE : PaymentStatus.PENDING,
             paymentMethod: Math.random() > 0.5 ? 'BANK_TRANSFER' : 'CASH',
-            transactionId: Math.random() > 0.5 ? `TRX${Math.floor(Math.random() * 1000000)}` : undefined,
+            // transactionId rimosso - campo non esiste nel modello
             createdById: createdUsers[2].id, // Segreteria
             organizationId: organization.id
           }
@@ -518,7 +518,7 @@ async function main() {
               status: isPaid ? PaymentStatus.PAID : 
                      isOverdue ? PaymentStatus.OVERDUE : PaymentStatus.PENDING,
               paymentMethod: isPaid ? (Math.random() > 0.6 ? 'BANK_TRANSFER' : 'CASH') : undefined,
-              transactionId: isPaid && Math.random() > 0.5 ? `TRX${Math.floor(Math.random() * 1000000)}` : undefined,
+              // transactionId rimosso - campo non esiste nel modello
               createdById: createdUsers[2].id,
               organizationId: organization.id
             }
@@ -581,9 +581,8 @@ async function main() {
             awayTeamId: isHome ? opponentTeam.id : team.id,
             date: matchDate,
             time: `${Math.floor(Math.random() * 4) + 15}:${Math.random() > 0.5 ? '00' : '30'}`, // Tra 15:00 e 19:00
-            venue: isHome ? 'Campo Sportivo Comunale' : `Campo ${cities[Math.floor(Math.random() * cities.length)]}`,
-            competition: Math.random() > 0.7 ? 'Campionato' : 
-                        Math.random() > 0.5 ? 'Coppa' : 'Amichevole',
+            // venue rimosso temporaneamente - necessita relazione corretta
+            // competition rimosso temporaneamente - necessita relazione corretta
             homeScore: hasScore ? Math.floor(Math.random() * 5) : null,
             awayScore: hasScore ? Math.floor(Math.random() * 5) : null,
             status: !isPast ? MatchStatus.SCHEDULED :
@@ -612,7 +611,7 @@ async function main() {
                 matchId: match.id,
                 athleteId: athlete.id,
                 isStarter: j < 11, // I primi 11 sono titolari
-                attended: isPast ? Math.random() > 0.1 : false // 90% di presenze
+                isPresent: isPast ? Math.random() > 0.1 : undefined // 90% di presenze
               }
             });
 
@@ -713,7 +712,7 @@ async function main() {
           description: ['Distorsione caviglia', 'Stiramento muscolare', 'Contusione', 
                        'Elongazione', 'Affaticamento muscolare', 'Trauma contusivo'][Math.floor(Math.random() * 6)],
           severity,
-          estimatedRecovery: recoveryDays,
+          estimatedRecoveryDays: recoveryDays,
           isRecovered,
           recoveryDate: isRecovered ? new Date(injuryDate.getTime() + recoveryDays * 24 * 60 * 60 * 1000) : null,
           notes: Math.random() > 0.5 ? 'Necessaria fisioterapia' : undefined
