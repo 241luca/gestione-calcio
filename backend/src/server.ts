@@ -18,6 +18,7 @@ import competitionRoutes from './routes/competitions.routes';
 import staffRoutes from './routes/staff.routes';
 import sponsorRoutes from './routes/sponsors.routes';
 import venueRoutes from './routes/venues.routes';
+import reportRoutes from './routes/reports.routes';
 
 // Carica le variabili d'ambiente
 dotenv.config();
@@ -79,6 +80,7 @@ app.use('/api/v1/competitions', competitionRoutes);
 app.use('/api/v1/staff', staffRoutes);
 app.use('/api/v1/sponsors', sponsorRoutes);
 app.use('/api/v1/venues', venueRoutes);
+app.use('/api/v1/reports', reportRoutes);
 
 // Route health check
 app.get('/health', async (req: Request, res: Response) => {

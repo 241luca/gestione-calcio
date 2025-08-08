@@ -92,7 +92,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 // POST /api/v1/teams - Crea nuova squadra
 router.post('/', async (req: AuthRequest, res) => {
   try {
-    const { name, category, season, coach, assistantCoach } = req.body;
+    const { name, category, season, coachId } = req.body;
 
     // Validazione base
     if (!name || !category) {
@@ -128,8 +128,7 @@ router.post('/', async (req: AuthRequest, res) => {
         name,
         category,
         season: season || '2024/2025',
-        coach: coach || '',
-        assistantCoach: assistantCoach || '',
+        coachId: coachId || null,
         organizationId: req.user?.organizationId!
       },
       include: {
@@ -160,7 +159,7 @@ router.post('/', async (req: AuthRequest, res) => {
 // PUT /api/v1/teams/:id - Aggiorna squadra
 router.put('/:id', async (req: AuthRequest, res) => {
   try {
-    const { name, category, season, coach, assistantCoach } = req.body;
+    const { name, category, season, coachId } = req.body;
 
     // Verifica che la squadra esista e appartenga all'organizzazione
     const existing = await prisma.team.findFirst({
@@ -186,8 +185,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
         ...(name && { name }),
         ...(category && { category }),
         ...(season && { season }),
-        ...(coach !== undefined && { coach }),
-        ...(assistantCoach !== undefined && { assistantCoach })
+        ...(coachId !== undefined && { coachId })
       },
       include: {
         _count: {

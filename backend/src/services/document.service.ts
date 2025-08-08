@@ -1,4 +1,4 @@
-// backend/src/services/document.service.ts - VERSIONE CORRETTA
+// backend/src/services/document.service.ts - VERSIONE CORRETTA FINALE
 import { PrismaClient } from '@prisma/client';
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import { addDays, differenceInDays } from 'date-fns';
@@ -31,7 +31,7 @@ export class DocumentService {
       expiryDate?: string;
       notes?: string;
       organizationId: string;
-      uploadedById?: string; // ID dell'utente che carica il documento
+      uploadedBy?: string; // ID dell'utente che carica il documento
     }
   ) {
     try {
@@ -60,9 +60,9 @@ export class DocumentService {
         throw new NotFoundError('Atleta non trovato');
       }
 
-      // Se non abbiamo uploadedById, usiamo un ID di sistema
+      // Se non abbiamo uploadedBy, usiamo un ID di sistema
       // In produzione questo dovrebbe venire dall'utente autenticato
-      const uploadedById = data.uploadedById || 'system';
+      const uploadedBy = data.uploadedBy || 'system';
 
       // Crea il documento nel database
       const document = await prisma.document.create({
@@ -79,7 +79,7 @@ export class DocumentService {
           status: 'VALID',
           notes: data.notes,
           isVerified: false,
-          uploadedById: uploadedById // Campo richiesto dallo schema
+          uploadedBy: uploadedBy // Campo stringa come da schema
         },
         include: {
           athlete: true,
@@ -137,9 +137,8 @@ export class DocumentService {
           where,
           include: {
             athlete: true,
-            type: true,
-            uploadedBy: true,
-            verifiedBy: true
+            type: true
+            // Rimosso uploadedBy e verifiedBy perché sono stringhe, non relazioni
           },
           orderBy: { createdAt: 'desc' },
           skip,
@@ -172,9 +171,8 @@ export class DocumentService {
         where: { id, organizationId },
         include: {
           athlete: true,
-          type: true,
-          uploadedBy: true,
-          verifiedBy: true
+          type: true
+          // Rimosso uploadedBy e verifiedBy perché sono stringhe, non relazioni
         }
       });
 
@@ -192,7 +190,7 @@ export class DocumentService {
   /**
    * Verifica un documento
    */
-  async verifyDocument(id: string, organizationId: string, verifiedById: string) {
+  async verifyDocument(id: string, organizationId: string, verifiedBy: string) {
     try {
       const document = await prisma.document.findFirst({
         where: { id, organizationId }
@@ -210,14 +208,13 @@ export class DocumentService {
         where: { id },
         data: {
           isVerified: true,
-          verifiedById: verifiedById, // ID dell'utente che verifica
+          verifiedBy: verifiedBy, // Stringa ID dell'utente che verifica
           verifiedAt: new Date()
         },
         include: {
           athlete: true,
-          type: true,
-          uploadedBy: true,
-          verifiedBy: true
+          type: true
+          // Rimosso uploadedBy e verifiedBy perché sono stringhe, non relazioni
         }
       });
 
@@ -371,8 +368,8 @@ export class DocumentService {
         },
         include: {
           athlete: true,
-          type: true,
-          uploadedBy: true
+          type: true
+          // Rimosso uploadedBy perché è una stringa, non una relazione
         },
         orderBy: {
           expiryDate: 'asc'
