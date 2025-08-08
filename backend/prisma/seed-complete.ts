@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, PaymentStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { addDays, subDays, addMonths, subMonths, addYears, subYears } from 'date-fns';
 
@@ -612,7 +612,7 @@ async function main() {
     
     for (const athlete of athletes) {
       // Iscrizione annuale
-      const iscrizioneStatus = randomElement(['PAID', 'PAID', 'PAID', 'PENDING', 'OVERDUE']);
+      const iscrizioneStatus = randomElement(['PAID', 'PAID', 'PAID', 'PENDING', 'OVERDUE']) as PaymentStatus;
       await prisma.payment.create({
         data: {
           organizationId: org.id,
@@ -645,9 +645,9 @@ async function main() {
             paidAmount: isPaid ? 80 : isPartial ? randomNumber(20, 60) : 0,
             dueDate,
             paidDate: isPaid ? addDays(dueDate, randomNumber(0, 15)) : null,
-            status: isPaid ? 'PAID' : 
+            status: (isPaid ? 'PAID' : 
                    isPartial ? 'PARTIAL' :
-                   dueDate < subDays(new Date(), 30) ? 'OVERDUE' : 'PENDING',
+                   dueDate < subDays(new Date(), 30) ? 'OVERDUE' : 'PENDING') as PaymentStatus,
             paymentMethod: isPaid ? randomElement(['BONIFICO', 'CONTANTI', 'CARTA', 'SATISPAY']) : null,
             description: `Quota mensile ${dueDate.toLocaleString('it-IT', { month: 'long', year: 'numeric' })}`,
             createdById: managerUser.id
@@ -667,7 +667,7 @@ async function main() {
             paidAmount: 120,
             dueDate: subMonths(new Date(), 4),
             paidDate: subMonths(new Date(), 4),
-            status: 'PAID',
+            status: 'PAID' as PaymentStatus,
             paymentMethod: randomElement(['BONIFICO', 'CARTA']),
             description: 'Kit divisa completo taglia ' + randomElement(['S', 'M', 'L', 'XL']),
             createdById: managerUser.id
