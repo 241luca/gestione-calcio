@@ -48,6 +48,7 @@ model Organization {
   transportZones     TransportZone[]
   transportRoutes    TransportRoute[]
   notifications      Notification[]
+  notificationTemplates NotificationTemplate[]
   competitions       Competition[]
   venues             Venue[]
   staffMembers       Staff[]
@@ -72,6 +73,10 @@ model User {
   isActive       Boolean   @default(true)
   emailVerified  Boolean   @default(false)
   lastLogin      DateTime?
+  
+  // Preferenze notifiche (JSON)
+  preferences    Json?     @default("{}")
+  
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -578,6 +583,26 @@ model Notification {
   @@index([organizationId])
   @@index([isRead])
   @@map("notifications")
+}
+
+// Template notifiche personalizzabili
+model NotificationTemplate {
+  id             String       @id @default(uuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  name           String
+  type           String       // Tipo di notifica (document_expiry, payment_overdue, etc.)
+  title          String       // Template titolo con variabili {{variable}}
+  message        String       // Template messaggio con variabili
+  emailSubject   String?      // Template oggetto email
+  emailBody      String?      // Template corpo email HTML
+  variables      Json         // Array di variabili disponibili
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, type])
+  @@map("notification_templates")
 }
 
 // ==========================================

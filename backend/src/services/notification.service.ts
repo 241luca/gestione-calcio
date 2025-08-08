@@ -3,6 +3,9 @@ import { PrismaClient } from '@prisma/client';
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import { addDays, subDays, startOfDay, endOfDay } from 'date-fns';
 import SocketService from './socket.service';
+import EmailService from './email.service';
+import UserPreferencesService from './user-preferences.service';
+import NotificationTemplatesService from './notification-templates.service';
 
 const prisma = new PrismaClient();
 
