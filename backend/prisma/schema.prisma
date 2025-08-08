@@ -705,24 +705,87 @@ model Staff {
   id             String       @id @default(uuid())
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
+  
+  // Dati anagrafici
   firstName      String
   lastName       String
-  role           String       // ALLENATORE, ASSISTENTE, PREPARATORE, MEDICO, FISIOTERAPISTA, DIRIGENTE
-  team           Team?        @relation(fields: [teamId], references: [id])
-  teamId         String?
+  fiscalCode     String?
+  birthDate      DateTime?
+  birthPlace     String?
+  nationality    String       @default("Italiana")
+  
+  // Contatti
   email          String?
   phone          String?
-  licenseNumber  String?      // Numero tesserino/licenza
-  licenseExpiry  DateTime?    // Scadenza licenza
-  qualification  String?      // Qualifiche (es. "UEFA A", "Laurea Scienze Motorie")
-  qualifications String?      // Qualifiche multiple
-  startDate      DateTime?
+  mobile         String?
+  address        String?
+  city           String?
+  province       String?
+  zipCode        String?
+  
+  // Info professionali
+  role           String?      // Legacy field
+  staffRole      String?      // COACH, ASSISTANT_COACH, MEDICAL, etc.
+  qualification  String?
+  qualifications String?
+  licenseNumber  String?
+  licenseType    String?
+  licenseExpiry  DateTime?
+  specialization String?
+  
+  // Contratto
+  contractType   String       @default("VOLUNTEER")
+  contractStart  DateTime?
   contractEnd    DateTime?
+  startDate      DateTime?
   salary         Float?
+  paymentFrequency String?
+  
+  // Team
+  team           Team?        @relation(fields: [teamId], references: [id])
+  teamId         String?
+  teamIds        String[]     // Multiple teams
+  primaryTeamId  String?      // Primary team
+  
+  // Permessi
+  canAccessSystem      Boolean @default(false)
+  canManageAthletes    Boolean @default(false)
+  canManagePayments    Boolean @default(false)
+  canManageDocuments   Boolean @default(false)
+  canViewReports       Boolean @default(false)
+  canSendNotifications Boolean @default(false)
+  permissions          Json?
+  
+  // Certificazioni
+  hasCriminalCheck     Boolean @default(false)
+  criminalCheckDate    DateTime?
+  criminalCheckExpiry  DateTime?
+  hasMedicalCertificate Boolean @default(false)
+  medicalCertificateDate DateTime?
+  medicalCertificateExpiry DateTime?
+  
+  // Emergenza
+  emergencyContact String?
+  emergencyPhone   String?
+  bloodType        String?
+  allergies        String?
+  medicalNotes     String?
+  
+  // Metadata
+  status         String       @default("ACTIVE")
+  profilePhoto   String?
+  notes          String?
+  tags           String[]
   isActive       Boolean      @default(true)
+  deletedAt      DateTime?
+  
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  @@index([organizationId])
+  @@index([teamId])
+  @@index([staffRole])
+  @@index([status])
   @@map("staff")
 }
 
