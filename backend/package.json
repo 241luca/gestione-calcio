@@ -12,6 +12,7 @@
     "seed": "ts-node prisma/seed.ts",
     "generate": "prisma generate",
     "create-demo-user": "ts-node src/scripts/create-demo-user.ts",
+    "create-sample-data": "ts-node src/scripts/create-sample-data.ts",
     "create-demo-payments": "ts-node src/scripts/create-demo-payments.ts"
   },
   "dependencies": {
