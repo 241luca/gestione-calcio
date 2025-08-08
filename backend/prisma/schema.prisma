@@ -1,5 +1,5 @@
 // Schema del database per il sistema di gestione società di calcio
-// Versione: 3.0.0 - Con tutte le funzionalità mancanti
+// Versione: 4.0.0 - Schema completo e allineato con tutti i componenti
 
 generator client {
   provider = "prisma-client-js"
@@ -18,7 +18,7 @@ datasource db {
 model Organization {
   id        String   @id @default(uuid())
   name      String
-  taxCode   String?  @unique // Codice fiscale/P.IVA
+  taxCode   String?  @unique
   address   String?
   city      String?
   province  String?
@@ -26,8 +26,7 @@ model Organization {
   email     String?
   phone     String?
   website   String?
-  logo      String?  // URL logo
-  // Nuovi campi
+  logo      String?
   foundedYear        Int?
   president          String?
   colors             String[]
@@ -39,23 +38,20 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   // Relazioni
-  users      User[]
-  athletes   Athlete[]
-  teams      Team[]
-  documents  Document[]
-  payments   Payment[]
-  matches    Match[]
-  trainings  TrainingSession[]
-  // Nuove relazioni
+  users              User[]
+  athletes           Athlete[]
+  teams              Team[]
+  documents          Document[]
+  payments           Payment[]
+  matches            Match[]
+  trainings          TrainingSession[]
   transportZones     TransportZone[]
-  transportRoutes    TransportRoute[]
   notifications      Notification[]
-  auditLogs          AuditLog[]
   competitions       Competition[]
   venues             Venue[]
-  staffMembers       StaffMember[]
-  events             Event[]
-  communications     Communication[]
+  staffMembers       Staff[]
+  sponsors           Sponsor[]
+  injuries           Injury[]
 
   @@map("organizations")
 }
@@ -73,19 +69,14 @@ model User {
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   isActive       Boolean   @default(true)
+  emailVerified  Boolean   @default(false)
   lastLogin      DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   // Relazioni
-  uploadedDocuments Document[] @relation("UploadedBy")
-  verifiedDocuments Document[] @relation("VerifiedBy")
   createdPayments   Payment[]  @relation("CreatedBy")
-  // Nuove relazioni
   notifications     Notification[]
-  auditLogs         AuditLog[]
-  performanceScores PerformanceScore[] @relation("Evaluator")
-  communications    Communication[]
 
   @@index([email])
   @@index([organizationId])
@@ -97,7 +88,8 @@ model Role {
   id          String   @id @default(uuid())
   name        String   @unique
   description String?
-  permissions Json     // Array di permessi
+  organizationId String? // Per ruoli specifici dell'organizzazione
+  permissions Json?    // Array di permessi
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -130,16 +122,14 @@ model Athlete {
   positionId     String?
   jerseyNumber   Int?
   status         AthleteStatus @default(ACTIVE)
+  height         Int?          // in cm
+  weight         Int?          // in kg
+  footPreference String?       // RIGHT, LEFT, BOTH
   
-  // Nuovi campi
+  // Trasporti
   transportZone        TransportZone? @relation(fields: [transportZoneId], references: [id])
   transportZoneId      String?
-  needsTransport       Boolean       @default(false)
-  photoUrl             String?
-  registrationNumber   String?
-  contractEndDate      DateTime?
-  socialMediaConsent   Boolean       @default(false)
-  imageRightsConsent   Boolean       @default(false)
+  hasTransportService  Boolean       @default(false)
   
   // Dati genitori/tutori
   parentName     String?
@@ -149,6 +139,9 @@ model Athlete {
   // Dati medici
   medicalNotes   String?
   allergies      String?
+  
+  // Note
+  notes          String?
   
   organization   Organization  @relation(fields: [organizationId], references: [id])
   organizationId String
@@ -163,9 +156,6 @@ model Athlete {
   matchRoster    MatchRoster[]
   matchStats     MatchStats[]
   injuries       Injury[]
-  // Nuove relazioni
-  transportBookings    TransportBooking[]
-  performanceScores    PerformanceScore[]
 
   @@index([organizationId])
   @@index([teamId])
@@ -185,10 +175,9 @@ enum AthleteStatus {
 model Team {
   id             String       @id @default(uuid())
   name           String
-  category       String       // Es: "Under 15", "Prima Squadra"
+  category       String       // Es: "U12", "U14", ecc.
   season         String       // Es: "2024/2025"
-  coach          String?
-  assistantCoach String?
+  coachId        String?      // ID dell'allenatore principale (da Staff)
   
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
@@ -201,8 +190,7 @@ model Team {
   homeMatches    Match[]      @relation("HomeTeam")
   awayMatches    Match[]      @relation("AwayTeam")
   trainings      TrainingSession[]
-  // Nuove relazioni
-  staffMembers   StaffMember[]
+  staffMembers   Staff[]
 
   @@index([organizationId])
   @@map("teams")
@@ -212,7 +200,7 @@ model Team {
 model Position {
   id          String    @id @default(uuid())
   name        String    @unique
-  code        String    @unique // Es: "POR", "DIF", "CEN", "ATT"
+  abbreviation String?  // Es: "POR", "DIF", "CEN", "ATT"
   description String?
 
   // Relazioni
@@ -256,18 +244,11 @@ model Document {
   status         DocumentStatus @default(VALID)
   notes          String?
   
-  // Nuovi campi per reminder
-  reminder30Days   Boolean        @default(false)
-  reminder7Days    Boolean        @default(false)
-  reminder1Day     Boolean        @default(false)
-  
   // Tracking upload e verifica
-  uploadedBy     User           @relation("UploadedBy", fields: [uploadedById], references: [id])
-  uploadedById   String
+  uploadedBy     String?        // ID utente che ha caricato
   uploadedAt     DateTime       @default(now())
   isVerified     Boolean        @default(false)
-  verifiedBy     User?          @relation("VerifiedBy", fields: [verifiedById], references: [id])
-  verifiedById   String?
+  verifiedBy     String?        // ID utente che ha verificato
   verifiedAt     DateTime?
   
   organization   Organization   @relation(fields: [organizationId], references: [id])
@@ -285,7 +266,7 @@ model Document {
 // Stati documento
 enum DocumentStatus {
   VALID
-  EXPIRING  // In scadenza (< 30 giorni)
+  EXPIRING
   EXPIRED
 }
 
@@ -352,44 +333,82 @@ enum PaymentStatus {
 // GESTIONE PARTITE E ALLENAMENTI
 // ==========================================
 
+// Competizioni
+model Competition {
+  id             String       @id @default(uuid())
+  name           String
+  type           String       // CAMPIONATO, COPPA, TORNEO, AMICHEVOLE
+  season         String
+  startDate      DateTime
+  endDate        DateTime?
+  description    String?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relazioni
+  matches        Match[]
+
+  @@map("competitions")
+}
+
+// Campi da gioco
+model Venue {
+  id             String       @id @default(uuid())
+  name           String
+  address        String
+  city           String
+  province       String?
+  capacity       Int?
+  type           String       @default("HOME") // HOME, AWAY, NEUTRAL
+  surface        String?      // ERBA_NATURALE, ERBA_SINTETICA, TERRA
+  hasLighting    Boolean      @default(false)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relazioni
+  matches        Match[]
+
+  @@map("venues")
+}
+
 // Partite
 model Match {
-  id              String       @id @default(uuid())
-  homeTeam        Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  id              String        @id @default(uuid())
+  homeTeam        Team?         @relation("HomeTeam", fields: [homeTeamId], references: [id])
   homeTeamId      String
-  awayTeam        Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  awayTeam        Team?         @relation("AwayTeam", fields: [awayTeamId], references: [id])
   awayTeamId      String
   date            DateTime
-  time            String?      // Orario separato
-  
-  // Campi base
-  venue           String?
-  
-  // Nuovi campi
-  competition     Competition? @relation(fields: [competitionId], references: [id])
-  competitionId   String?
-  venueDetails    Venue?       @relation(fields: [venueId], references: [id])
+  time            String?       // Orario separato
+  venue           Venue?        @relation(fields: [venueId], references: [id])
   venueId         String?
-  referees        String[]
-  weatherConditions String?
-  spectators      Int?
-  incomeGenerated Float?
+  competition     Competition?  @relation(fields: [competitionId], references: [id])
+  competitionId   String?
+  matchType       String        @default("CAMPIONATO") // CAMPIONATO, COPPA, AMICHEVOLE, TORNEO
   
+  // Risultato
   homeScore       Int?
   awayScore       Int?
-  status          MatchStatus  @default(SCHEDULED)
+  status          MatchStatus   @default(SCHEDULED)
+  
+  // Dettagli aggiuntivi
+  isHome          Boolean       @default(true)
+  opponentName    String?       // Nome squadra avversaria se esterna
   notes           String?
   
-  organization    Organization @relation(fields: [organizationId], references: [id])
+  organization    Organization  @relation(fields: [organizationId], references: [id])
   organizationId  String
   
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   // Relazioni
   roster          MatchRoster[]
   stats           MatchStats[]
-  transportSchedules TransportSchedule[]
 
   @@index([organizationId])
   @@index([date])
@@ -412,14 +431,10 @@ model MatchRoster {
   matchId   String
   athlete   Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   athleteId String
+  position  String?  // Posizione in campo per questa partita
   isStarter Boolean  @default(false)
-  attended  Boolean  @default(false)
+  isPresent Boolean? // Presenza effettiva
   notes     String?
-  
-  // Nuovi campi per convocazioni avanzate
-  convocationStatus String    @default("PENDING")
-  responseDate      DateTime?
-  absenceReason     String?
 
   @@unique([matchId, athleteId])
   @@map("match_rosters")
@@ -452,8 +467,9 @@ model TrainingSession {
   startTime      String
   endTime        String
   location       String?
-  type           String?      // TECHNICAL, TACTICAL, PHYSICAL
+  type           String?      // TECNICO, TATTICO, FISICO, PARTITA
   description    String?
+  notes          String?
   
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
@@ -463,7 +479,6 @@ model TrainingSession {
 
   // Relazioni
   attendances    TrainingAttendance[]
-  transportSchedules TransportSchedule[]
 
   @@index([teamId])
   @@index([date])
@@ -490,26 +505,31 @@ model TrainingAttendance {
 // ==========================================
 
 model Injury {
-  id           String    @id @default(uuid())
-  athlete      Athlete   @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  athleteId    String
-  injuryDate   DateTime
-  description  String
-  severity     String?   // MILD, MODERATE, SEVERE
-  estimatedRecovery Int? // Giorni stimati di recupero
-  isRecovered  Boolean   @default(false)
-  recoveryDate DateTime?
-  notes        String?
+  id                String       @id @default(uuid())
+  athlete           Athlete      @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  athleteId         String
+  injuryDate        DateTime
+  injuryType        String?      // MUSCOLARE, DISTORSIONE, CONTUSIONE, FRATTURA, ALTRO
+  bodyPart          String?      // Parte del corpo infortunata
+  description       String
+  severity          String?      // LIEVE, MODERATA, GRAVE
+  estimatedRecoveryDays Int?     // Giorni stimati di recupero
+  isRecovered       Boolean      @default(false)
+  recoveryDate      DateTime?
+  notes             String?
   
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  organizationId    String
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   @@index([athleteId])
   @@map("injuries")
 }
 
 // ==========================================
-// SISTEMA TRASPORTI (NUOVO)
+// SISTEMA TRASPORTI
 // ==========================================
 
 model TransportZone {
@@ -527,62 +547,8 @@ model TransportZone {
   @@map("transport_zones")
 }
 
-model TransportRoute {
-  id             String       @id @default(uuid())
-  name           String
-  driver         String?
-  vehiclePlate   String?
-  capacity       Int          @default(8)
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  // Relazioni
-  schedules      TransportSchedule[]
-
-  @@map("transport_routes")
-}
-
-model TransportSchedule {
-  id         String           @id @default(uuid())
-  route      TransportRoute   @relation(fields: [routeId], references: [id])
-  routeId    String
-  match      Match?           @relation(fields: [matchId], references: [id])
-  matchId    String?
-  session    TrainingSession? @relation(fields: [sessionId], references: [id])
-  sessionId  String?
-  pickupTime DateTime
-  returnTime DateTime?
-  status     String           @default("SCHEDULED")
-  notes      String?
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-
-  // Relazioni
-  bookings   TransportBooking[]
-
-  @@map("transport_schedules")
-}
-
-model TransportBooking {
-  id          String            @id @default(uuid())
-  athlete     Athlete           @relation(fields: [athleteId], references: [id])
-  athleteId   String
-  schedule    TransportSchedule @relation(fields: [scheduleId], references: [id])
-  scheduleId  String
-  status      String            @default("CONFIRMED")
-  pickupPoint String?
-  notes       String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  @@unique([athleteId, scheduleId])
-  @@map("transport_bookings")
-}
-
 // ==========================================
-// SISTEMA NOTIFICHE (NUOVO)
+// SISTEMA NOTIFICHE
 // ==========================================
 
 model Notification {
@@ -591,11 +557,11 @@ model Notification {
   userId         String?
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
-  type           String
+  type           String       // DOCUMENT_EXPIRING, PAYMENT_OVERDUE, MATCH_REMINDER, etc.
   title          String
   message        String
   link           String?
-  priority       String       @default("normal")
+  priority       String       @default("normal") // low, normal, high, urgent
   isRead         Boolean      @default(false)
   readAt         DateTime?
   data           Json?
@@ -608,160 +574,53 @@ model Notification {
 }
 
 // ==========================================
-// AUDIT LOG (NUOVO)
+// STAFF TECNICO
 // ==========================================
 
-model AuditLog {
-  id             String       @id @default(uuid())
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
-  user           User         @relation(fields: [userId], references: [id])
-  userId         String
-  action         String
-  entityType     String
-  entityId       String
-  oldValues      Json?
-  newValues      Json?
-  ipAddress      String?
-  userAgent      String?
-  createdAt      DateTime     @default(now())
-
-  @@index([organizationId])
-  @@index([userId])
-  @@index([entityType, entityId])
-  @@map("audit_logs")
-}
-
-// ==========================================
-// COMPETIZIONI E VENUE (NUOVO)
-// ==========================================
-
-model Competition {
-  id             String       @id @default(uuid())
-  name           String
-  type           String
-  season         String
-  startDate      DateTime
-  endDate        DateTime?
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  // Relazioni
-  matches        Match[]
-
-  @@map("competitions")
-}
-
-model Venue {
-  id             String       @id @default(uuid())
-  name           String
-  address        String
-  city           String
-  province       String?
-  capacity       Int?
-  type           String       @default("STANDARD")
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  // Relazioni
-  matches        Match[]
-
-  @@map("venues")
-}
-
-// ==========================================
-// STAFF TECNICO (NUOVO)
-// ==========================================
-
-model StaffMember {
+model Staff {
   id             String       @id @default(uuid())
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   firstName      String
   lastName       String
-  role           String
+  role           String       // ALLENATORE, ASSISTENTE, PREPARATORE, MEDICO, FISIOTERAPISTA, DIRIGENTE
   team           Team?        @relation(fields: [teamId], references: [id])
   teamId         String?
   email          String?
   phone          String?
-  qualifications String?
+  qualification  String?      // Qualifiche (es. "UEFA A", "Laurea Scienze Motorie")
+  startDate      DateTime?
   contractEnd    DateTime?
+  salary         Float?
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  @@map("staff_members")
+  @@map("staff")
 }
 
 // ==========================================
-// PERFORMANCE SCORES (NUOVO)
+// SPONSOR
 // ==========================================
 
-model PerformanceScore {
-  id          String   @id @default(uuid())
-  athlete     Athlete  @relation(fields: [athleteId], references: [id])
-  athleteId   String
-  date        DateTime
-  type        String
-  score       Float
-  metrics     Json?
-  evaluator   User?    @relation("Evaluator", fields: [evaluatorId], references: [id])
-  evaluatorId String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([athleteId])
-  @@map("performance_scores")
-}
-
-// ==========================================
-// EVENTI (NUOVO)
-// ==========================================
-
-model Event {
-  id              String       @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  organizationId  String
-  type            String
-  title           String
-  description     String?
-  date            DateTime
-  endDate         DateTime?
-  location        String?
-  maxParticipants Int?
-  isPublic        Boolean      @default(false)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-
-  @@index([date])
-  @@map("events")
-}
-
-// ==========================================
-// COMUNICAZIONI (NUOVO)
-// ==========================================
-
-model Communication {
+model Sponsor {
   id             String       @id @default(uuid())
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
-  fromUser       User         @relation(fields: [fromUserId], references: [id])
-  fromUserId     String
-  toUsers        String[]
-  toGroups       String[]
-  subject        String
-  message        String
-  type           String       @default("EMAIL")
-  status         String       @default("PENDING")
-  sentAt         DateTime?
-  errorMessage   String?
+  name           String
+  type           String       // MAIN, SECONDARY, TECHNICAL
+  contactPerson  String?
+  email          String?
+  phone          String?
+  website        String?
+  logoUrl        String?
+  amount         Float?       // Importo annuale
+  startDate      DateTime?
+  endDate        DateTime?
+  description    String?
+  isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  @@index([status])
-  @@map("communications")
+  @@map("sponsors")
 }

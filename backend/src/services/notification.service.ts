@@ -461,7 +461,7 @@ export class NotificationService {
             matchId: match.id,
             date: match.date,
             time: match.time,
-            venue: match.venue
+            venueId: match.venueId
           }
         });
         remindersSent++;

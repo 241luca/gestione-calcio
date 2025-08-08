@@ -22,50 +22,50 @@ async function main() {
       email: 'info@asdcalciomilano.it',
       website: 'www.asdcalciomilano.it',
       foundedYear: 2010,
-      federationNumber: 'MI12345',
+      // federationNumber rimosso - non esiste nello schema
       logo: '/logo.png'
     }
   });
 
   console.log('✅ Organizzazione creata');
 
-  // 2. RUOLI
+  // 2. RUOLI - Usando string ID invece di number
   const roles = await Promise.all([
     prisma.role.upsert({
-      where: { id: 1 },
+      where: { id: 'role-admin' },
       update: {},
       create: {
-        id: 1,
+        id: 'role-admin',
         name: 'admin',
         description: 'Amministratore completo',
         organizationId: organization.id
       }
     }),
     prisma.role.upsert({
-      where: { id: 2 },
+      where: { id: 'role-coach' },
       update: {},
       create: {
-        id: 2,
+        id: 'role-coach',
         name: 'coach',
         description: 'Allenatore',
         organizationId: organization.id
       }
     }),
     prisma.role.upsert({
-      where: { id: 3 },
+      where: { id: 'role-manager' },
       update: {},
       create: {
-        id: 3,
+        id: 'role-manager',
         name: 'manager',
         description: 'Dirigente',
         organizationId: organization.id
       }
     }),
     prisma.role.upsert({
-      where: { id: 4 },
+      where: { id: 'role-parent' },
       update: {},
       create: {
-        id: 4,
+        id: 'role-parent',
         name: 'parent',
         description: 'Genitore',
         organizationId: organization.id
@@ -89,7 +89,7 @@ async function main() {
         firstName: 'Admin',
         lastName: 'Demo',
         phone: '+39 333 1234567',
-        roleId: 1,
+        roleId: 'role-admin', // Usando string ID
         organizationId: organization.id,
         isActive: true,
         emailVerified: true
@@ -105,7 +105,7 @@ async function main() {
         firstName: 'Mario',
         lastName: 'Rossi',
         phone: '+39 333 2345678',
-        roleId: 2,
+        roleId: 'role-coach',
         organizationId: organization.id,
         isActive: true,
         emailVerified: true
@@ -121,7 +121,7 @@ async function main() {
         firstName: 'Luigi',
         lastName: 'Verdi',
         phone: '+39 333 3456789',
-        roleId: 2,
+        roleId: 'role-coach',
         organizationId: organization.id,
         isActive: true,
         emailVerified: true
@@ -131,57 +131,57 @@ async function main() {
 
   console.log('✅ Utenti creati');
 
-  // 4. POSIZIONI
+  // 4. POSIZIONI - Usando string ID
   const positions = await Promise.all([
     prisma.position.upsert({
-      where: { id: 1 },
+      where: { id: 'pos-1' },
       update: {},
-      create: { id: 1, name: 'Portiere', abbreviation: 'POR' }
+      create: { id: 'pos-1', name: 'Portiere', abbreviation: 'POR' }
     }),
     prisma.position.upsert({
-      where: { id: 2 },
+      where: { id: 'pos-2' },
       update: {},
-      create: { id: 2, name: 'Difensore Centrale', abbreviation: 'DC' }
+      create: { id: 'pos-2', name: 'Difensore Centrale', abbreviation: 'DC' }
     }),
     prisma.position.upsert({
-      where: { id: 3 },
+      where: { id: 'pos-3' },
       update: {},
-      create: { id: 3, name: 'Terzino Destro', abbreviation: 'TD' }
+      create: { id: 'pos-3', name: 'Terzino Destro', abbreviation: 'TD' }
     }),
     prisma.position.upsert({
-      where: { id: 4 },
+      where: { id: 'pos-4' },
       update: {},
-      create: { id: 4, name: 'Terzino Sinistro', abbreviation: 'TS' }
+      create: { id: 'pos-4', name: 'Terzino Sinistro', abbreviation: 'TS' }
     }),
     prisma.position.upsert({
-      where: { id: 5 },
+      where: { id: 'pos-5' },
       update: {},
-      create: { id: 5, name: 'Centrocampista Centrale', abbreviation: 'CC' }
+      create: { id: 'pos-5', name: 'Centrocampista Centrale', abbreviation: 'CC' }
     }),
     prisma.position.upsert({
-      where: { id: 6 },
+      where: { id: 'pos-6' },
       update: {},
-      create: { id: 6, name: 'Centrocampista Esterno', abbreviation: 'CE' }
+      create: { id: 'pos-6', name: 'Centrocampista Esterno', abbreviation: 'CE' }
     }),
     prisma.position.upsert({
-      where: { id: 7 },
+      where: { id: 'pos-7' },
       update: {},
-      create: { id: 7, name: 'Trequartista', abbreviation: 'TRQ' }
+      create: { id: 'pos-7', name: 'Trequartista', abbreviation: 'TRQ' }
     }),
     prisma.position.upsert({
-      where: { id: 8 },
+      where: { id: 'pos-8' },
       update: {},
-      create: { id: 8, name: 'Attaccante', abbreviation: 'ATT' }
+      create: { id: 'pos-8', name: 'Attaccante', abbreviation: 'ATT' }
     }),
     prisma.position.upsert({
-      where: { id: 9 },
+      where: { id: 'pos-9' },
       update: {},
-      create: { id: 9, name: 'Ala Destra', abbreviation: 'AD' }
+      create: { id: 'pos-9', name: 'Ala Destra', abbreviation: 'AD' }
     }),
     prisma.position.upsert({
-      where: { id: 10 },
+      where: { id: 'pos-10' },
       update: {},
-      create: { id: 10, name: 'Ala Sinistra', abbreviation: 'AS' }
+      create: { id: 'pos-10', name: 'Ala Sinistra', abbreviation: 'AS' }
     })
   ]);
 
@@ -197,7 +197,7 @@ async function main() {
         name: 'Under 10',
         category: 'U10',
         season: '2024/2025',
-        coachId: 'user-coach-1',
+        // coachId non esiste - relazione gestita diversamente
         organizationId: organization.id
       }
     }),
@@ -209,7 +209,6 @@ async function main() {
         name: 'Under 12',
         category: 'U12',
         season: '2024/2025',
-        coachId: 'user-coach-2',
         organizationId: organization.id
       }
     }),
@@ -221,7 +220,6 @@ async function main() {
         name: 'Under 14',
         category: 'U14',
         season: '2024/2025',
-        coachId: 'user-coach-1',
         organizationId: organization.id
       }
     }),
@@ -233,7 +231,6 @@ async function main() {
         name: 'Under 16',
         category: 'U16',
         season: '2024/2025',
-        coachId: 'user-coach-2',
         organizationId: organization.id
       }
     })
@@ -241,33 +238,33 @@ async function main() {
 
   console.log('✅ Squadre create');
 
-  // 6. ZONE TRASPORTO
+  // 6. ZONE TRASPORTO - Usando string ID
   const transportZones = await Promise.all([
     prisma.transportZone.upsert({
-      where: { id: 1 },
+      where: { id: 'zone-1' },
       update: {},
       create: {
-        id: 1,
+        id: 'zone-1',
         name: 'Zona Centro',
         description: 'Milano centro',
         organizationId: organization.id
       }
     }),
     prisma.transportZone.upsert({
-      where: { id: 2 },
+      where: { id: 'zone-2' },
       update: {},
       create: {
-        id: 2,
+        id: 'zone-2',
         name: 'Zona Nord',
         description: 'Milano nord e hinterland',
         organizationId: organization.id
       }
     }),
     prisma.transportZone.upsert({
-      where: { id: 3 },
+      where: { id: 'zone-3' },
       update: {},
       create: {
-        id: 3,
+        id: 'zone-3',
         name: 'Zona Sud',
         description: 'Milano sud e hinterland',
         organizationId: organization.id
@@ -339,10 +336,12 @@ async function main() {
   ];
 
   const athletes = [];
+  const positionIds = positions.map(p => p.id);
+  const zoneIds = transportZones.map(z => z.id);
   
   for (let i = 0; i < athleteNames.length; i++) {
     const athlete = athleteNames[i];
-    let teamId, positionId;
+    let teamId;
     
     // Assegna alla squadra in base all'età
     if (i < 12) {
@@ -356,14 +355,15 @@ async function main() {
     }
     
     // Assegna posizione (distribuzione realistica)
+    let positionId;
     if (i % 11 === 0) {
-      positionId = 1; // Portiere
+      positionId = positionIds[0]; // Portiere
     } else if (i % 11 <= 4) {
-      positionId = 2 + (i % 3); // Difensori
+      positionId = positionIds[1 + (i % 3)]; // Difensori
     } else if (i % 11 <= 7) {
-      positionId = 5 + (i % 2); // Centrocampisti
+      positionId = positionIds[4 + (i % 2)]; // Centrocampisti
     } else {
-      positionId = 8 + (i % 3); // Attaccanti
+      positionId = positionIds[7 + (i % 3)]; // Attaccanti
     }
     
     const createdAthlete = await prisma.athlete.create({
@@ -382,13 +382,13 @@ async function main() {
         phone: `+39 333 ${Math.floor(Math.random() * 9000000) + 1000000}`,
         email: `${athlete.firstName.toLowerCase()}.${athlete.lastName.toLowerCase()}@email.com`,
         teamId,
-        positionId,
+        positionId, // Ora usa string ID
         jerseyNumber: (i % 25) + 1,
         footPreference: ['RIGHT', 'LEFT', 'BOTH'][Math.floor(Math.random() * 3)],
         height: 130 + Math.floor(Math.random() * 50),
         weight: 30 + Math.floor(Math.random() * 30),
         status: Math.random() > 0.9 ? 'INJURED' : 'ACTIVE',
-        transportZoneId: Math.floor(Math.random() * 3) + 1,
+        transportZoneId: zoneIds[Math.floor(Math.random() * 3)], // Ora usa string ID
         hasTransportService: Math.random() > 0.5,
         organizationId: organization.id,
         parentName: `${['Giovanni', 'Maria', 'Roberto', 'Anna'][Math.floor(Math.random() * 4)]} ${athlete.lastName}`,
@@ -414,8 +414,8 @@ async function main() {
         description: 'Certificato medico per attività sportiva agonistica',
         isRequired: true,
         hasExpiry: true,
-        validityDays: 365,
-        organizationId: organization.id
+        validityDays: 365
+        // organizationId rimosso - non esiste nella tabella DocumentType
       }
     }),
     prisma.documentType.upsert({
@@ -427,8 +427,7 @@ async function main() {
         description: 'Documento di identità',
         isRequired: true,
         hasExpiry: true,
-        validityDays: 3650,
-        organizationId: organization.id
+        validityDays: 3650
       }
     }),
     prisma.documentType.upsert({
@@ -440,8 +439,7 @@ async function main() {
         description: 'Tessera federale',
         isRequired: true,
         hasExpiry: true,
-        validityDays: 365,
-        organizationId: organization.id
+        validityDays: 365
       }
     }),
     prisma.documentType.upsert({
@@ -452,8 +450,7 @@ async function main() {
         name: 'Modulo Privacy',
         description: 'Consenso trattamento dati',
         isRequired: true,
-        hasExpiry: false,
-        organizationId: organization.id
+        hasExpiry: false
       }
     })
   ]);
@@ -477,7 +474,9 @@ async function main() {
           expiryDate: addMonths(new Date(), 9),
           status: 'VALID',
           isVerified: true,
-          uploadedBy: 'user-admin',
+          uploadedBy: {
+            connect: { id: 'user-admin' }
+          },
           organizationId: organization.id
         }
       })
@@ -497,7 +496,9 @@ async function main() {
           expiryDate: addMonths(new Date(), 36),
           status: 'VALID',
           isVerified: true,
-          uploadedBy: 'user-admin',
+          uploadedBy: {
+            connect: { id: 'user-admin' }
+          },
           organizationId: organization.id
         }
       })
@@ -524,7 +525,9 @@ async function main() {
           status: tesseramentoExpiry < new Date() ? 'EXPIRED' : 
                  tesseramentoExpiry < addDays(new Date(), 30) ? 'EXPIRING' : 'VALID',
           isVerified: Math.random() > 0.3,
-          uploadedBy: 'user-admin',
+          uploadedBy: {
+            connect: { id: 'user-admin' }
+          },
           organizationId: organization.id
         }
       })
@@ -543,8 +546,8 @@ async function main() {
         name: 'Quota Iscrizione',
         description: 'Iscrizione annuale',
         amount: 150,
-        isRecurring: false,
-        organizationId: organization.id
+        isRecurring: false
+        // organizationId rimosso - non esiste nella tabella PaymentType
       }
     }),
     prisma.paymentType.upsert({
@@ -555,8 +558,7 @@ async function main() {
         name: 'Retta Mensile',
         description: 'Quota mensile',
         amount: 80,
-        isRecurring: true,
-        organizationId: organization.id
+        isRecurring: true
       }
     }),
     prisma.paymentType.upsert({
@@ -567,8 +569,7 @@ async function main() {
         name: 'Kit Divise',
         description: 'Divise ufficiali',
         amount: 120,
-        isRecurring: false,
-        organizationId: organization.id
+        isRecurring: false
       }
     })
   ]);
@@ -590,7 +591,8 @@ async function main() {
           status: 'PAID',
           paymentMethod: 'BANK_TRANSFER',
           description: 'Quota iscrizione 2024/2025',
-          organizationId: organization.id
+          organizationId: organization.id,
+          createdById: 'user-admin' // Campo richiesto
         }
       })
     );
@@ -612,7 +614,8 @@ async function main() {
             status: isPaid ? 'PAID' : isOverdue ? 'OVERDUE' : 'PENDING',
             paymentMethod: isPaid ? ['BANK_TRANSFER', 'CASH', 'CREDIT_CARD'][Math.floor(Math.random() * 3)] : null,
             description: `Retta ${dueDate.toLocaleString('it-IT', { month: 'long', year: 'numeric' })}`,
-            organizationId: organization.id
+            organizationId: organization.id,
+            createdById: 'user-admin'
           }
         })
       );
@@ -631,7 +634,8 @@ async function main() {
             status: 'PAID',
             paymentMethod: 'CASH',
             description: 'Kit divise stagione 2024/2025',
-            organizationId: organization.id
+            organizationId: organization.id,
+            createdById: 'user-admin'
           }
         })
       );
@@ -650,7 +654,7 @@ async function main() {
         season: '2024/2025',
         startDate: new Date('2024-09-15'),
         endDate: new Date('2025-05-30'),
-        description: 'Campionato provinciale categoria Under 10',
+        // description rimosso - non esiste nello schema
         organizationId: organization.id
       }
     }),
@@ -691,11 +695,11 @@ async function main() {
 
   console.log('✅ Competizioni create');
 
-  // 13. VENUE (Campi da gioco)
+  // 13. VENUE (Campi da gioco) - Usando string ID
   const venues = await Promise.all([
     prisma.venue.create({
       data: {
-        id: 1,
+        id: 'venue-1',
         name: 'Campo Principale',
         address: 'Via dello Sport, 10',
         city: 'Milano',
@@ -708,7 +712,7 @@ async function main() {
     }),
     prisma.venue.create({
       data: {
-        id: 2,
+        id: 'venue-2',
         name: 'Campo Secondario',
         address: 'Via dello Sport, 10',
         city: 'Milano',
@@ -721,7 +725,7 @@ async function main() {
     }),
     prisma.venue.create({
       data: {
-        id: 3,
+        id: 'venue-3',
         name: 'Centro Sportivo Comunale',
         address: 'Via Roma, 25',
         city: 'Milano',
@@ -750,12 +754,12 @@ async function main() {
       
       const match = await prisma.match.create({
         data: {
-          homeTeamId: isHome ? team.id : null,
-          awayTeamId: !isHome ? team.id : null,
+          homeTeamId: isHome ? team.id : 'team-external',
+          awayTeamId: !isHome ? team.id : 'team-external',
           opponentName: isHome ? `Squadra Ospite ${i + 1}` : `Squadra Casa ${i + 1}`,
           date: matchDate,
           time: `${14 + Math.floor(Math.random() * 6)}:${['00', '30'][Math.floor(Math.random() * 2)]}`,
-          venueId: isHome ? 1 : 3,
+          venueId: isHome ? 'venue-1' : 'venue-3',
           competitionId: competitions[Math.floor(Math.random() * competitions.length)].id,
           matchType: matchTypes[Math.floor(Math.random() * matchTypes.length)],
           status: matchDate < new Date() ? 'COMPLETED' : 'SCHEDULED',
@@ -776,7 +780,7 @@ async function main() {
   const rosters = [];
   for (const match of matches.filter(m => m.status === 'SCHEDULED')) {
     const team = teams.find(t => t.id === match.homeTeamId || t.id === match.awayTeamId);
-    if (team) {
+    if (team && team.id !== 'team-external') {
       const teamAthletes = athletes.filter(a => a.teamId === team.id && a.status === 'ACTIVE');
       const selectedAthletes = teamAthletes.slice(0, Math.min(15, teamAthletes.length));
       
@@ -786,7 +790,7 @@ async function main() {
             data: {
               matchId: match.id,
               athleteId: athlete.id,
-              isConvocated: true,
+              // isConvocated non esiste - campo rimosso
               isPresent: null,
               position: athlete.positionId
             }
@@ -813,7 +817,7 @@ async function main() {
           endTime: '19:00',
           type: ['TECNICO', 'TATTICO', 'FISICO', 'PARTITA'][Math.floor(Math.random() * 4)],
           location: venues[Math.floor(Math.random() * 2)].name,
-          notes: `Allenamento ${i + 1}`,
+          // notes rimosso - non esiste nello schema
           organizationId: organization.id
         }
       });
@@ -837,150 +841,7 @@ async function main() {
 
   console.log(`✅ ${trainingSessions.length} Sessioni allenamento create`);
 
-  // 17. SPONSOR
-  const sponsors = await Promise.all([
-    prisma.sponsor.create({
-      data: {
-        name: 'SportStore Milano',
-        type: 'MAIN',
-        contactPerson: 'Giovanni Bianchi',
-        email: 'info@sportstore.it',
-        phone: '+39 02 12345678',
-        website: 'www.sportstore.it',
-        amount: 15000,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-12-31'),
-        description: 'Sponsor principale - Fornitura materiale tecnico',
-        logoUrl: '/sponsors/sportstore.png',
-        isActive: true,
-        organizationId: organization.id
-      }
-    }),
-    prisma.sponsor.create({
-      data: {
-        name: 'Pizzeria Da Mario',
-        type: 'SECONDARY',
-        contactPerson: 'Mario Rossi',
-        email: 'info@pizzeriamario.it',
-        phone: '+39 02 87654321',
-        amount: 5000,
-        startDate: new Date('2024-03-01'),
-        endDate: new Date('2025-02-28'),
-        description: 'Sponsor cartellonistica campo',
-        isActive: true,
-        organizationId: organization.id
-      }
-    }),
-    prisma.sponsor.create({
-      data: {
-        name: 'Banca Locale',
-        type: 'SECONDARY',
-        contactPerson: 'Lucia Verdi',
-        email: 'sponsor@bancalocale.it',
-        phone: '+39 02 11223344',
-        amount: 8000,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-12-31'),
-        description: 'Sponsor maglia gara',
-        isActive: true,
-        organizationId: organization.id
-      }
-    }),
-    prisma.sponsor.create({
-      data: {
-        name: 'Autofficina Rapida',
-        type: 'TECHNICAL',
-        contactPerson: 'Franco Neri',
-        email: 'info@autofficinarapida.it',
-        phone: '+39 333 4455667',
-        amount: 3000,
-        startDate: new Date('2024-06-01'),
-        endDate: new Date('2025-05-31'),
-        description: 'Sponsor tecnico - Manutenzione pulmino',
-        isActive: true,
-        organizationId: organization.id
-      }
-    })
-  ]);
-
-  console.log('✅ Sponsor creati');
-
-  // 18. STAFF
-  const staff = await Promise.all([
-    prisma.staff.create({
-      data: {
-        firstName: 'Mario',
-        lastName: 'Rossi',
-        role: 'ALLENATORE',
-        email: 'mario.rossi@team.com',
-        phone: '+39 333 1234567',
-        qualification: 'UEFA A',
-        teamId: 'team-u14',
-        startDate: new Date('2023-09-01'),
-        contractEnd: new Date('2025-06-30'),
-        salary: 2000,
-        organizationId: organization.id
-      }
-    }),
-    prisma.staff.create({
-      data: {
-        firstName: 'Luigi',
-        lastName: 'Verdi',
-        role: 'ALLENATORE',
-        email: 'luigi.verdi@team.com',
-        phone: '+39 333 2345678',
-        qualification: 'UEFA B',
-        teamId: 'team-u12',
-        startDate: new Date('2024-01-01'),
-        contractEnd: new Date('2025-06-30'),
-        salary: 1800,
-        organizationId: organization.id
-      }
-    }),
-    prisma.staff.create({
-      data: {
-        firstName: 'Giuseppe',
-        lastName: 'Bianchi',
-        role: 'PREPARATORE',
-        email: 'giuseppe.bianchi@team.com',
-        phone: '+39 333 3456789',
-        qualification: 'Laurea Scienze Motorie',
-        startDate: new Date('2023-09-01'),
-        salary: 1500,
-        organizationId: organization.id
-      }
-    }),
-    prisma.staff.create({
-      data: {
-        firstName: 'Roberto',
-        lastName: 'Ferrari',
-        role: 'MEDICO',
-        email: 'dr.ferrari@team.com',
-        phone: '+39 333 4567890',
-        qualification: 'Medico Sportivo',
-        startDate: new Date('2022-09-01'),
-        salary: 500,
-        organizationId: organization.id
-      }
-    }),
-    prisma.staff.create({
-      data: {
-        firstName: 'Andrea',
-        lastName: 'Romano',
-        role: 'FISIOTERAPISTA',
-        email: 'andrea.romano@team.com',
-        phone: '+39 333 5678901',
-        qualification: 'Fisioterapista Sportivo',
-        startDate: new Date('2023-01-01'),
-        salary: 1200,
-        organizationId: organization.id
-      }
-    })
-  ]);
-
-  console.log('✅ Staff creato');
-
-  // 19. NOTIFICHE
+  // 17. NOTIFICHE
   const notifications = [];
   
   // Notifiche documenti in scadenza
@@ -1021,7 +882,7 @@ async function main() {
 
   console.log(`✅ ${notifications.length} Notifiche create`);
 
-  // 20. INFORTUNI (per alcuni atleti)
+  // 18. INFORTUNI (per alcuni atleti)
   const injuries = [];
   const injuredAthletes = athletes.filter(a => a.status === 'INJURED');
   
@@ -1031,7 +892,7 @@ async function main() {
         data: {
           athleteId: athlete.id,
           injuryDate: subDays(new Date(), Math.floor(Math.random() * 30)),
-          injuryType: ['MUSCOLARE', 'DISTORSIONE', 'CONTUSIONE', 'FRATTURA'][Math.floor(Math.random() * 4)],
+          // injuryType non esiste - campo diverso nello schema
           bodyPart: ['Caviglia', 'Ginocchio', 'Coscia', 'Polpaccio'][Math.floor(Math.random() * 4)],
           severity: ['LIEVE', 'MODERATA', 'GRAVE'][Math.floor(Math.random() * 3)],
           estimatedRecoveryDays: Math.floor(Math.random() * 30) + 7,
@@ -1052,8 +913,6 @@ async function main() {
   console.log(`- ${payments.length} Pagamenti`);
   console.log(`- ${matches.length} Partite`);
   console.log(`- ${trainingSessions.length} Allenamenti`);
-  console.log(`- ${sponsors.length} Sponsor`);
-  console.log(`- ${staff.length} Membri staff`);
   console.log(`- ${notifications.length} Notifiche`);
   console.log(`- ${injuries.length} Infortuni`);
 }
