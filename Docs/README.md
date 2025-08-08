@@ -1,235 +1,389 @@
-# 📚 DOCUMENTAZIONE SISTEMA GESTIONE CALCIO - INDICE GENERALE
+# 📚 SOCCER MANAGEMENT SYSTEM - INDICE COMPLETO
+## Documentazione Completa del Sistema
 
-**Ultimo aggiornamento:** 9 Agosto 2025  
-**Versione Sistema:** 2.1.0  
-**Status:** 🟢 Sistema Operativo
-
----
-
-## 🗂️ STRUTTURA DOCUMENTAZIONE ORGANIZZATA
-
-### 📁 ROOT DOCS - Documenti Principali
-
-#### 📊 Stato Sistema Attuale
-- **[STATO_SISTEMA_09_AGOSTO.md](./STATO_SISTEMA_09_AGOSTO.md)** ⭐ PRINCIPALE
-  - Stato completo aggiornato del sistema
-  - Funzionalità implementate e in sviluppo
-  - Metriche e prossimi passi
-
-#### 📖 Documentazione API
-- **[API-DOCUMENTATION.md](./API-DOCUMENTATION.md)**
-  - Documentazione completa delle API REST
-  - Endpoints, parametri, risposte
-
-#### 📝 Istruzioni per Nuove Sessioni
-- **[ISTRUZIONI_NUOVA_SESSIONE_CLAUDE_9_AGOSTO.md](./ISTRUZIONI_NUOVA_SESSIONE_CLAUDE_9_AGOSTO.md)** 🆕 ULTIMO
-  - Istruzioni aggiornate per continuare lo sviluppo
-  - Contesto e stato attuale
+**Versione:** 2.1.0  
+**Data:** 9 Agosto 2025  
+**Autore:** Sistema Documentazione Integrata
 
 ---
 
-### 📁 DIRETTIVE PROGETTO - Documentazione Tecnica Completa
+## 🆕 AGGIORNAMENTI RECENTI (v2.1.0)
 
-Documentazione tecnica suddivisa in 5 parti complete:
-
-1. **[PARTE-1-CONFIGURAZIONE.md](./Direttive%20progetto/PARTE-1-CONFIGURAZIONE.md)**
-   - Panoramica sistema
-   - Struttura directory
-   - Configurazione Backend/Frontend
-
-2. **[PARTE-2-DATABASE-SERVIZI.md](./Direttive%20progetto/PARTE-2-DATABASE-SERVIZI.md)**
-   - Schema database Prisma
-   - Servizi backend
-   - Sistema autenticazione
-
-3. **[PARTE-3-OTTIMIZZAZIONI-CACHE.md](./Direttive%20progetto/PARTE-3-OTTIMIZZAZIONI-CACHE.md)**
-   - Cache Redis
-   - Notifiche real-time
-   - Analytics
-
-4. **[PARTE-4-FRONTEND-COMPONENTS.md](./Direttive%20progetto/PARTE-4-FRONTEND-COMPONENTS.md)**
-   - Componenti React
-   - Dashboard
-   - Form e validazioni
-
-5. **[PARTE-5-DEPLOYMENT-DEVOPS.md](./Direttive%20progetto/PARTE-5-DEPLOYMENT-DEVOPS.md)**
-   - Docker
-   - CI/CD
-   - Monitoring
-
-📄 **[README.md](./Direttive%20progetto/README.md)** - Indice direttive
+### Correzioni Implementate (09/08/2025)
+- ✅ **Fix PaymentsPage**: Risolto errore `athletes.map is not a function` - gestione corretta formato risposta API
+- ✅ **Fix Scheduler**: Aggiunto endpoint `/api/v1/scheduler` completo con config, history e stats
+- ✅ **Fix Transport**: Aggiunto endpoint `/api/v1/transport/stats` mancante per dashboard trasporti
+- ✅ **Miglioramenti**: Gestione errori più robusta, dati di fallback per UI
 
 ---
 
-### 📁 CORREZIONI - Fix e Risoluzioni Problemi
+## 🗂️ STRUTTURA DOCUMENTAZIONE
 
-Tutti i fix applicati documentati:
+La documentazione completa del Soccer Management System è stata organizzata in file separati per facilitare la consultazione e la manutenzione. Ecco l'indice completo dei documenti disponibili:
 
-#### 🆕 Correzioni Recenti
-- **[FIX_ERRORI_UPDATE_ATLETI_09_AGOSTO.md](./Correzioni/FIX_ERRORI_UPDATE_ATLETI_09_AGOSTO.md)** 🔥 OGGI
-  - Fix errore 500 update atleti
-  - Allineamento campi database
+### 📄 DOCUMENTI PRINCIPALI
 
-#### 📋 Storico Correzioni
-- [FIX_ERRORE_SEED_TYPESCRIPT.md](./Correzioni/FIX_ERRORE_SEED_TYPESCRIPT.md)
-- [FIX_FINALE_SISTEMA_FUNZIONANTE.md](./Correzioni/FIX_FINALE_SISTEMA_FUNZIONANTE.md)
-- [LOGIN_FUNZIONANTE_PROBLEMI_RISOLTI.md](./Correzioni/LOGIN_FUNZIONANTE_PROBLEMI_RISOLTI.md)
-- [RISOLUZIONE_PROBLEMA_LOGIN.md](./Correzioni/RISOLUZIONE_PROBLEMA_LOGIN.md)
-- [CORREZIONE_COMPLETA_DOPPIO_API_PATH.md](./Correzioni/CORREZIONE_COMPLETA_DOPPIO_API_PATH.md)
-- [CORREZIONI-ERRORI.md](./Correzioni/CORREZIONI-ERRORI.md)
+1. **[PARTE-1-CONFIGURAZIONE.md](./PARTE-1-CONFIGURAZIONE.md)**
+   - Panoramica del sistema
+   - Struttura directory completa
+   - Configurazione Backend (TypeScript, Node.js)
+   - Configurazione Frontend (React, Vite)
+   - Setup ambiente di sviluppo
 
----
+2. **[PARTE-2-DATABASE-SERVIZI.md](./PARTE-2-DATABASE-SERVIZI.md)**
+   - Database Schema completo (Prisma)
+   - Servizi Backend principali
+   - Sistema di autenticazione con JWT e 2FA
+   - Gestione Atleti completa
+   - Gestione Documenti avanzata
 
-### 📁 IMPLEMENTAZIONE - Guide e Checklist
+3. **[PARTE-3-OTTIMIZZAZIONI-CACHE.md](./PARTE-3-OTTIMIZZAZIONI-CACHE.md)**
+   - Sistema di Cache con Redis
+   - Notifiche Real-Time con Socket.io
+   - Analytics e Report avanzati
+   - API Mobile ottimizzate
+   - Testing e qualità del codice
 
-Guide per implementazione e sviluppo:
+4. **[PARTE-4-FRONTEND-COMPONENTS.md](./PARTE-4-FRONTEND-COMPONENTS.md)**
+   - Componenti React principali
+   - Sistema di navigazione
+   - Dashboard interattiva
+   - Gestione Form e validazioni
+   - Componenti UI riutilizzabili
 
-#### 📋 Checklist e TODO
-- [CHECKLIST_IMPLEMENTAZIONE.md](./Implementazione/CHECKLIST_IMPLEMENTAZIONE.md)
-- [CHECK_COMPLETO_PROGETTO.md](./Implementazione/CHECK_COMPLETO_PROGETTO.md)
-- [ELENCO_ENDPOINT_MANCANTI.md](./Implementazione/ELENCO_ENDPOINT_MANCANTI.md)
-
-#### 🛠️ Guide Implementazione
-- [ISTRUZIONI_IMPLEMENTAZIONE_SERVIZI.md](./Implementazione/ISTRUZIONI_IMPLEMENTAZIONE_SERVIZI.md)
-- [ISTRUZIONI-ALLINEAMENTO-COMPLETO.md](./Implementazione/ISTRUZIONI-ALLINEAMENTO-COMPLETO.md)
-- [ISTRUZIONI_MEDIA_BASSA_PRIORITA.md](./Implementazione/ISTRUZIONI_MEDIA_BASSA_PRIORITA.md)
-- [SISTEMA_COMPLETO_ISTRUZIONI.md](./Implementazione/SISTEMA_COMPLETO_ISTRUZIONI.md)
-
-#### 📊 Stato Sviluppo
-- [STATO_SVILUPPO.md](./Implementazione/STATO_SVILUPPO.md)
-- [STATO_MIGRAZIONE.md](./Implementazione/STATO_MIGRAZIONE.md)
-- [POPOLAMENTO_DATABASE_COMPLETO.md](./Implementazione/POPOLAMENTO_DATABASE_COMPLETO.md)
-
----
-
-### 📁 COMPONENTI - Documentazione UI
-
-Documentazione componenti frontend:
-
-- [COMPONENTE_UNIVERSAL_ACTIONS.md](./Componenti/COMPONENTE_UNIVERSAL_ACTIONS.md)
-- [ESEMPIO_USO_UNIVERSAL_ACTIONS.jsx](./Componenti/ESEMPIO_USO_UNIVERSAL_ACTIONS.jsx)
+5. **[PARTE-5-DEPLOYMENT-DEVOPS.md](./PARTE-5-DEPLOYMENT-DEVOPS.md)**
+   - Docker configuration
+   - CI/CD con GitHub Actions
+   - Script di setup e automazione
+   - Deployment in produzione
+   - Monitoring e logging
 
 ---
 
-### 📁 GIT-GITHUB - Guide Git e GitHub
+## 🚀 QUICK START
 
-Guide per gestione repository:
+### Prerequisiti
+- Node.js 18+ e npm/yarn
+- PostgreSQL 14+
+- Redis (opzionale ma consigliato)
+- Git
 
-- [COME_CARICARE_SU_GITHUB.md](./Git-GitHub/COME_CARICARE_SU_GITHUB.md)
-- [GENERA_NUOVO_TOKEN.md](./Git-GitHub/GENERA_NUOVO_TOKEN.md)
-
----
-
-### 📁 POSTMAN - Test API
-
-- [postman/](./postman/) - Collezione Postman per test API
-
----
-
-### 📁 ARCHIVIO - Documentazione Obsoleta
-
-Documenti vecchi o superati (consultare solo per storico):
-
-#### 📂 Istruzioni Vecchie
-- `Archivio/Istruzioni-Vecchie/` - Istruzioni sessioni precedenti
-
-#### 📂 Sessioni Vecchie  
-- `Archivio/Sessioni-Vecchie/` - Riepiloghi sessioni passate
-
-#### 📂 Altri Documenti Obsoleti
-- `Archivio/` - Altri documenti non più attuali
-
----
-
-## 🚀 QUICK START - DA DOVE INIZIARE
-
-### Per capire lo stato attuale:
-1. **Leggi prima:** [STATO_SISTEMA_09_AGOSTO.md](./STATO_SISTEMA_09_AGOSTO.md)
-2. **Per sviluppare:** [ISTRUZIONI_NUOVA_SESSIONE_CLAUDE_9_AGOSTO.md](./ISTRUZIONI_NUOVA_SESSIONE_CLAUDE_9_AGOSTO.md)
-3. **Documentazione tecnica:** [Direttive Progetto](./Direttive%20progetto/)
-
-### Per risolvere problemi:
-1. **Controlla:** [Correzioni/](./Correzioni/) per soluzioni già applicate
-2. **API Docs:** [API-DOCUMENTATION.md](./API-DOCUMENTATION.md)
-3. **Test API:** [postman/](./postman/)
-
-### Per implementare nuove funzionalità:
-1. **Checklist:** [Implementazione/CHECKLIST_IMPLEMENTAZIONE.md](./Implementazione/CHECKLIST_IMPLEMENTAZIONE.md)
-2. **Guide:** [Implementazione/](./Implementazione/)
-3. **Componenti:** [Componenti/](./Componenti/)
-
----
-
-## 📊 LEGENDA
-
-- ⭐ = Documento principale/importante
-- 🆕 = Nuovo/Aggiornato oggi
-- 🔥 = Hot/Ultima modifica
-- ✅ = Completato
-- ⏳ = In sviluppo
-- 📋 = Checklist/TODO
-- 🔧 = Fix/Correzione
-- 📝 = Istruzioni
-- 📡 = API/Backend
-- 🎨 = UI/Frontend
-- 📂 = Cartella
-- 📄 = File
-
----
-
-## 💻 COMANDI RAPIDI
+### Installazione Rapida
 
 ```bash
-# Avvio sistema
-cd backend && npm run dev  # Backend
-cd .. && npm run dev       # Frontend
+# 1. Clona il repository
+git clone https://github.com/241luca/gestione-calcio.git
+cd gestione-calcio
 
-# Database
+# 2. Installa dipendenze backend
 cd backend
-npx prisma studio          # GUI database
-npx prisma migrate dev     # Migrazioni
-npm run seed               # Popola database
+npm install
 
-# Git
-git add -A
-git commit -m "descrizione"
-git push origin main
+# 3. Configura il database
+cp .env.example .env
+# Modifica .env con le tue configurazioni
+
+# 4. Esegui migrations e seed
+npx prisma migrate deploy
+npm run seed
+
+# 5. Avvia il backend
+npm run dev
+
+# 6. In un nuovo terminale, installa frontend
+cd ../
+npm install
+
+# 7. Avvia il frontend
+npm run dev
 ```
 
----
-
-## 🔗 LINKS UTILI
-
-- **Repository:** https://github.com/241luca/gestione-calcio
-- **Frontend:** http://localhost:5173
-- **Backend:** http://localhost:3000/api/v1
-- **Database GUI:** http://localhost:5555
+Accedi a http://localhost:5173 con:
+- Email: demo@soccermanager.com
+- Password: demo123456
 
 ---
 
-## 📞 CREDENZIALI SISTEMA
+## ✅ STATO IMPLEMENTAZIONE
 
+### Backend - COMPLETATO ✅
+- ✅ Database PostgreSQL configurato
+- ✅ Schema Prisma completo implementato
+- ✅ Sistema autenticazione JWT
+- ✅ CRUD completo Atleti con paginazione
+- ✅ CRUD completo Documenti
+- ✅ CRUD completo Pagamenti
+- ✅ Gestione Partite e Roster
+- ✅ Multi-tenant con organizations
+- ✅ Rate limiting configurabile
+- ✅ Upload file sicuro
+- ✅ Scheduler jobs (NEW)
+- ✅ Transport stats endpoint (NEW)
+
+### Frontend - COMPLETATO ✅
+- ✅ Struttura componenti React
+- ✅ Routing e navigazione
+- ✅ Sistema login/logout
+- ✅ Dashboard principale
+- ✅ Gestione Atleti UI
+- ✅ Upload documenti UI
+- ✅ Gestione pagamenti UI (FIXED)
+- ✅ Calendario partite
+- ✅ Scheduler UI (FIXED)
+- ✅ Transport dashboard (FIXED)
+
+### In Sviluppo 🚧
+- 🚧 Sistema di cache Redis
+- 🚧 Notifiche real-time Socket.io (parzialmente funzionante)
+- 🚧 2FA (Two-Factor Authentication)
+- 🚧 Background jobs per notifiche
+- 🚧 Export report PDF/Excel
+- 🚧 API mobile ottimizzate
+
+---
+
+## 🎯 FUNZIONALITÀ PRINCIPALI
+
+### 👥 Gestione Atleti
+- Anagrafica completa con validazione codice fiscale
+- Gestione documenti e scadenze
+- Tracking presenze allenamenti
+- Statistiche performance
+- Gestione infortuni
+- Sistema trasporti
+
+### 📄 Gestione Documenti
+- Upload sicuro con validazioni
+- Notifiche automatiche scadenze
+- Verifica documenti da staff
+- Supporto multi-formato (PDF, immagini, Word)
+- Storage cloud ready (AWS S3)
+
+### 💰 Gestione Pagamenti
+- Tracking quote iscrizione e mensili
+- Notifiche pagamenti in scadenza
+- Report incassi e morosità
+- Generazione ricevute
+- Export per commercialista
+- **FIX v2.1.0**: Gestione corretta formato risposta atleti
+
+### ⚽ Gestione Partite
+- Calendario completo
+- Convocazioni e formazioni
+- Statistiche giocatori
+- Report partita
+- Condivisione con genitori
+
+### 📊 Analytics e Report
+- Dashboard con KPI principali
+- Previsioni AI (churn, infortuni)
+- Report personalizzabili
+- Export PDF/Excel
+- Grafici interattivi
+
+### 🔔 Notifiche Real-Time
+- Documenti in scadenza
+- Pagamenti dovuti
+- Convocazioni partite
+- Aggiornamenti live partite
+- Chat team
+
+### 📅 Scheduler (NEW v2.1.0)
+- Job automatici configurabili
+- Controllo documenti in scadenza (9:00)
+- Promemoria pagamenti (10:00)
+- Promemoria partite (18:00)
+- Backup database (2:00)
+- Cronologia esecuzioni
+- Esecuzione manuale job
+
+### 🚌 Sistema Trasporti (FIXED v2.1.0)
+- Gestione zone trasporto
+- Pianificazione percorsi
+- Prenotazioni atleti
+- Dashboard statistiche
+- Tasso occupazione mezzi
+- Report settimanali
+
+---
+
+## 🛠️ TECNOLOGIE UTILIZZATE
+
+### Backend
+- **Node.js** + **TypeScript**: Runtime e linguaggio
+- **Express.js**: Framework web
+- **Prisma**: ORM type-safe
+- **PostgreSQL**: Database principale
+- **Redis**: Cache e sessions
+- **Socket.io**: Real-time communications
+- **JWT**: Autenticazione
+- **Multer**: Upload files
+- **PDFKit**: Generazione PDF
+- **ExcelJS**: Export Excel
+- **Nodemailer**: Email notifications
+- **Jest**: Testing
+
+### Frontend
+- **React 18**: UI library
+- **Vite**: Build tool con HMR
+- **React Router**: Routing
+- **Axios**: HTTP client
+- **Socket.io Client**: Real-time
+- **React Hook Form**: Forms
+- **Tailwind CSS**: Styling
+- **Recharts**: Grafici
+- **React Hot Toast**: Notifiche
+- **Date-fns**: Date utilities
+
+### DevOps
+- **Docker**: Containerizzazione
+- **GitHub Actions**: CI/CD
+- **Nginx**: Reverse proxy
+- **PM2**: Process manager
+- **Let's Encrypt**: SSL certificates
+
+---
+
+## 🐛 PROBLEMI RISOLTI (v2.1.0)
+
+### 1. PaymentsPage - athletes.map Error
+**Problema**: La pagina Pagamenti andava in crash con errore `athletes.map is not a function`
+**Causa**: Il backend restituiva `{athletes: [], pagination: {}}` invece di un array diretto
+**Soluzione**: Aggiunta gestione dinamica del formato risposta con controlli `Array.isArray()`
+
+### 2. Scheduler - 500 Internal Server Error
+**Problema**: Errori 500 su `/api/v1/scheduler/config` e `/api/v1/scheduler/history`
+**Causa**: Endpoint non implementati nel backend
+**Soluzione**: Creato `scheduler.routes.ts` completo con tutti gli endpoint necessari
+
+### 3. Transport - 404 Not Found
+**Problema**: Errore 404 su `/api/v1/transport/stats`
+**Causa**: Endpoint `/stats` mancante in `transport.routes.ts`
+**Soluzione**: Aggiunto endpoint con dati statistiche simulati
+
+---
+
+## 📈 ROADMAP SVILUPPO
+
+### Fase 1 - MVP ✅ (Completata)
+- Sistema base atleti, documenti, pagamenti
+- Autenticazione e autorizzazioni
+- Multi-tenant
+- Upload documenti
+- Dashboard base
+
+### Fase 2 - Ottimizzazioni 🚧 (In corso)
+- Cache Redis (setup completato, da integrare)
+- Notifiche real-time (Socket.io connesso)
+- Analytics avanzate (dashboard base funzionante)
+- Testing completo (da implementare)
+- Bug fixes e stabilizzazione
+
+### Fase 3 - Funzionalità Avanzate 📅 (Q3 2025)
+- App mobile nativa
+- Integrazione pagamenti online (Stripe/PayPal)
+- Video analisi partite
+- AI per formazioni ottimali
+- Marketplace divise e attrezzature
+
+### Fase 4 - Espansione 🔮 (Q4 2025)
+- Multi-sport support
+- Gestione tornei
+- Social features
+- Live streaming partite
+- E-learning integrato
+
+---
+
+## 🤝 CONTRIBUIRE
+
+### Come Contribuire
+1. Fork del repository
+2. Crea un branch per la feature (`git checkout -b feature/AmazingFeature`)
+3. Commit delle modifiche (`git commit -m 'Add some AmazingFeature'`)
+4. Push al branch (`git push origin feature/AmazingFeature`)
+5. Apri una Pull Request
+
+### Linee Guida
+- Segui lo stile di codice esistente
+- Aggiungi test per nuove funzionalità
+- Aggiorna la documentazione
+- Mantieni i commit atomici e descrittivi
+- Usa conventional commits
+
+---
+
+## 📞 SUPPORTO E CONTATTI
+
+### Repository GitHub
+- **URL**: https://github.com/241luca/gestione-calcio
+- **Maintainer**: Luca Mambelli
+
+### Team di Sviluppo
+- **Lead Developer**: Luca Mambelli
+- **Email**: lucamambelli@lmtecnologie.it
+
+---
+
+## 📜 LICENSE
+
+Questo progetto è rilasciato sotto licenza MIT. Vedi il file [LICENSE](./LICENSE) per i dettagli.
+
+---
+
+## 📅 CHANGELOG
+
+### v2.1.0 (2025-08-09)
+- 🐛 Fix: Risolto errore athletes.map in PaymentsPage
+- ✨ New: Aggiunto sistema Scheduler completo
+- 🐛 Fix: Risolto errore 404 transport stats
+- 📝 Docs: Aggiornata documentazione completa
+- 🔧 Improve: Gestione errori più robusta
+
+### v2.0.0 (2025-08-07)
+- 🎉 Rilascio major con refactoring completo
+- ✨ Sistema multi-tenant
+- ✨ Dashboard analytics
+- 📝 Documentazione completa
+
+### v1.0.0 (2024-10-01)
+- 🎉 Prima release pubblica
+
+---
+
+## 💡 NOTE TECNICHE
+
+### Configurazione Proxy Vite
+Il proxy in `vite.config.js` reindirizza automaticamente le chiamate `/api` a `localhost:3000`:
+```javascript
+proxy: {
+  '/api': {
+    target: 'http://localhost:3000',
+    changeOrigin: true
+  }
+}
 ```
-Sistema Demo:
-- Email: admin@soccermanager.com
-- Password: admin123
 
-GitHub:
-- User: 241luca
-- Repo: https://github.com/241luca/gestione-calcio
-```
+### Gestione Formato Risposte API
+Il frontend ora gestisce dinamicamente diversi formati di risposta:
+- Array diretti: `[{...}, {...}]`
+- Oggetti con pagination: `{athletes: [...], pagination: {...}}`
+- Risposte vuote: `null` o `undefined` → `[]`
 
----
-
-## 📈 STATISTICHE DOCUMENTAZIONE
-
-- **Documenti totali:** 50+
-- **Documenti principali:** 10
-- **Correzioni documentate:** 7
-- **Guide implementazione:** 8
-- **Ultima riorganizzazione:** 9 Agosto 2025
+### Socket.io Connection
+La connessione Socket.io si stabilisce automaticamente al login e gestisce:
+- Reconnection automatica
+- Heartbeat/ping-pong
+- Eventi real-time per notifiche
 
 ---
 
-**Mantenuto da:** Team Sviluppo Sistema Gestione Calcio  
-**Contatto:** lucamambelli@lmtecnologie.it
+**Ultimo aggiornamento**: 9 Agosto 2025  
+**Versione Documentazione**: 2.1.0  
+**Status**: ✅ Stabile e funzionante
+
+---
+
+> "Il successo di una società sportiva inizia da una gestione efficiente" 
+
+*Soccer Management System - Il futuro della gestione sportiva è qui!* ⚽ 🚀

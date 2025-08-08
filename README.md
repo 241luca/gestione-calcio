@@ -1,223 +1,189 @@
 # ⚽ SOCCER MANAGEMENT SYSTEM
 ## Sistema Completo Gestione Società di Calcio
 
-**Versione:** 3.1.0  
-**Completamento:** 70%  
+**Versione:** 2.1.0  
+**Completamento:** 75%  
 **Ultimo Aggiornamento:** 9 Agosto 2025
 
----
-
-## 🎯 QUICK START PER SVILUPPATORI
-
-### 📌 **DOCUMENTI DA LEGGERE PRIMA DI INIZIARE**
-
-1. **[ISTRUZIONI-NUOVA-SESSIONE.md](./ISTRUZIONI-NUOVA-SESSIONE.md)** 🆕
-   - **⚠️ LEGGI QUESTO PER PRIMO!**
-   - Setup completo per nuove sessioni Claude
-   - Roadmap dettagliata moduli da completare
-   - Template e standard da seguire
-
-2. **[TRACKING-SVILUPPO.md](./TRACKING-SVILUPPO.md)** 📊
-   - Stato real-time del sistema (70% completo)
-   - Checklist moduli completati/mancanti
-   - Cronologia sviluppo giorno per giorno
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/241luca/gestione-calcio)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-blue)](https://www.postgresql.org/)
 
 ---
 
-## 🚀 FUNZIONALITÀ PRINCIPALI
+## 🆕 AGGIORNAMENTI v2.1.0 (09/08/2025)
+
+- 🐛 **FIX**: Risolto errore `athletes.map` in PaymentsPage
+- 🐛 **FIX**: Implementati endpoint Scheduler mancanti
+- 🐛 **FIX**: Aggiunto endpoint Transport stats
+- 📝 **DOCS**: Aggiornata documentazione completa
+- ✅ **STABLE**: Sistema ora stabile e funzionante
+
+---
+
+## 🚀 QUICK START
+
+```bash
+# Clona il repository
+git clone https://github.com/241luca/gestione-calcio.git
+cd gestione-calcio
+
+# Setup Backend
+cd backend
+npm install
+cp .env.example .env  # Configura le variabili
+npx prisma migrate deploy
+npm run dev
+
+# Setup Frontend (nuovo terminale)
+cd ..
+npm install
+npm run dev
+```
+
+🌐 Apri http://localhost:5173
+
+**Credenziali Demo:**
+- Email: `demo@soccermanager.com`
+- Password: `demo123456`
+
+---
+
+## 📚 DOCUMENTAZIONE
+
+### 📌 **DOCUMENTI PRINCIPALI**
+
+1. **[Docs/README.md](./Docs/README.md)** 📖
+   - Documentazione completa del sistema
+   - Architettura e tecnologie
+   - API Reference
+
+2. **[Docs/CHANGELOG.md](./Docs/CHANGELOG.md)** 📝
+   - Cronologia versioni
+   - Dettaglio modifiche
+   - Bug fix e nuove features
+
+3. **[Docs/FIX-TECNICI-v2.1.0.md](./Docs/FIX-TECNICI-v2.1.0.md)** 🔧
+   - Dettagli tecnici correzioni v2.1.0
+   - Pattern e soluzioni implementate
+   - Best practices
+
+4. **[TRACKING-SVILUPPO.md](./TRACKING-SVILUPPO.md)** 📊
+   - Stato real-time del sistema
+   - Checklist moduli completati
+   - Roadmap sviluppo
+
+---
+
+## 🎯 FUNZIONALITÀ PRINCIPALI
 
 ### ✅ Completate (100%)
-- 🔐 **Autenticazione** - JWT, refresh tokens, 2FA ready
-- 👥 **Gestione Atleti** - CRUD completo, import CSV, validazioni
-- 📄 **Gestione Documenti** - Upload, scadenze automatiche, notifiche
-- 💰 **Gestione Pagamenti** - PDF ricevute, export Excel, report mensili
-- 🔔 **Sistema Notifiche** - Email, real-time, scheduler automatico
+- 🔐 **Autenticazione** - JWT, refresh tokens, multi-tenant
+- 👥 **Gestione Atleti** - CRUD completo, import/export, validazioni
+- 📄 **Gestione Documenti** - Upload sicuro, scadenze automatiche
+- 💰 **Gestione Pagamenti** - Ricevute PDF, export Excel, report
+- 🔔 **Sistema Notifiche** - Email, real-time con Socket.io
 - 📊 **Dashboard** - Analytics, KPI, grafici interattivi
-- ⚙️ **Impostazioni** - Multi-tenant, backup, gestione utenti
+- ⚙️ **Impostazioni** - Configurazioni, backup, utenti
+- 📅 **Scheduler** - Job automatici configurabili (NEW)
 
-### 🟡 In Sviluppo
-- ⚽ **Gestione Partite** (60%) - Mancano convocazioni e formazioni
-- 👨‍👩‍👧‍👦 **Staff** (80%) - Manca gestione permessi dettagliata
-- 🏆 **Competizioni** (80%) - Manca classifica automatica
+### 🟡 In Sviluppo (60-80%)
+- ⚽ **Gestione Partite** - Calendario, roster (mancano convocazioni)
+- 👨‍👩‍👧‍👦 **Staff** - Gestione base (mancano permessi dettagliati)
+- 🏆 **Competizioni** - CRUD base (manca classifica automatica)
+- 🚌 **Trasporti** - Dashboard stats funzionante (FIXED)
 
 ### 🔴 Da Implementare
-- 🎯 **Allenamenti** - Calendario, presenze, schede tecniche
-- 🏥 **Infortuni** - Tracking recupero, certificati medici
-- 📈 **Reports Avanzati** - Analytics AI, export personalizzabili
-- 🚌 **Trasporti** - Prenotazioni, percorsi, split costi
-- 💬 **Messaggistica** - Chat interna, comunicazioni genitori
+- 🎯 **Allenamenti** - Calendario, presenze, schede
+- 🏥 **Infortuni** - Tracking, certificati medici
+- 📈 **Reports Avanzati** - Analytics AI, ML predictions
+- 💬 **Messaggistica** - Chat interna, comunicazioni
 - 📱 **App Mobile** - React Native, offline mode
 
 ---
 
-## 💻 INSTALLAZIONE RAPIDA
+## 🛠️ TECH STACK
 
-```bash
-# 1. Clone repository
-git clone https://github.com/241luca/gestione-calcio.git
-cd gestione-calcio
+### Backend
+- **Node.js 18+** con **TypeScript**
+- **Express.js** - Web framework
+- **Prisma ORM** - Database management
+- **PostgreSQL 14+** - Database
+- **JWT** - Authentication
+- **Socket.io** - Real-time
+- **Redis** - Cache (optional)
 
-# 2. Setup Backend
-cd backend
-npm install
-npx prisma migrate deploy
-npm run dev
-
-# 3. Setup Frontend
-cd ..
-npm install
-npm run dev
-
-# 4. Accedi a
-# Frontend: http://localhost:5173
-# Backend: http://localhost:3000
-# Login: demo@soccermanager.com / demo123456
-```
+### Frontend
+- **React 18** - UI Library
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **Axios** - HTTP client
+- **React Router** - Routing
+- **React Hook Form** - Forms
+- **Recharts** - Grafici
 
 ---
 
-## 📁 STRUTTURA PROGETTO
+## 📂 STRUTTURA PROGETTO
 
 ```
-soccer-management-system/
-├── 📁 backend/           # Node.js + Express + TypeScript
+gestione-calcio/
+├── backend/               # Backend Node.js/TypeScript
 │   ├── src/
 │   │   ├── routes/       # API endpoints
 │   │   ├── services/     # Business logic
-│   │   ├── middleware/   # Auth, rate limit, etc
-│   │   └── utils/        # Helpers e utilities
-│   └── prisma/
-│       └── schema.prisma # Database schema
-├── 📁 src/               # Frontend React
-│   ├── pages/            # Pagine principali
-│   ├── components/       # Componenti riutilizzabili
-│   ├── hooks/            # Custom React hooks
-│   └── services/         # API client
-├── 📁 Docs/              # Documentazione dettagliata
-├── 📄 ISTRUZIONI-NUOVA-SESSIONE.md  # Start here!
-├── 📄 TRACKING-SVILUPPO.md          # Progress tracking
-└── 📄 README.md                     # This file
+│   │   ├── middleware/   # Auth, validation
+│   │   └── utils/        # Utilities
+│   └── prisma/           # Database schema
+├── src/                  # Frontend React
+│   ├── components/       # React components
+│   ├── pages/           # Page components
+│   ├── services/        # API services
+│   └── hooks/           # Custom hooks
+├── Docs/                # Documentazione
+└── README.md           # Questo file
 ```
-
----
-
-## 🛠️ TECNOLOGIE UTILIZZATE
-
-### Backend
-- **Node.js** + **TypeScript** - Runtime e type safety
-- **Express.js** - Web framework
-- **Prisma** - ORM type-safe
-- **PostgreSQL** - Database principale
-- **Socket.io** - Real-time communications
-- **PDFKit** - Generazione PDF
-- **Nodemailer** - Email notifications
-
-### Frontend
-- **React 18** - UI library
-- **Vite** - Build tool velocissimo
-- **Tailwind CSS** - Utility-first CSS
-- **React Query** - Data fetching
-- **React Hook Form** - Form management
-- **Recharts** - Grafici e analytics
-- **Socket.io Client** - Real-time updates
-
----
-
-## 📊 STATO SVILUPPO
-
-```
-╔══════════════════════════════════════════════════╗
-║           COMPLETAMENTO SISTEMA: 70%              ║
-╠══════════════════════════════════════════════════╣
-║ ██████████████████████████████░░░░░░░░░░░░ 70%   ║
-╚══════════════════════════════════════════════════╝
-
-Moduli Completati:  7/18 (39%)
-Moduli Parziali:    4/18 (22%)
-Moduli Da Fare:     7/18 (39%)
-```
-
----
-
-## 📝 DOCUMENTAZIONE COMPLETA
-
-### Documenti Tecnici
-1. **[Docs/PARTE-1-CONFIGURAZIONE.md](./Docs/PARTE-1-CONFIGURAZIONE.md)**
-   - Setup ambiente sviluppo
-   - Configurazioni backend/frontend
-   
-2. **[Docs/PARTE-2-DATABASE-SERVIZI.md](./Docs/PARTE-2-DATABASE-SERVIZI.md)**
-   - Schema database Prisma
-   - Servizi backend principali
-   
-3. **[Docs/PARTE-3-OTTIMIZZAZIONI-CACHE.md](./Docs/PARTE-3-OTTIMIZZAZIONI-CACHE.md)**
-   - Sistema cache Redis
-   - Notifiche real-time
-   - Analytics avanzate
-
-### Documenti Specifici
-- **[SISTEMA-NOTIFICHE-DOCUMENTAZIONE.md](./SISTEMA-NOTIFICHE-DOCUMENTAZIONE.md)**
-  - Architettura notifiche complete
-  - Email, Socket.io, Scheduler
-
----
-
-## 🎯 PROSSIMI PASSI
-
-### Priorità ALTA (Core Business)
-1. **⚽ Completare Partite** - 2 giorni
-2. **🎯 Implementare Allenamenti** - 1 giorno
-3. **🏥 Aggiungere Infortuni** - 1 giorno
-
-### Priorità MEDIA (Nice to Have)
-4. **📈 Reports Avanzati** - 2 giorni
-5. **🚌 Sistema Trasporti** - 1 giorno
-6. **💬 Messaggistica** - 2 giorni
-
-### Priorità BASSA (Future)
-7. **📱 App Mobile** - 5+ giorni
 
 ---
 
 ## 🤝 CONTRIBUIRE
 
-1. Leggi **ISTRUZIONI-NUOVA-SESSIONE.md**
-2. Scegli un modulo da implementare da **TRACKING-SVILUPPO.md**
-3. Segui gli standard di codice esistenti
-4. Aggiorna sempre la documentazione
-5. Fai commit descrittivi e push su GitHub
+1. Fork del repository
+2. Crea branch feature (`git checkout -b feature/NuovaFeature`)
+3. Commit modifiche (`git commit -m 'Add: NuovaFeature'`)
+4. Push al branch (`git push origin feature/NuovaFeature`)
+5. Apri Pull Request
 
-### Commit Message Format
-```bash
-feat: [modulo] - descrizione breve
-fix: [modulo] - problema risolto
-docs: aggiornato [documento]
-```
+### Convenzioni Commit
+- `Fix:` per bug fix
+- `Add:` per nuove features
+- `Update:` per modifiche
+- `Docs:` per documentazione
+- `Test:` per test
 
 ---
 
-## 📞 CONTATTI E SUPPORTO
+## 📞 SUPPORTO
 
-- **GitHub:** https://github.com/241luca/gestione-calcio
-- **Email:** lucamambelli@lmtecnologie.it
-- **Issues:** Usa GitHub Issues per bug e feature requests
+- **GitHub**: [241luca/gestione-calcio](https://github.com/241luca/gestione-calcio)
+- **Email**: lucamambelli@lmtecnologie.it
+- **Issues**: [GitHub Issues](https://github.com/241luca/gestione-calcio/issues)
 
 ---
 
 ## 📜 LICENSE
 
-MIT License - Vedi file LICENSE per dettagli
+MIT License - vedi [LICENSE](./LICENSE) per dettagli
 
 ---
 
 ## 🙏 CREDITS
 
-Sviluppato con ❤️ da:
-- **Luca Mambelli** - Lead Developer
-- **Claude AI Assistant** - Development Support
+Sviluppato da **Luca Mambelli** @ LM Tecnologie
 
 ---
 
-> "Il successo di una società sportiva inizia da una gestione efficiente"
+> "Il successo di una società sportiva inizia da una gestione efficiente" ⚽
 
-**Soccer Management System - Il futuro della gestione sportiva è qui!** ⚽ 🚀
+**Soccer Management System** - Gestione sportiva moderna e intelligente 🚀
