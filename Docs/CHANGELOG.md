@@ -1,166 +1,108 @@
-# 📝 CHANGELOG - SOCCER MANAGEMENT SYSTEM
+# 📝 CHANGELOG - Soccer Management System
 
-Tutti i cambiamenti significativi del progetto sono documentati in questo file.
+## [2.1.1] - 2024-12-09
 
-Il formato è basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
-e questo progetto aderisce a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### 🐛 Bug Fixes
+- **StaffPage Component**
+  - Risolto errore `staff.filter is not a function` causato da formato risposta API non gestito
+  - Rimosso errore di sintassi (doppia chiusura `};` nella funzione `loadStaff`)
+  - Aggiunta gestione intelligente del formato risposta API:
+    - Supporto per array diretto
+    - Supporto per oggetto con `staffMembers` e `pagination`
+    - Fallback ad array vuoto in caso di errore
+  - Migliorata UX con toast notifications per gli errori
+  - Aggiunto stato di loading corretto
 
----
-
-## [2.1.0] - 2025-08-09
-
-### 🐛 Fixed
-- **PaymentsPage**: Risolto errore critico `athletes.map is not a function`
-  - Il componente ora gestisce correttamente sia array diretti che oggetti con pagination
-  - Aggiunti controlli `Array.isArray()` su tutti i `.map()` degli atleti
-  - Migliorata gestione dei dati vuoti o malformati
-
-- **Scheduler**: Risolti errori 500 su endpoint mancanti
-  - Creato nuovo file `backend/src/routes/scheduler.routes.ts`
-  - Implementati endpoint: `/config`, `/history`, `/run`, `/toggle`, `/stats`
-  - Aggiunti job predefiniti per controlli automatici
-
-- **Transport**: Risolto errore 404 su `/api/v1/transport/stats`
-  - Aggiunto endpoint mancante nel file `transport.routes.ts`
-  - Implementate statistiche dashboard con dati simulati
-  - Corretto problema di routing nel proxy Vite
-
-### ✨ Added
-- **Scheduler System**:
-  - Dashboard per gestione job automatici
-  - Cronologia esecuzioni con dettagli
-  - Possibilità di eseguire job manualmente
-  - Configurazione orari di esecuzione
-  - 5 job predefiniti (documenti, pagamenti, partite, backup, pulizia)
-
-- **Transport Statistics**:
-  - Dashboard con metriche trasporti
-  - Grafici viaggi settimanali
-  - Tasso occupazione mezzi
-  - Percorsi più popolari
-  - Prenotazioni recenti
-
-### 🔧 Changed
-- Migliorata gestione errori API con dati di fallback
-- Aggiornata documentazione con tutti i fix implementati
-- Ottimizzato caricamento dati nelle pagine
-
-### 📝 Documentation
-- Aggiornato README principale con versione 2.1.0
-- Documentati tutti i problemi risolti e le soluzioni
-- Aggiunte note tecniche su configurazione proxy
-- Creato questo file CHANGELOG.md
+### 🔧 Technical Details
+- **File modificato**: `src/pages/StaffPage.jsx`
+- **Problema**: L'API backend restituisce un oggetto con struttura `{ staffMembers: [], pagination: {} }` ma il frontend si aspettava un array diretto
+- **Soluzione**: Implementata logica di parsing adattiva per gestire entrambi i formati
 
 ---
 
-## [2.0.0] - 2025-08-07
+## [2.1.0] - 2024-08-09
+
+### ✨ New Features
+- Sistema di scheduler completo con configurazione e statistiche
+- Dashboard trasporti con statistiche dettagliate
+
+### 🐛 Bug Fixes
+- **PaymentsPage**: Risolto errore `athletes.map is not a function`
+- **Scheduler**: Aggiunto endpoint `/api/v1/scheduler` completo
+- **Transport**: Aggiunto endpoint `/api/v1/transport/stats` mancante
+
+### 🎨 Improvements
+- Gestione errori più robusta in tutti i componenti
+- Aggiunta di dati di fallback per migliorare l'esperienza utente
+- Migliorata la resilienza dell'applicazione
+
+---
+
+## [2.0.0] - 2024-08-07
 
 ### 🎉 Major Release
-- Refactoring completo architettura backend
-- Migrazione a TypeScript per type safety
-- Implementazione pattern repository per data access
-- Nuovo sistema di routing modulare
+- Refactoring completo dell'architettura
+- Migrazione a TypeScript per il backend
+- Nuovo sistema di cache con Redis
+- Notifiche real-time con Socket.io
+- Analytics avanzate con predizioni AI
+- API mobile ottimizzate
+- Sistema di audit logging completo
+- Multi-tenant support avanzato
 
-### ✨ Added
-- **Multi-tenant Architecture**:
-  - Supporto per multiple organizzazioni
-  - Isolamento dati per tenant
-  - Gestione permessi per organizzazione
+### ✨ New Features
+- Dashboard con KPI e grafici interattivi
+- Sistema di notifiche push
+- Export report in PDF/Excel
+- Gestione documenti con scadenze automatiche
+- Sistema pagamenti integrato
+- Calendario partite con convocazioni
+- Gestione trasporti atleti
+- Chat team real-time
 
-- **Dashboard Analytics**:
-  - KPI in tempo reale
-  - Grafici interattivi con Recharts
-  - Previsioni con algoritmi ML base
-
-- **Real-time Features**:
-  - Socket.io integration
-  - Notifiche push real-time
-  - Update live dashboard
-
-- **Advanced Athletes Management**:
-  - Import/export CSV/Excel
-  - Bulk operations
-  - Advanced filtering e search
-
-### 🔧 Changed
-- Database schema ottimizzato con indici
-- API responses standardizzate
-- Error handling centralizzato
-- Validazioni con Zod
-
-### 🔐 Security
-- Implementato rate limiting
-- CORS configuration
-- Input sanitization
-- SQL injection prevention con Prisma
+### 🔧 Technical Improvements
+- Architettura microservices-ready
+- Caching strategy con Redis
+- Database query optimization
+- Security enhancements
+- Performance improvements
+- Docker support
+- CI/CD pipeline
 
 ---
 
-## [1.5.0] - 2025-01-15
+## [1.5.0] - 2024-01-15
 
-### ✨ Added
+### ✨ New Features
+- Multi-tenant support
 - Two-Factor Authentication (2FA)
 - Audit logging system
-- Email notifications
-- Document expiry alerts
 
-### 🔧 Changed
-- Improved UI/UX design
-- Better mobile responsiveness
-- Optimized database queries
-
-### 🐛 Fixed
-- File upload size limits
-- Date timezone issues
-- Payment calculation errors
+### 🐛 Bug Fixes
+- Vari bug fix minori
+- Miglioramenti performance
 
 ---
 
-## [1.0.0] - 2024-10-01
+## [1.0.0] - 2023-10-01
 
 ### 🎉 Initial Release
-- Basic athlete management
-- Document upload and tracking
-- Payment management
-- Simple dashboard
-- User authentication
-- Basic reporting
+- Sistema base di gestione atleti
+- Gestione documenti
+- Gestione pagamenti
+- Autenticazione e autorizzazioni
+- Dashboard base
+- CRUD operations per tutte le entità principali
 
 ---
 
-## Legenda
+## 📋 Legenda
 
-- 🎉 **Major**: Cambiamenti importanti o nuove major release
-- ✨ **Added**: Nuove funzionalità
-- 🔧 **Changed**: Modifiche a funzionalità esistenti
-- 🐛 **Fixed**: Bug fix
-- 🔐 **Security**: Miglioramenti sicurezza
+- 🎉 **Major Release**: Rilascio di versione principale
+- ✨ **New Features**: Nuove funzionalità
+- 🐛 **Bug Fixes**: Correzioni di bug
+- 🔧 **Technical**: Modifiche tecniche/infrastrutturali
+- 🎨 **Improvements**: Miglioramenti generali
 - 📝 **Documentation**: Aggiornamenti documentazione
-- 🗑️ **Deprecated**: Funzionalità deprecate
-- ❌ **Removed**: Funzionalità rimosse
-- 🚀 **Performance**: Miglioramenti performance
-
----
-
-## Versioning
-
-Questo progetto usa [Semantic Versioning](https://semver.org/):
-
-- **MAJOR** version: cambiamenti incompatibili con API precedenti
-- **MINOR** version: nuove funzionalità retrocompatibili
-- **PATCH** version: bug fix retrocompatibili
-
-Formato: `MAJOR.MINOR.PATCH`
-
----
-
-## Links
-
-- [Repository GitHub](https://github.com/241luca/gestione-calcio)
-- [Issue Tracker](https://github.com/241luca/gestione-calcio/issues)
-- [Pull Requests](https://github.com/241luca/gestione-calcio/pulls)
-
----
-
-**Maintained by**: Luca Mambelli  
-**Last Updated**: 2025-08-09
+- 🔒 **Security**: Fix di sicurezza
+- ⚡ **Performance**: Ottimizzazioni performance

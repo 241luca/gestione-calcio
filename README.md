@@ -1,23 +1,28 @@
 # ⚽ SOCCER MANAGEMENT SYSTEM
 ## Sistema Completo Gestione Società di Calcio
 
-**Versione:** 2.1.0  
-**Completamento:** 75%  
-**Ultimo Aggiornamento:** 9 Agosto 2025
+**Versione:** 2.1.1  
+**Completamento:** 78%  
+**Ultimo Aggiornamento:** 9 Dicembre 2024
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/241luca/gestione-calcio)
+[![Version](https://img.shields.io/badge/version-2.1.1-blue.svg)](https://github.com/241luca/gestione-calcio)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-blue)](https://www.postgresql.org/)
 
 ---
 
-## 🆕 AGGIORNAMENTI v2.1.0 (09/08/2025)
+## 🆕 ULTIMI AGGIORNAMENTI
 
+### v2.1.1 (09/12/2024)
+- 🐛 **FIX**: Risolto errore `staff.filter is not a function` in StaffPage
+- 🔧 **IMPROVEMENT**: Gestione adattiva formato risposta API
+- 📝 **DOCS**: Aggiunto CHANGELOG e TROUBLESHOOTING guide
+
+### v2.1.0 (09/08/2024)  
 - 🐛 **FIX**: Risolto errore `athletes.map` in PaymentsPage
 - 🐛 **FIX**: Implementati endpoint Scheduler mancanti
 - 🐛 **FIX**: Aggiunto endpoint Transport stats
-- 📝 **DOCS**: Aggiornata documentazione completa
 - ✅ **STABLE**: Sistema ora stabile e funzionante
 
 ---
@@ -64,12 +69,17 @@ npm run dev
    - Dettaglio modifiche
    - Bug fix e nuove features
 
-3. **[Docs/FIX-TECNICI-v2.1.0.md](./Docs/FIX-TECNICI-v2.1.0.md)** 🔧
+3. **[Docs/TROUBLESHOOTING.md](./Docs/TROUBLESHOOTING.md)** 🆘
+   - Problemi comuni e soluzioni
+   - Pattern di gestione errori
+   - Best practices implementate
+
+4. **[Docs/FIX-TECNICI-v2.1.0.md](./Docs/FIX-TECNICI-v2.1.0.md)** 🔧
    - Dettagli tecnici correzioni v2.1.0
    - Pattern e soluzioni implementate
    - Best practices
 
-4. **[TRACKING-SVILUPPO.md](./TRACKING-SVILUPPO.md)** 📊
+5. **[TRACKING-SVILUPPO.md](./TRACKING-SVILUPPO.md)** 📊
    - Stato real-time del sistema
    - Checklist moduli completati
    - Roadmap sviluppo

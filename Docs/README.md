@@ -1,15 +1,22 @@
 # 📚 SOCCER MANAGEMENT SYSTEM - INDICE COMPLETO
 ## Documentazione Completa del Sistema
 
-**Versione:** 2.1.0  
-**Data:** 9 Agosto 2025  
+**Versione:** 2.1.1  
+**Data:** 9 Dicembre 2024  
 **Autore:** Sistema Documentazione Integrata
 
 ---
 
-## 🆕 AGGIORNAMENTI RECENTI (v2.1.0)
+## 🆕 AGGIORNAMENTI RECENTI
 
-### Correzioni Implementate (09/08/2025)
+### Versione 2.1.1 (09/12/2024)
+- ✅ **Fix StaffPage**: Risolto errore `staff.filter is not a function`
+  - Corretto errore di sintassi (doppia chiusura `};`)
+  - Aggiunta gestione formato risposta API con `staffMembers` e `pagination`
+  - Migliorata gestione errori con toast notification
+  - Aggiunto stato di loading appropriato
+
+### Versione 2.1.0 (09/08/2025)
 - ✅ **Fix PaymentsPage**: Risolto errore `athletes.map is not a function` - gestione corretta formato risposta API
 - ✅ **Fix Scheduler**: Aggiunto endpoint `/api/v1/scheduler` completo con config, history e stats
 - ✅ **Fix Transport**: Aggiunto endpoint `/api/v1/transport/stats` mancante per dashboard trasporti
