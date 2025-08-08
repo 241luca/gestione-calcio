@@ -86,21 +86,21 @@ async function main() {
 
     // 4. Crea posizioni di gioco
     const positions = [
-      { name: 'Portiere', code: 'POR', description: 'Portiere' },
-      { name: 'Difensore Centrale', code: 'DC', description: 'Difensore centrale' },
-      { name: 'Terzino Destro', code: 'TD', description: 'Terzino destro' },
-      { name: 'Terzino Sinistro', code: 'TS', description: 'Terzino sinistro' },
-      { name: 'Centrocampista Centrale', code: 'CC', description: 'Centrocampista centrale' },
-      { name: 'Mediano', code: 'MED', description: 'Mediano' },
-      { name: 'Trequartista', code: 'TRQ', description: 'Trequartista' },
-      { name: 'Ala Destra', code: 'AD', description: 'Ala destra' },
-      { name: 'Ala Sinistra', code: 'AS', description: 'Ala sinistra' },
-      { name: 'Attaccante', code: 'ATT', description: 'Attaccante centrale' }
+      { name: 'Portiere', abbreviation: 'POR', description: 'Portiere' },
+      { name: 'Difensore Centrale', abbreviation: 'DC', description: 'Difensore centrale' },
+      { name: 'Terzino Destro', abbreviation: 'TD', description: 'Terzino destro' },
+      { name: 'Terzino Sinistro', abbreviation: 'TS', description: 'Terzino sinistro' },
+      { name: 'Centrocampista Centrale', abbreviation: 'CC', description: 'Centrocampista centrale' },
+      { name: 'Mediano', abbreviation: 'MED', description: 'Mediano' },
+      { name: 'Trequartista', abbreviation: 'TRQ', description: 'Trequartista' },
+      { name: 'Ala Destra', abbreviation: 'AD', description: 'Ala destra' },
+      { name: 'Ala Sinistra', abbreviation: 'AS', description: 'Ala sinistra' },
+      { name: 'Attaccante', abbreviation: 'ATT', description: 'Attaccante centrale' }
     ];
 
     for (const position of positions) {
       await prisma.position.upsert({
-        where: { id: position.id },
+        where: { name: position.name },
         update: {},
         create: position
       });

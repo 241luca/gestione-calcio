@@ -191,23 +191,23 @@ async function main() {
     // ========================================
     console.log('\n⚽ Creazione posizioni di gioco...');
     const positions = [
-      { name: 'Portiere', code: 'POR', description: 'Portiere' },
-      { name: 'Difensore Centrale', code: 'DC', description: 'Difensore centrale' },
-      { name: 'Terzino Destro', code: 'TD', description: 'Terzino destro' },
-      { name: 'Terzino Sinistro', code: 'TS', description: 'Terzino sinistro' },
-      { name: 'Centrocampista Difensivo', code: 'MED', description: 'Mediano' },
-      { name: 'Centrocampista Centrale', code: 'CC', description: 'Centrocampista centrale' },
-      { name: 'Centrocampista Offensivo', code: 'TRQ', description: 'Trequartista' },
-      { name: 'Ala Destra', code: 'AD', description: 'Ala destra' },
-      { name: 'Ala Sinistra', code: 'AS', description: 'Ala sinistra' },
-      { name: 'Attaccante Centrale', code: 'ATT', description: 'Attaccante centrale' },
-      { name: 'Seconda Punta', code: 'SP', description: 'Seconda punta' }
+      { name: 'Portiere', abbreviation: 'POR', description: 'Portiere' },
+      { name: 'Difensore Centrale', abbreviation: 'DC', description: 'Difensore centrale' },
+      { name: 'Terzino Destro', abbreviation: 'TD', description: 'Terzino destro' },
+      { name: 'Terzino Sinistro', abbreviation: 'TS', description: 'Terzino sinistro' },
+      { name: 'Centrocampista Difensivo', abbreviation: 'MED', description: 'Mediano' },
+      { name: 'Centrocampista Centrale', abbreviation: 'CC', description: 'Centrocampista centrale' },
+      { name: 'Centrocampista Offensivo', abbreviation: 'TRQ', description: 'Trequartista' },
+      { name: 'Ala Destra', abbreviation: 'AD', description: 'Ala destra' },
+      { name: 'Ala Sinistra', abbreviation: 'AS', description: 'Ala sinistra' },
+      { name: 'Attaccante Centrale', abbreviation: 'ATT', description: 'Attaccante centrale' },
+      { name: 'Seconda Punta', abbreviation: 'SP', description: 'Seconda punta' }
     ];
 
     const createdPositions = [];
     for (const position of positions) {
       const created = await prisma.position.upsert({
-        where: { id: position.id },
+        where: { name: position.name },
         update: {},
         create: position
       });
@@ -433,7 +433,7 @@ async function main() {
             status,
             uploadedBy: createdUsers[Math.floor(Math.random() * createdUsers.length)].id,
             isVerified: Math.random() > 0.2,
-            verifiedById: Math.random() > 0.2 ? createdUsers[0].id : null,
+            verifiedBy: Math.random() > 0.2 ? createdUsers[0].id : null,
             verifiedAt: Math.random() > 0.2 ? new Date() : null,
             organizationId: organization.id
           }
@@ -708,6 +708,7 @@ async function main() {
       await prisma.injury.create({
         data: {
           athleteId: athlete.id,
+          organizationId: organization.id,
           injuryDate,
           description: ['Distorsione caviglia', 'Stiramento muscolare', 'Contusione', 
                        'Elongazione', 'Affaticamento muscolare', 'Trauma contusivo'][Math.floor(Math.random() * 6)],
