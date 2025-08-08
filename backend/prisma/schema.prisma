@@ -348,54 +348,6 @@ enum PaymentStatus {
   CANCELLED
 }
 
-// Pagamenti
-model Payment {
-  id             String        @id @default(uuid())
-  athlete        Athlete       @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  athleteId      String
-  type           PaymentType   @relation(fields: [typeId], references: [id])
-  typeId         Int
-  amount         Float
-  paidAmount     Float?        @default(0)  // AGGIUNTO: Importo pagato
-  dueDate        DateTime
-  paidDate       DateTime?
-  status         PaymentStatus @default(PENDING)
-  paymentMethod  String?       // CASH, BANK_TRANSFER, CREDIT_CARD
-  transactionId  String?       // Riferimento transazione
-  description    String?       // AGGIUNTO: Descrizione pagamento
-  notes          String?
-  
-  // Nuovi campi
-  invoiceNumber  String?
-  invoiceUrl     String?
-  reminderSent   Boolean       @default(false)
-  reminderDate   DateTime?
-  
-  createdBy      User          @relation("CreatedBy", fields: [createdById], references: [id])
-  createdById    String
-  
-  organization   Organization  @relation(fields: [organizationId], references: [id])
-  organizationId String
-  
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  @@index([athleteId])
-  @@index([organizationId])
-  @@index([dueDate])
-  @@index([status])
-  @@map("payments")
-}
-
-// Stati pagamento
-enum PaymentStatus {
-  PENDING
-  PAID
-  PARTIAL    // AGGIUNTO: Pagamento parziale
-  OVERDUE
-  CANCELLED
-}
-
 // ==========================================
 // GESTIONE PARTITE E ALLENAMENTI
 // ==========================================

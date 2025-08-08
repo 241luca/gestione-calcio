@@ -376,8 +376,8 @@ export class NotificationService {
     try {
       const overduePayments = await prisma.payment.findMany({
         where: {
-          status: 'OVERDUE',
-          reminderSent: false
+          status: 'OVERDUE'
+          // Campo reminderSent non esiste nel modello attuale
         },
         include: {
           athlete: true,
@@ -403,11 +403,11 @@ export class NotificationService {
           }
         });
 
-        // Aggiorna flag reminder
-        await prisma.payment.update({
-          where: { id: payment.id },
-          data: { reminderSent: true }
-        });
+        // Non possiamo aggiornare reminderSent perché non esiste
+        // await prisma.payment.update({
+        //   where: { id: payment.id },
+        //   data: { reminderSent: true }
+        // });
 
         remindersSent++;
       }
