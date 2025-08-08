@@ -14,7 +14,8 @@ import {
   TruckIcon,
   TrophyIcon,
   UserGroupIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { authService } from '../services/api';
 import NotificationBell from './notifications/NotificationBell';
@@ -35,6 +36,7 @@ const Layout = ({ setIsAuthenticated }) => {
     { name: 'Pagamenti', href: '/payments', icon: CurrencyEuroIcon },
     { name: 'Trasporti', href: '/transport', icon: TruckIcon },
     { name: 'Notifiche', href: '/notifications', icon: Bars3Icon },
+    { name: 'Scheduler', href: '/scheduler', icon: ClockIcon },
     { name: 'Calendario', href: '/calendar', icon: CalendarIcon },
     { name: 'Report', href: '/reports', icon: ChartBarIcon },
     { name: 'Impostazioni', href: '/settings', icon: Cog6ToothIcon },

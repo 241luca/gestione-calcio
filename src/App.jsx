@@ -15,6 +15,7 @@ import ReportsPage from './pages/ReportsPage';
 import TransportPage from './pages/TransportPage';
 import NotificationsPage from './pages/NotificationsPage';
 import TestNotifications from './pages/TestNotifications';
+import SchedulerPage from './pages/SchedulerPage';
 import CompetitionsPage from './pages/CompetitionsPage';
 import StaffPage from './pages/StaffPage';
 import SponsorsPage from './pages/SponsorsPage';
@@ -79,6 +80,7 @@ function App() {
           <Route path="transport" element={<TransportPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="test-notifications" element={<TestNotifications />} />
+          <Route path="scheduler" element={<SchedulerPage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="reports" element={<ReportsPage />} />
