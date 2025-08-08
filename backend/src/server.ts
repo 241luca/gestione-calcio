@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { createServer } from 'http';
 import SocketService from './services/socket.service';
+import SchedulerService from './services/scheduler.service';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -168,6 +169,10 @@ async function startServer() {
       console.log(`🔌 Socket.io attivo su ws://localhost:${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`🧪 Test Socket.io: http://localhost:${PORT}/api/v1/socket/test`);
+      
+      // Inizializza lo scheduler per notifiche automatiche
+      SchedulerService.initialize();
+      
       console.log('\n✅ SERVIZI ATTIVI:');
       console.log('  ✅ Autenticazione');
       console.log('  ✅ Atleti');
@@ -176,6 +181,7 @@ async function startServer() {
       console.log('  ✅ Notifiche');
       console.log('  ✅ Socket.io (Real-time)');
       console.log('  ✅ Trasporti');
+      console.log('  ✅ Scheduler (Notifiche automatiche)');
     });
   } catch (error) {
     console.error('❌ Errore avvio server:', error);

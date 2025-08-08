@@ -14,6 +14,7 @@ import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
 import TransportPage from './pages/TransportPage';
 import NotificationsPage from './pages/NotificationsPage';
+import TestNotifications from './pages/TestNotifications';
 import CompetitionsPage from './pages/CompetitionsPage';
 import StaffPage from './pages/StaffPage';
 import SponsorsPage from './pages/SponsorsPage';
@@ -77,6 +78,7 @@ function App() {
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="transport" element={<TransportPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="test-notifications" element={<TestNotifications />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="reports" element={<ReportsPage />} />
