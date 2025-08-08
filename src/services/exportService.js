@@ -83,23 +83,54 @@ export const exportService = {
   /**
    * Genera PDF (versione semplificata - stampa della pagina)
    */
-  exportToPDF: (title = 'Report') => {
-    // Per ora usiamo la stampa del browser
-    // In futuro si può integrare una libreria come jsPDF
-    
-    // Salva il titolo originale
-    const originalTitle = document.title;
-    
-    // Imposta il titolo per la stampa
-    document.title = title;
-    
-    // Apri la finestra di stampa
-    window.print();
-    
-    // Ripristina il titolo originale
-    setTimeout(() => {
-      document.title = originalTitle;
-    }, 1000);
+  exportToPDF: async (config) => {
+    try {
+      const { data, title, fields, filename } = config;
+      
+      // Per ora usiamo la stampa del browser
+      // In futuro si può integrare una libreria come jsPDF
+      
+      // Salva il titolo originale
+      const originalTitle = document.title;
+      
+      // Imposta il titolo per la stampa
+      document.title = title || 'Report';
+      
+      // Apri la finestra di stampa
+      window.print();
+      
+      // Ripristina il titolo originale
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Errore export PDF:', error);
+      toast.error('Errore nella generazione del PDF');
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Esporta dati in formato Excel
+   */
+  exportToExcel: async (config) => {
+    try {
+      const { data, sheetName, filename } = config;
+      
+      // Per ora usiamo CSV con estensione .xls
+      // Excel può aprire file CSV
+      const csvFilename = filename?.replace('.xlsx', '.csv') || 'export.csv';
+      
+      exportService.exportToCSV(data, csvFilename);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Errore export Excel:', error);
+      toast.error('Errore nell\'esportazione Excel');
+      return { success: false, error };
+    }
   },
 
   /**
