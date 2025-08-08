@@ -151,15 +151,7 @@ class StaffService {
           { firstName: 'asc' }
         ],
         include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              lastLogin: true
-            }
-          },
-          teams: true,
-          primaryTeam: true
+          team: true
         }
       }),
       prisma.staff.count({ where })
@@ -200,18 +192,7 @@ class StaffService {
         deletedAt: null
       },
       include: {
-        user: true,
-        teams: true,
-        primaryTeam: true,
-        documents: true,
-        trainingSessions: {
-          orderBy: { date: 'desc' },
-          take: 10
-        },
-        matches: {
-          orderBy: { date: 'desc' },
-          take: 10
-        }
+        team: true
       }
     });
 
@@ -331,8 +312,7 @@ class StaffService {
         status: StaffStatus.ACTIVE
       },
       include: {
-        user: true,
-        teams: true
+        team: true
       }
     });
 
@@ -379,8 +359,7 @@ class StaffService {
         updatedAt: new Date()
       },
       include: {
-        user: true,
-        teams: true
+        team: true
       }
     });
 
@@ -458,8 +437,7 @@ class StaffService {
         primaryTeamId: isPrimary ? teamId : staff.primaryTeamId
       },
       include: {
-        teams: true,
-        primaryTeam: true
+        team: true
       }
     });
 
@@ -490,8 +468,7 @@ class StaffService {
         primaryTeamId
       },
       include: {
-        teams: true,
-        primaryTeam: true
+        team: true
       }
     });
 
@@ -607,8 +584,7 @@ class StaffService {
         { firstName: 'asc' }
       ],
       include: {
-        teams: true,
-        primaryTeam: true
+        team: true
       }
     });
 
@@ -633,7 +609,7 @@ class StaffService {
         { lastName: 'asc' }
       ],
       include: {
-        user: true
+        team: true
       }
     });
 
@@ -670,10 +646,10 @@ class StaffService {
     return {
       summary: {
         total: totalStaff,
-        active: byStatus.active || 0,
-        inactive: byStatus.inactive || 0,
+        active: byStatus['ACTIVE'] || 0,
+        inactive: byStatus['INACTIVE'] || 0,
         withLicense: await this.countStaffWithLicense(organizationId),
-        volunteers: byContract.volunteer || 0
+        volunteers: byContract['VOLUNTEER'] || 0
       },
       byRole,
       byContract,
@@ -710,17 +686,12 @@ class StaffService {
       prisma.trainingSession.count({
         where: {
           organizationId,
-          coachId: staffId,
           date: { gte: thirtyDaysAgo }
         }
       }),
       prisma.match.count({
         where: {
           organizationId,
-          OR: [
-            { coachId: staffId },
-            { assistantCoachId: staffId }
-          ],
           date: { gte: thirtyDaysAgo }
         }
       })
@@ -758,7 +729,6 @@ class StaffService {
         data: {
           id: uuidv4(),
           name: systemRole,
-          displayName: role,
           description: `Ruolo ${role}`,
           permissions: []
         }
@@ -785,7 +755,7 @@ class StaffService {
 
     return result.reduce((acc, item) => ({
       ...acc,
-      [item.staffRole.toLowerCase()]: item._count
+      [item.staffRole ? item.staffRole.toLowerCase() : 'unknown']: item._count
     }), {});
   }
 

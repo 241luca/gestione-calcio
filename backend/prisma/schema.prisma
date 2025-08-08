@@ -706,6 +706,9 @@ model Staff {
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   
+  // Link a User (opzionale)
+  userId         String?
+  
   // Dati anagrafici
   firstName      String
   lastName       String
@@ -786,6 +789,7 @@ model Staff {
   @@index([teamId])
   @@index([staffRole])
   @@index([status])
+  @@index([userId])
   @@map("staff")
 }
 
