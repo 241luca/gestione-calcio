@@ -15,6 +15,8 @@ import ReportsPage from './pages/ReportsPage';
 import TransportPage from './pages/TransportPage';
 import NotificationsPage from './pages/NotificationsPage';
 import CompetitionsPage from './pages/CompetitionsPage';
+import StaffPage from './pages/StaffPage';
+import SponsorsPage from './pages/SponsorsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -69,6 +71,8 @@ function App() {
           <Route path="athletes/:id/edit" element={<AthleteFormPage />} />
           <Route path="teams" element={<TeamsPage />} />
           <Route path="competitions" element={<CompetitionsPage />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="sponsors" element={<SponsorsPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="transport" element={<TransportPage />} />
