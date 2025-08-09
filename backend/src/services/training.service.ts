@@ -14,6 +14,8 @@ export class TrainingService {
     organizationId: string;
     teamId: string;
     date: Date;
+    startTime: Date;
+    endTime: Date;
     type?: string;
     location?: string;
     notes?: string;
@@ -36,6 +38,8 @@ export class TrainingService {
           organizationId: data.organizationId,
           teamId: data.teamId,
           date: new Date(data.date),
+          startTime: new Date(data.startTime),
+          endTime: new Date(data.endTime),
           type: data.type || 'Allenamento',
           location: data.location || 'Campo principale',
           notes: data.notes,
@@ -178,6 +182,8 @@ export class TrainingService {
     organizationId: string,
     data: {
       date?: Date;
+      startTime?: Date;
+      endTime?: Date;
       type?: string;
       location?: string;
       notes?: string;
@@ -197,7 +203,9 @@ export class TrainingService {
         where: { id },
         data: {
           ...data,
-          date: data.date ? new Date(data.date) : undefined
+          date: data.date ? new Date(data.date) : undefined,
+          startTime: data.startTime ? new Date(data.startTime) : undefined,
+          endTime: data.endTime ? new Date(data.endTime) : undefined
         },
         include: {
           team: true,

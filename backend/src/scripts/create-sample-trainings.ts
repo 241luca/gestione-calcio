@@ -43,10 +43,17 @@ async function createSampleTrainings() {
           const baseDate = addDays(today, week * 7 + dayOffset);
           const trainingDate = setMinutes(setHours(baseDate, 18), 0);
           
+          const startTime = new Date(trainingDate);
+          startTime.setHours(18, 0, 0, 0);
+          const endTime = new Date(trainingDate);
+          endTime.setHours(19, 30, 0, 0);
+          
           trainingsToCreate.push({
             organizationId: org.id,
             teamId: team.id,
             date: trainingDate,
+            startTime: startTime,
+            endTime: endTime,
             type: dayOffset === 5 ? 'Rifinitura' : 'Allenamento',
             location: dayOffset === 3 ? 'Campo B' : 'Campo principale',
             status: 'SCHEDULED',
@@ -62,10 +69,17 @@ async function createSampleTrainings() {
       // Aggiungi un allenamento speciale per oggi (se non è domenica)
       if (today.getDay() !== 0) {
         const todayTraining = setMinutes(setHours(today, 17), 30);
+        const todayStart = new Date(todayTraining);
+        todayStart.setHours(17, 30, 0, 0);
+        const todayEnd = new Date(todayTraining);
+        todayEnd.setHours(19, 0, 0, 0);
+        
         trainingsToCreate.push({
           organizationId: org.id,
           teamId: team.id,
           date: todayTraining,
+          startTime: todayStart,
+          endTime: todayEnd,
           type: 'Allenamento',
           location: 'Campo principale',
           status: 'SCHEDULED',

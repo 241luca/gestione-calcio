@@ -15,6 +15,8 @@ router.use(authenticate);
 const createTrainingSchema = z.object({
   teamId: z.string().uuid(),
   date: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
   type: z.string().optional(),
   location: z.string().optional(),
   notes: z.string().optional()
@@ -98,7 +100,9 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     const training = await trainingService.createTrainingSession({
       organizationId,
       ...validatedData,
-      date: new Date(validatedData.date)
+      date: new Date(validatedData.date),
+      startTime: new Date(validatedData.startTime),
+      endTime: new Date(validatedData.endTime)
     });
 
     res.status(201).json(ResponseFormatter.success(training, {
@@ -128,7 +132,9 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       organizationId,
       {
         ...validatedData,
-        date: validatedData.date ? new Date(validatedData.date) : undefined
+        date: validatedData.date ? new Date(validatedData.date) : undefined,
+        startTime: validatedData.startTime ? new Date(validatedData.startTime) : undefined,
+        endTime: validatedData.endTime ? new Date(validatedData.endTime) : undefined
       }
     );
 
