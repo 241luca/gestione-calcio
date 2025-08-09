@@ -971,7 +971,7 @@ export class PaymentService {
    */
   async exportPayments(
     organizationId: string,
-    format: string,
+    exportFormat: string,  // Rinominato da format a exportFormat
     filters?: any
   ) {
     const where: any = { organizationId };
@@ -997,18 +997,18 @@ export class PaymentService {
       'Atleta': `${p.athlete.firstName} ${p.athlete.lastName}`,
       'Tipo': p.type.name,
       'Importo': p.amount,
-      'Scadenza': format(p.dueDate, 'dd/MM/yyyy'),
+      'Scadenza': format(p.dueDate, 'dd/MM/yyyy'),  // Ora format è la funzione di date-fns
       'Stato': p.status,
       'Pagato': p.paidAmount || 0,
-      'Data Pagamento': p.paidDate ? format(p.paidDate, 'dd/MM/yyyy') : '',
+      'Data Pagamento': p.paidDate ? format(p.paidDate, 'dd/MM/yyyy') : '',  // Ora format è la funzione di date-fns
       'Metodo': p.paymentMethod || ''
     }));
 
     return {
       data,
-      format,
-      filename: `pagamenti_${format(new Date(), 'yyyy-MM-dd')}.${format === 'csv' ? 'csv' : 'xlsx'}`,
-      contentType: format === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      format: exportFormat,  // Usiamo exportFormat nel return
+      filename: `pagamenti_${format(new Date(), 'yyyy-MM-dd')}.${exportFormat === 'csv' ? 'csv' : 'xlsx'}`,  // Ora format è la funzione, exportFormat è il parametro
+      contentType: exportFormat === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     };
   }
 

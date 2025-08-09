@@ -53,40 +53,6 @@ ResponseFormatter.error(
 )
 ```
 
-### Note Importanti
-
-1. **Campo Photo**: Il modello Athlete nel database NON ha un campo `photo`. Se si vuole salvare le foto degli atleti, considerare:
-   - Aggiungere il campo `photo` al modello Athlete in `schema.prisma`
-   - Oppure salvare le foto come documenti di tipo speciale
-   - Oppure creare una tabella separata per le foto
-
-2. **Enum AthleteStatus**: I valori validi sono:
-   - ACTIVE
-   - INACTIVE
-   - SUSPENDED
-   - INJURED
-
-3. **ResponseFormatter.error()**: Accetta esattamente 4 parametri:
-   - `code` (string): Codice errore
-   - `message` (string): Messaggio di errore
-   - `details` (any, opzionale): Dettagli aggiuntivi
-   - `field` (string, opzionale): Campo che ha generato l'errore
-
-### File Modificati
-- `/backend/src/services/athlete.service.ts`
-- `/backend/src/middleware/validation.middleware.ts`
-
-### Test Eseguiti
-- ✅ Compilazione TypeScript corretta
-- ✅ Server backend avviato senza errori
-- ✅ Git commit e push eseguiti
-
-### Prossimi Passi Consigliati
-1. Decidere come gestire le foto degli atleti (aggiungere campo al DB o usare sistema documenti)
-2. Testare le API degli atleti per verificare che tutto funzioni
-3. Aggiornare il frontend se necessario per gestire il campo photo virtuale
-4. Verificare che tutte le validazioni funzionino correttamente
-
 ---
 
 ## AGGIORNAMENTO: Errori in document.routes.ts (9 Agosto 2025 - ore 18:45)
@@ -113,16 +79,75 @@ ResponseFormatter.error(
 - Rimosso parametro `userId` da `deleteDocument()` (non richiesto)
 - Sistemati tutti i parametri opzionali con tipo `undefined` invece di cast forzati
 
-#### 3. Allineamento completo tra Service e Routes
-Ora tutti i metodi chiamati dalle route esistono nel servizio con i parametri corretti.
+---
 
-### File Modificati (Update)
-- `/backend/src/services/document.service.ts` - Aggiunti 8 nuovi metodi
-- `/backend/src/routes/document.routes.ts` - Corretti tutti i parametri delle chiamate
+## AGGIORNAMENTO: Errori in payment.routes.ts (9 Agosto 2025 - ore 19:00)
 
-### Test Eseguiti (Update)
+### Problemi Risolti nel PaymentService e Routes
+
+#### 1. Metodi mancanti nel PaymentService
+**Problema**: Le route chiamavano metodi che non esistevano nel servizio.
+
+**Metodi aggiunti**:
+- `getPayments()` - per recuperare lista pagamenti con paginazione
+- `getPaymentById()` - per recuperare singolo pagamento
+- `getUpcomingPayments()` - per recuperare pagamenti in scadenza
+- `updatePayment()` - per aggiornare un pagamento
+- `deletePayment()` - per eliminare un pagamento
+- `createBulkPayments()` - alias per bulkCreatePayments (già esistente)
+- `exportPayments()` - per esportare pagamenti in CSV/Excel
+
+#### 2. Parametri corretti nelle route
+**Problemi risolti**:
+- Corretto passaggio parametri a `createPayment()` (organizzazione e user nel body)
+- Corretto `getPaymentStats()` che accetta solo Date opzionale, non stringhe
+- Corretto `getOverduePayments()` che restituisce oggetto con payments.length
+- Corretto cast di `days` da stringa a numero per `getUpcomingPayments()`
+- Rimosso parametri extra da `recordPayment()` e `deletePayment()`
+- Corretto `sendPaymentReminders()` che accetta solo organizationId
+- Sistemato `exportPayments()` con parametri corretti
+
+---
+
+## RIEPILOGO TOTALE
+
+### Note Importanti
+
+1. **Campo Photo**: Il modello Athlete nel database NON ha un campo `photo`. Se si vuole salvare le foto degli atleti, considerare:
+   - Aggiungere il campo `photo` al modello Athlete in `schema.prisma`
+   - Oppure salvare le foto come documenti di tipo speciale
+   - Oppure creare una tabella separata per le foto
+
+2. **Enum AthleteStatus**: I valori validi sono:
+   - ACTIVE
+   - INACTIVE
+   - SUSPENDED
+   - INJURED
+
+3. **ResponseFormatter.error()**: Accetta esattamente 4 parametri:
+   - `code` (string): Codice errore
+   - `message` (string): Messaggio di errore
+   - `details` (any, opzionale): Dettagli aggiuntivi
+   - `field` (string, opzionale): Campo che ha generato l'errore
+
+### File Modificati TOTALI
+- `/backend/src/services/athlete.service.ts`
+- `/backend/src/middleware/validation.middleware.ts`
+- `/backend/src/services/document.service.ts`
+- `/backend/src/routes/document.routes.ts`
+- `/backend/src/services/payment.service.ts`
+- `/backend/src/routes/payment.routes.ts`
+
+### Test Eseguiti
 - ✅ Compilazione TypeScript corretta
 - ✅ Server backend avviato senza errori
 - ✅ Git commit e push eseguiti
-- ✅ Tutti i metodi del DocumentService ora esistono
-- ✅ Tutte le route sono allineate con i metodi del servizio
+- ✅ Tutti i metodi dei servizi ora esistono
+- ✅ Tutte le route sono allineate con i metodi dei servizi
+
+### Prossimi Passi Consigliati
+1. Testare le API di atleti, documenti e pagamenti
+2. Verificare che il frontend si connetta correttamente
+3. Decidere come gestire le foto degli atleti
+4. Implementare i metodi PDF che sono ancora placeholder
+5. Configurare Redis per il caching (opzionale)
