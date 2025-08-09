@@ -23,10 +23,9 @@ export const validateBody = (schema: ZodSchema) => {
         return res.status(422).json(
           ResponseFormatter.error(
             'VALIDATION_ERROR',
-            'I dati forniti non sono validi',
+            'I dati forniti non sono validi. Controlla i campi evidenziati e riprova',
             errors,
-            errors[0]?.field,
-            'Controlla i campi evidenziati e riprova'
+            errors[0]?.field
           )
         );
       }
@@ -128,10 +127,9 @@ export const validate = (schemas: {
         return res.status(422).json(
           ResponseFormatter.error(
             'VALIDATION_ERROR',
-            'Dati non validi',
+            'Dati non validi. Verifica i dati inseriti',
             errors,
-            errors[0]?.field,
-            'Verifica i dati inseriti'
+            errors[0]?.field
           )
         );
       }
