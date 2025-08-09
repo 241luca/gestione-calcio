@@ -9,6 +9,13 @@
 Il sistema utilizza limiti di paginazione per ottimizzare le performance e gestire grandi quantità di dati. 
 Questa documentazione elenca tutti i limiti configurati nel sistema.
 
+### ⚡ Modifiche Recenti (7 Agosto 2025)
+- ✅ Aumentato limite Atleti da 50 → 400
+- ✅ Aumentato limite Documenti da 20 → 1000  
+- ✅ Aumentato limite Pagamenti da 50 → 3000
+- ✅ Creata documentazione completa
+- ✅ Aggiunti script di analisi e monitoraggio
+
 ---
 
 ## 📈 DATI ATTUALI NEL DATABASE
@@ -71,6 +78,27 @@ Altri moduli del sistema che potrebbero avere limiti:
 - **Matches**: Da verificare
 - **Training Sessions**: Da verificare
 - **Notifications**: Da verificare
+
+---
+
+## 📝 SCRIPT UTILI
+
+### Script di Analisi Disponibili:
+
+1. **count-all-data.ts** - Conta tutti i dati nel database
+   ```bash
+   cd backend && npx ts-node src/scripts/count-all-data.ts
+   ```
+
+2. **find-all-limits.sh** - Trova tutti i limiti nel codice
+   ```bash
+   ./find-all-limits.sh
+   ```
+
+3. **check-limits.sh** - Verifica rapida dei limiti principali
+   ```bash
+   ./check-limits.sh
+   ```
 
 ---
 
