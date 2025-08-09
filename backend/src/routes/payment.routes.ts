@@ -1,347 +1,437 @@
-import { Router } from 'express';
+// backend/src/routes/payment.routes.ts
+import { Router, Response, NextFunction } from 'express';
 import { PaymentService } from '../services/payment.service';
-import { authenticate, AuthRequest } from '../middleware/auth.middleware';
-import { authorize } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, authorize } from '../middleware/auth.middleware';
+import { validate, validateBody, validateParams, validateQuery } from '../middleware/validation.middleware';
 import { ResponseFormatter } from '../utils/responseFormatter';
+import { 
+  createPaymentSchema,
+  updatePaymentSchema,
+  recordPaymentSchema,
+  paymentFiltersSchema,
+  paginationSchema,
+  idParamSchema
+} from '../validators/schemas';
 import { z } from 'zod';
 import { startOfMonth, endOfMonth } from 'date-fns';
 
 const router = Router();
 const paymentService = new PaymentService();
 
-// Schema di validazione per la creazione pagamento
-const createPaymentSchema = z.object({
-  athleteId: z.string().uuid(),
-  typeId: z.number().positive(),
-  amount: z.number().positive(),
-  dueDate: z.string().transform(str => new Date(str)),
-  description: z.string().optional(),
-  notes: z.string().optional()
-});
-
-// Schema per registrare un pagamento
-const recordPaymentSchema = z.object({
-  amount: z.number().positive(),
-  paymentDate: z.string().transform(str => new Date(str)),
-  paymentMethod: z.string().optional(),
-  notes: z.string().optional()
-});
-
-// Schema per pagamenti multipli
-const bulkCreateSchema = z.object({
-  athleteIds: z.array(z.string().uuid()),
-  typeId: z.number().positive(),
-  amount: z.number().positive(),
-  dueDate: z.string().transform(str => new Date(str)),
-  description: z.string().optional()
-});
-
 // Applica autenticazione a tutte le route
 router.use(authenticate);
 
 /**
  * GET /api/v1/payments
- * Recupera tutti i pagamenti dell'organizzazione con filtri opzionali
+ * Recupera tutti i pagamenti con filtri e paginazione
  */
-router.get('/', async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 GET /payments - Recupero pagamenti organizzazione');
-    console.log('User:', req.user);
-    const organizationId = req.user!.organizationId;
-    console.log('Organization ID:', organizationId);
-    
-    // Parsing dei filtri dalla query string
-    const filters: any = {};
-    if (req.query.status) filters.status = req.query.status;
-    if (req.query.athleteId) filters.athleteId = req.query.athleteId;
-    if (req.query.typeId) filters.typeId = Number(req.query.typeId);
-    if (req.query.fromDate) filters.fromDate = new Date(req.query.fromDate as string);
-    if (req.query.toDate) filters.toDate = new Date(req.query.toDate as string);
+router.get('/', 
+  validate({
+    query: paymentFiltersSchema.merge(paginationSchema)
+  }),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const { 
+        page = 1, 
+        limit = 50, 
+        sortBy = 'dueDate', 
+        sortOrder = 'desc',
+        ...filters 
+      } = req.query as any;
 
-    const payments = await paymentService.getPaymentsByOrganization(organizationId, filters);
+      // Gestione filtro per mese
+      if (filters.month) {
+        const monthDate = new Date(filters.month + '-01');
+        filters.fromDate = startOfMonth(monthDate);
+        filters.toDate = endOfMonth(monthDate);
+        delete filters.month;
+      }
 
-    res.json(ResponseFormatter.success(payments, {
-      count: payments.length,
-      filters
-    }));
-  } catch (error) {
-    console.error('❌ Errore in GET /payments:', error);
-    next(error);
-  }
-});
-
-/**
- * GET /api/v1/payments/athlete/:athleteId
- * Recupera tutti i pagamenti di un atleta specifico
- */
-router.get('/athlete/:athleteId', authorize('payments:read'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 GET /payments/athlete - Pagamenti atleta:', req.params.athleteId);
-    const organizationId = req.user!.organizationId;
-    const { athleteId } = req.params;
-
-    const result = await paymentService.getPaymentsByAthlete(athleteId, organizationId);
-
-    res.json(ResponseFormatter.success(result));
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * POST /api/v1/payments
- * Crea un nuovo pagamento
- */
-router.post('/', authorize('payments:create'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 POST /payments - Creazione nuovo pagamento');
-    const organizationId = req.user!.organizationId;
-
-    // Valida i dati
-    const validatedData = createPaymentSchema.parse(req.body);
-
-    const payment = await paymentService.createPayment({
-      organizationId,
-      ...validatedData,
-      createdById: req.user!.userId
-    });
-
-    res.status(201).json(ResponseFormatter.success(payment, {
-      message: 'Pagamento creato con successo'
-    }));
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(422).json(ResponseFormatter.validationError(error.errors));
-    }
-    next(error);
-  }
-});
-
-/**
- * PUT /api/v1/payments/:id
- * Aggiorna lo stato di un pagamento
- */
-router.put('/:id', authorize('payments:update'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 PUT /payments/:id - Aggiornamento stato pagamento');
-    const organizationId = req.user!.organizationId;
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!status) {
-      return res.status(400).json(
-        ResponseFormatter.error('VALIDATION_ERROR', 'Lo stato è obbligatorio')
+      const result = await paymentService.getPayments(
+        organizationId,
+        filters,
+        { page, limit, sortBy, sortOrder }
       );
+
+      res.json(ResponseFormatter.success(result));
+    } catch (error) {
+      next(error);
     }
-
-    const payment = await paymentService.updatePaymentStatus(id, status, organizationId);
-
-    res.json(ResponseFormatter.success(payment, {
-      message: 'Stato pagamento aggiornato'
-    }));
-  } catch (error) {
-    next(error);
   }
-});
-
-/**
- * POST /api/v1/payments/:id/pay
- * Registra un pagamento effettuato
- */
-router.post('/:id/pay', authorize('payments:update'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 POST /payments/:id/pay - Registrazione pagamento');
-    const organizationId = req.user!.organizationId;
-    const { id } = req.params;
-
-    // Valida i dati
-    const validatedData = recordPaymentSchema.parse(req.body);
-
-    const payment = await paymentService.recordPayment(id, validatedData, organizationId);
-
-    res.json(ResponseFormatter.success(payment, {
-      message: 'Pagamento registrato con successo'
-    }));
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(422).json(ResponseFormatter.validationError(error.errors));
-    }
-    next(error);
-  }
-});
-
-/**
- * GET /api/v1/payments/overdue
- * Recupera tutti i pagamenti scaduti
- */
-router.get('/overdue', authorize('payments:read'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 GET /payments/overdue - Pagamenti scaduti');
-    const organizationId = req.user!.organizationId;
-
-    const result = await paymentService.getOverduePayments(organizationId);
-
-    res.json(ResponseFormatter.success(result, {
-      warning: result.stats.count > 0 ? `Ci sono ${result.stats.count} pagamenti scaduti` : null
-    }));
-  } catch (error) {
-    next(error);
-  }
-});
+);
 
 /**
  * GET /api/v1/payments/stats
- * Recupera le statistiche sui pagamenti
+ * Recupera statistiche pagamenti
  */
-router.get('/stats', async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 GET /payments/stats - Statistiche pagamenti');
-    console.log('User:', req.user);
-    const organizationId = req.user!.organizationId;
-    console.log('Organization ID:', organizationId);
-    const month = req.query.month ? new Date(req.query.month as string) : undefined;
+router.get('/stats',
+  validate({
+    query: z.object({
+      month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+      year: z.string().regex(/^\d{4}$/).optional()
+    })
+  }),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const stats = await paymentService.getPaymentStats(
+        organizationId,
+        req.query.month as string,
+        req.query.year as string
+      );
 
-    const stats = await paymentService.getPaymentStats(organizationId, month);
-
-    res.json(ResponseFormatter.success(stats));
-  } catch (error) {
-    console.error('❌ Errore in GET /payments/stats:', error);
-    next(error);
+      res.json(ResponseFormatter.success(stats));
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
+
+/**
+ * GET /api/v1/payments/overdue
+ * Recupera pagamenti in ritardo
+ */
+router.get('/overdue',
+  authorize('payments:read'),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const overduePayments = await paymentService.getOverduePayments(organizationId);
+
+      res.json(ResponseFormatter.success(overduePayments, {
+        message: `${overduePayments.length} pagamenti in ritardo`
+      }));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/v1/payments/upcoming
+ * Recupera pagamenti in scadenza
+ */
+router.get('/upcoming',
+  validate({
+    query: z.object({
+      days: z.string().regex(/^\d+$/).transform(Number).default('7')
+    })
+  }),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const upcomingPayments = await paymentService.getUpcomingPayments(
+        organizationId,
+        req.query.days as number
+      );
+
+      res.json(ResponseFormatter.success(upcomingPayments, {
+        message: `${upcomingPayments.length} pagamenti in scadenza nei prossimi ${req.query.days} giorni`
+      }));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/v1/payments/athlete/:athleteId
+ * Recupera pagamenti di un atleta
+ */
+router.get('/athlete/:athleteId',
+  authorize('payments:read'),
+  validate({
+    params: z.object({
+      athleteId: z.string().uuid()
+    }),
+    query: z.object({
+      year: z.string().regex(/^\d{4}$/).optional(),
+      status: z.enum(['PENDING', 'PAID', 'OVERDUE', 'CANCELLED']).optional()
+    })
+  }),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const result = await paymentService.getPaymentsByAthlete(
+        req.params.athleteId,
+        organizationId,
+        req.query as any
+      );
+
+      res.json(ResponseFormatter.success(result));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/v1/payments/:id
+ * Recupera dettagli singolo pagamento
+ */
+router.get('/:id',
+  validateParams(idParamSchema),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const payment = await paymentService.getPaymentById(
+        req.params.id,
+        organizationId
+      );
+
+      res.json(ResponseFormatter.success(payment));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/payments
+ * Crea nuovo pagamento
+ */
+router.post('/',
+  authorize('payments:create'),
+  validateBody(createPaymentSchema),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const userId = req.user!.userId;
+
+      const payment = await paymentService.createPayment(
+        req.body,
+        organizationId,
+        userId
+      );
+
+      res.status(201).json(
+        ResponseFormatter.success(payment, {
+          message: 'Pagamento creato con successo'
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 /**
  * POST /api/v1/payments/bulk
- * Crea pagamenti multipli (es. quota mensile per tutti)
+ * Crea pagamenti multipli
  */
-router.post('/bulk', authorize('payments:create'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 POST /payments/bulk - Creazione pagamenti multipli');
-    const organizationId = req.user!.organizationId;
+router.post('/bulk',
+  authorize('payments:create'),
+  validateBody(z.object({
+    athleteIds: z.array(z.string().uuid()).min(1),
+    typeId: z.number().positive(),
+    amount: z.number().positive(),
+    dueDate: z.string().datetime(),
+    description: z.string().optional()
+  })),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const userId = req.user!.userId;
 
-    // Valida i dati
-    const validatedData = bulkCreateSchema.parse(req.body);
+      const result = await paymentService.createBulkPayments(
+        req.body,
+        organizationId,
+        userId
+      );
 
-    const results = await paymentService.bulkCreatePayments({
-      organizationId,
-      ...validatedData,
-      createdById: req.user!.userId
-    });
-
-    res.status(201).json(ResponseFormatter.success(results, {
-      message: `Creati ${results.created.length} pagamenti su ${results.total}`
-    }));
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(422).json(ResponseFormatter.validationError(error.errors));
+      res.status(201).json(
+        ResponseFormatter.success(result, {
+          message: `Creati ${result.created} pagamenti per ${result.athletes} atleti`
+        })
+      );
+    } catch (error) {
+      next(error);
     }
-    next(error);
   }
-});
+);
 
 /**
- * GET /api/v1/payments/:id/receipt
- * Genera e scarica la ricevuta di un pagamento
+ * PUT /api/v1/payments/:id
+ * Aggiorna pagamento
  */
-router.get('/:id/receipt', authorize('payments:read'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 GET /payments/:id/receipt - Generazione ricevuta');
-    const organizationId = req.user!.organizationId;
-    const { id } = req.params;
+router.put('/:id',
+  authorize('payments:update'),
+  validate({
+    params: idParamSchema,
+    body: updatePaymentSchema
+  }),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const userId = req.user!.userId;
 
-    const receipt = await paymentService.generateReceipt(id, organizationId);
+      const payment = await paymentService.updatePayment(
+        req.params.id,
+        req.body,
+        organizationId,
+        userId
+      );
 
-    res.json(ResponseFormatter.success(receipt, {
-      message: 'Ricevuta generata'
-    }));
-  } catch (error) {
-    next(error);
+      res.json(
+        ResponseFormatter.success(payment, {
+          message: 'Pagamento aggiornato con successo'
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
+
+/**
+ * POST /api/v1/payments/:id/pay
+ * Registra pagamento effettuato
+ */
+router.post('/:id/pay',
+  authorize('payments:update'),
+  validate({
+    params: idParamSchema,
+    body: recordPaymentSchema
+  }),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const userId = req.user!.userId;
+
+      const payment = await paymentService.recordPayment(
+        req.params.id,
+        req.body,
+        organizationId,
+        userId
+      );
+
+      res.json(
+        ResponseFormatter.success(payment, {
+          message: 'Pagamento registrato con successo'
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/payments/:id/receipt
+ * Genera ricevuta PDF
+ */
+router.post('/:id/receipt',
+  authorize('payments:read'),
+  validateParams(idParamSchema),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      
+      const receipt = await paymentService.generateReceipt(
+        req.params.id,
+        organizationId
+      );
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="ricevuta-${req.params.id}.pdf"`);
+      res.send(receipt);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * DELETE /api/v1/payments/:id
+ * Cancella pagamento (solo se PENDING)
+ */
+router.delete('/:id',
+  authorize('payments:delete'),
+  validateParams(idParamSchema),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      const userId = req.user!.userId;
+
+      await paymentService.deletePayment(
+        req.params.id,
+        organizationId,
+        userId
+      );
+
+      res.json(
+        ResponseFormatter.success(null, {
+          message: 'Pagamento cancellato con successo'
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 /**
  * POST /api/v1/payments/send-reminders
- * Invia promemoria per pagamenti in scadenza
+ * Invia promemoria pagamenti
  */
-router.post('/send-reminders', authorize('payments:admin'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 POST /payments/send-reminders - Invio promemoria');
-    const organizationId = req.user!.organizationId;
+router.post('/send-reminders',
+  authorize('payments:manage'),
+  validateBody(z.object({
+    paymentIds: z.array(z.string().uuid()).optional(),
+    daysBeforeDue: z.number().min(1).max(30).default(3)
+  })),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      
+      const result = await paymentService.sendPaymentReminders(
+        organizationId,
+        req.body.paymentIds,
+        req.body.daysBeforeDue
+      );
 
-    const result = await paymentService.sendPaymentReminders(organizationId);
-
-    res.json(ResponseFormatter.success(result, {
-      message: `Inviati ${result.remindersSent} promemoria`
-    }));
-  } catch (error) {
-    next(error);
+      res.json(
+        ResponseFormatter.success(result, {
+          message: `Inviati ${result.sent} promemoria`
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 /**
- * POST /api/v1/payments/check-overdue
- * Controlla e aggiorna i pagamenti scaduti
- */
-router.post('/check-overdue', authorize('payments:admin'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 POST /payments/check-overdue - Controllo pagamenti scaduti');
-
-    const result = await paymentService.checkAndUpdateOverduePayments();
-
-    res.json(ResponseFormatter.success(result, {
-      message: `Aggiornati ${result.updated} pagamenti a OVERDUE`
-    }));
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * GET /api/v1/payments/report/monthly
- * Genera report mensile PDF
- */
-router.get('/report/monthly', authorize('payments:read'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 GET /payments/report/monthly - Generazione report mensile');
-    const organizationId = req.user!.organizationId;
-    const month = req.query.month ? new Date(req.query.month as string) : new Date();
-
-    const report = await paymentService.generateMonthlyReport(organizationId, month);
-
-    res.json(ResponseFormatter.success(report, {
-      message: 'Report mensile generato'
-    }));
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * GET /api/v1/payments/export/excel
+ * GET /api/v1/payments/export
  * Esporta pagamenti in Excel/CSV
  */
-router.get('/export/excel', authorize('payments:read'), async (req: AuthRequest, res, next) => {
-  try {
-    console.log('💰 GET /payments/export/excel - Export Excel');
-    const organizationId = req.user!.organizationId;
-    
-    const fromDate = req.query.fromDate 
-      ? new Date(req.query.fromDate as string)
-      : startOfMonth(new Date());
-    
-    const toDate = req.query.toDate
-      ? new Date(req.query.toDate as string)
-      : endOfMonth(new Date());
+router.get('/export',
+  authorize('payments:read'),
+  validate({
+    query: z.object({
+      format: z.enum(['excel', 'csv']).default('excel'),
+      year: z.string().regex(/^\d{4}$/).optional(),
+      month: z.string().regex(/^\d{1,2}$/).optional(),
+      status: z.enum(['PENDING', 'PAID', 'OVERDUE', 'CANCELLED']).optional()
+    })
+  }),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const organizationId = req.user!.organizationId;
+      
+      const result = await paymentService.exportPayments(
+        organizationId,
+        req.query as any
+      );
 
-    const exportData = await paymentService.exportToExcel(organizationId, fromDate, toDate);
-
-    res.json(ResponseFormatter.success(exportData, {
-      message: 'Export generato con successo'
-    }));
-  } catch (error) {
-    next(error);
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+      res.send(result.buffer);
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
-// Export del router
 export default router;

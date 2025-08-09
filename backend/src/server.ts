@@ -5,6 +5,8 @@ import { PrismaClient } from '@prisma/client';
 import { createServer } from 'http';
 import SocketService from './services/socket.service';
 import SchedulerService from './services/scheduler.service';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware';
+import { ResponseFormatter } from './utils/responseFormatter';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -139,28 +141,9 @@ app.get('/api/v1/socket/test', (req: Request, res: Response) => {
   });
 });
 
-// Error handler globale
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', err);
-  
-  res.status(500).json({
-    success: false,
-    error: {
-      message: err.message || 'Errore interno del server',
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    }
-  });
-});
-
-// 404 handler
-app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      message: 'Endpoint non trovato'
-    }
-  });
-});
+// Error handlers - DEVONO essere gli ultimi middleware!
+app.use(notFoundHandler);  // Gestisce 404
+app.use(errorHandler);     // Gestisce tutti gli errori
 
 // Avvia il server
 async function startServer() {
