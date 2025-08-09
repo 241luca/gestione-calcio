@@ -34,7 +34,7 @@ router.get('/',
       const organizationId = req.user!.organizationId;
       const { 
         page = 1, 
-        limit = 50,
+        limit = 3000,  // Aumentato per visualizzare tutti i 2531 pagamenti
         ...filters 
       } = req.query as any;
 

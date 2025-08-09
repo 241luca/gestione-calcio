@@ -121,7 +121,7 @@ export class DocumentService {
     pagination: { page: number; limit: number }
   ) {
     try {
-      const { page = 1, limit = 20 } = pagination;
+      const { page = 1, limit = 1000 } = pagination;  // Aumentato per visualizzare tutti i 841 documenti
       const skip = (page - 1) * limit;
 
       const where: any = {
