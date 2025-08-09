@@ -69,7 +69,7 @@ router.get('/',
       const organizationId = req.user!.organizationId;
       const { 
         page = 1, 
-        limit = 50,
+        limit = 1000,  // Aumentato per visualizzare tutti gli 841 documenti
         ...filters 
       } = req.query as any;
 
