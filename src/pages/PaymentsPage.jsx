@@ -30,9 +30,14 @@ const PaymentsPage = () => {
   const { mutate } = useApiMutation();
   
   // Estrai gli array dal formato restituito dal backend
-  const payments = Array.isArray(paymentsData) ? paymentsData : (paymentsData?.payments || []);
-  const athletes = Array.isArray(athletesData) ? athletesData : [];
-  const overduePayments = overdueData?.payments || [];
+  // IMPORTANTE: Se c'è paginazione, i dati sono in 'items'
+  const payments = Array.isArray(paymentsData) 
+    ? paymentsData 
+    : (paymentsData?.items || paymentsData?.payments || []);
+  const athletes = Array.isArray(athletesData) 
+    ? athletesData 
+    : (athletesData?.items || athletesData?.athletes || []);
+  const overduePayments = overdueData?.items || overdueData?.payments || [];
   const stats = overdueData?.stats || {};
   
   // Tipi di pagamento (per ora hardcoded, potremmo caricarli dal backend)

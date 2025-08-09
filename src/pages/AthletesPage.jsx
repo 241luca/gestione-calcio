@@ -20,7 +20,10 @@ const AthletesPage = () => {
   const { mutate } = useApiMutation();
   
   // Estrai l'array di atleti dal formato restituito dal backend
-  const athletes = Array.isArray(athletesData) ? athletesData : (athletesData?.athletes || []);
+  // IMPORTANTE: Se c'è paginazione, i dati sono in 'items'
+  const athletes = Array.isArray(athletesData) 
+    ? athletesData 
+    : (athletesData?.items || athletesData?.athletes || []);
   
   console.log('🔍 DEBUG AthletesPage:');
   console.log('  - athletesData raw:', athletesData);

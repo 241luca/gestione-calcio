@@ -22,8 +22,13 @@ const DocumentsPage = () => {
   const { mutate } = useApiMutation();
   
   // Estrai gli array dal formato restituito dal backend
-  const documents = Array.isArray(documentsData) ? documentsData : [];
-  const athletes = Array.isArray(athletesData) ? athletesData : [];
+  // IMPORTANTE: Se c'è paginazione, i dati sono in 'items'
+  const documents = Array.isArray(documentsData) 
+    ? documentsData 
+    : (documentsData?.items || documentsData?.documents || []);
+  const athletes = Array.isArray(athletesData) 
+    ? athletesData 
+    : (athletesData?.items || athletesData?.athletes || []);
   
   // Stati per UI
   const [searchTerm, setSearchTerm] = useState('');
