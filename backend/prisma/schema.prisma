@@ -628,42 +628,6 @@ model Sponsor {
   @@map("sponsors")
 }
 
-model TrainingSession {
-  id             String              @id @default(uuid())
-  organizationId String
-  teamId         String
-  date           DateTime
-  type           String?             @default("Allenamento")
-  location       String?             @default("Campo principale")
-  notes          String?
-  status         String              @default("SCHEDULED")
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  
-  organization   Organization        @relation(fields: [organizationId], references: [id])
-  team           Team                @relation(fields: [teamId], references: [id])
-  attendances    TrainingAttendance[]
-  schedules      TransportSchedule[]
-
-  @@map("training_sessions")
-}
-
-model TrainingAttendance {
-  id         String          @id @default(uuid())
-  sessionId  String
-  athleteId  String
-  present    Boolean         @default(false)
-  notes      String?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  
-  session    TrainingSession @relation(fields: [sessionId], references: [id])
-  athlete    Athlete         @relation(fields: [athleteId], references: [id])
-
-  @@unique([sessionId, athleteId])
-  @@map("training_attendances")
-}
-
 model TransportRoute {
   id             String              @id @default(uuid())
   organizationId String
