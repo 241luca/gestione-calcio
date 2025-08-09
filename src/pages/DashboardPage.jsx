@@ -23,15 +23,18 @@ const DashboardPage = () => {
   const { data: trainingsData, loading: loadingTrainings } = useApiData('/training-sessions/today');
 
   // Calcola statistiche dagli atleti
-  // athletesData è già l'array estratto dal hook useApiData
-  const athletes = Array.isArray(athletesData) ? athletesData : [];
+  // L'endpoint /athletes restituisce { athletes: [...], pagination: {...} }
+  const athletes = athletesData?.athletes || athletesData || [];
+  
+  // Se athletesData è un oggetto con proprietà athletes, usa quella, altrimenti usa athletesData direttamente
+  const athletesList = Array.isArray(athletes) ? athletes : (Array.isArray(athletesData) ? athletesData : []);
   
   // Gestione speciale per overduePayments che restituisce un oggetto con payments e stats
   const overduePaymentsObj = overduePaymentsData?.payments ? overduePaymentsData : { payments: [], stats: {} };
   
   const stats = {
-    totalAthletes: athletes.length,
-    activeAthletes: athletes.filter(a => a.status === 'ACTIVE').length,
+    totalAthletes: athletesList.length,
+    activeAthletes: athletesList.filter(a => a.status === 'ACTIVE').length,
     documentsExpiring: Array.isArray(expiringDocsData) ? expiringDocsData.length : 0,
     pendingPayments: overduePaymentsObj.stats?.count || 0,
     upcomingMatches: Array.isArray(upcomingMatchesData) ? upcomingMatchesData.length : 0,
@@ -39,7 +42,7 @@ const DashboardPage = () => {
   };
 
   // Dati per i widget
-  const recentAthletes = athletes.slice(0, 5);
+  const recentAthletes = athletesList.slice(0, 5);
   const expiringDocs = (Array.isArray(expiringDocsData) ? expiringDocsData : []).slice(0, 5);
   const overduePayments = {
     amount: overduePaymentsObj.stats?.totalAmount || 0,
