@@ -182,10 +182,13 @@ export const authService = {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         
-        // Salva organization ID - può venire da user o direttamente dalla risposta
-        const orgId = organizationId || user.organizationId;
+        // IMPORTANTE: Salva organization ID - può venire da user o direttamente dalla risposta
+        const orgId = organizationId || user?.organizationId || user?.organization?.id;
         if (orgId) {
           localStorage.setItem('organizationId', orgId);
+          console.log('✅ OrganizationId salvato:', orgId);
+        } else {
+          console.error('⚠️ OrganizationId non trovato nella risposta!');
         }
         
         return { success: true, data: response.data.data };
