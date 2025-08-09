@@ -370,7 +370,7 @@ export class AthleteService {
   /**
    * Importa atleti da CSV
    */
-  async bulkImportAthletes(athletes: any[], organizationId: string) {
+  async bulkImportAthletes(athletes: any[], organizationId: string, userId?: string) {
     const results = {
       imported: [] as any[],
       failed: [] as any[],
@@ -421,10 +421,13 @@ export class AthleteService {
         Stato: athlete.status
       }));
 
+      // Per ora restituiamo solo i dati, la conversione in CSV/Excel sarà gestita dal controller
       return {
         data,
         format,
-        filename: `atleti_${new Date().toISOString().split('T')[0]}`
+        filename: `atleti_${new Date().toISOString().split('T')[0]}.${format}`,
+        contentType: format === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        buffer: Buffer.from(JSON.stringify(data)) // Temporaneo, andrebbe convertito in CSV/Excel reale
       };
     } catch (error) {
       throw new BadRequestError('Errore nell\'esportazione degli atleti');
@@ -482,14 +485,19 @@ export class AthleteService {
   /**
    * Crea atleti in blocco
    */
-  async bulkCreateAthletes(athletes: any[], organizationId: string) {
-    return this.bulkImportAthletes(athletes, organizationId);
+  async bulkCreateAthletes(athletes: any[], organizationId: string, userId?: string) {
+    const results = await this.bulkImportAthletes(athletes, organizationId);
+    // Aggiungiamo 'created' per compatibilità con le route
+    return {
+      ...results,
+      created: results.imported.length
+    };
   }
 
   /**
    * Aggiorna stato atleta
    */
-  async updateAthleteStatus(id: string, status: string, organizationId: string) {
+  async updateAthleteStatus(id: string, status: string, organizationId: string, userId?: string, reason?: string) {
     try {
       const athlete = await prisma.athlete.update({
         where: {
