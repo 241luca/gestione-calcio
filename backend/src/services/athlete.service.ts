@@ -127,7 +127,7 @@ export class AthleteService {
   /**
    * Crea nuovo atleta
    */
-  async createAthlete(data: any, organizationId: string) {
+  async createAthlete(data: any, organizationId: string, userId?: string) {
     try {
       // Verifica codice fiscale univoco
       if (data.fiscalCode) {
@@ -187,7 +187,7 @@ export class AthleteService {
   /**
    * Aggiorna atleta
    */
-  async updateAthlete(id: string, data: any, organizationId: string) {
+  async updateAthlete(id: string, data: any, organizationId: string, userId?: string) {
     try {
       // Verifica che l'atleta esista
       const existing = await prisma.athlete.findFirst({
@@ -282,7 +282,7 @@ export class AthleteService {
   /**
    * Elimina atleta (soft delete)
    */
-  async deleteAthlete(id: string, organizationId: string) {
+  async deleteAthlete(id: string, organizationId: string, userId?: string) {
     try {
       const athlete = await prisma.athlete.findFirst({
         where: { id, organizationId }
@@ -394,5 +394,159 @@ export class AthleteService {
     }
 
     return results;
+  }
+
+  /**
+   * Esporta atleti in formato CSV/Excel
+   */
+  async exportAthletes(organizationId: string, format: string = 'csv') {
+    try {
+      const athletes = await prisma.athlete.findMany({
+        where: { organizationId },
+        include: {
+          team: true,
+          position: true
+        }
+      });
+
+      const data = athletes.map(athlete => ({
+        Nome: athlete.firstName,
+        Cognome: athlete.lastName,
+        'Data di Nascita': athlete.birthDate,
+        'Codice Fiscale': athlete.fiscalCode,
+        Email: athlete.email,
+        Telefono: athlete.phone,
+        Squadra: athlete.team?.name || '',
+        Posizione: athlete.position?.name || '',
+        Stato: athlete.status
+      }));
+
+      return {
+        data,
+        format,
+        filename: `atleti_${new Date().toISOString().split('T')[0]}`
+      };
+    } catch (error) {
+      throw new BadRequestError('Errore nell\'esportazione degli atleti');
+    }
+  }
+
+  /**
+   * Ottieni documenti dell'atleta
+   */
+  async getAthleteDocuments(athleteId: string, organizationId: string) {
+    try {
+      const documents = await prisma.document.findMany({
+        where: {
+          athleteId,
+          organizationId
+        },
+        include: {
+          type: true
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      return documents;
+    } catch (error) {
+      throw new BadRequestError('Errore nel recupero dei documenti');
+    }
+  }
+
+  /**
+   * Ottieni pagamenti dell'atleta
+   */
+  async getAthletePayments(athleteId: string, organizationId: string) {
+    try {
+      const payments = await prisma.payment.findMany({
+        where: {
+          athleteId,
+          organizationId
+        },
+        include: {
+          type: true
+        },
+        orderBy: {
+          dueDate: 'desc'
+        }
+      });
+
+      return payments;
+    } catch (error) {
+      throw new BadRequestError('Errore nel recupero dei pagamenti');
+    }
+  }
+
+  /**
+   * Crea atleti in blocco
+   */
+  async bulkCreateAthletes(athletes: any[], organizationId: string) {
+    return this.bulkImportAthletes(athletes, organizationId);
+  }
+
+  /**
+   * Aggiorna stato atleta
+   */
+  async updateAthleteStatus(id: string, status: string, organizationId: string) {
+    try {
+      const athlete = await prisma.athlete.update({
+        where: {
+          id,
+          organizationId
+        },
+        data: {
+          status
+        }
+      });
+
+      return athlete;
+    } catch (error) {
+      throw new BadRequestError('Errore nell\'aggiornamento dello stato');
+    }
+  }
+
+  /**
+   * Upload foto atleta
+   */
+  async uploadAthletePhoto(athleteId: string, photoUrl: string, organizationId: string) {
+    try {
+      const athlete = await prisma.athlete.update({
+        where: {
+          id: athleteId,
+          organizationId
+        },
+        data: {
+          photo: photoUrl
+        }
+      });
+
+      return athlete;
+    } catch (error) {
+      throw new BadRequestError('Errore nel caricamento della foto');
+    }
+  }
+
+  /**
+   * Ripristina atleta eliminato
+   */
+  async restoreAthlete(id: string, organizationId: string, userId?: string) {
+    try {
+      const athlete = await prisma.athlete.update({
+        where: {
+          id,
+          organizationId
+        },
+        data: {
+          status: 'ACTIVE',
+          updatedAt: new Date()
+        }
+      });
+
+      return athlete;
+    } catch (error) {
+      throw new BadRequestError('Errore nel ripristino dell\'atleta');
+    }
   }
 }

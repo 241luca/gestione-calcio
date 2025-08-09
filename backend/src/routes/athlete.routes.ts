@@ -81,8 +81,7 @@ router.get('/export',
     try {
       const result = await athleteService.exportAthletes(
         req.user.organizationId,
-        req.query.format,
-        req.query.teamId
+        req.query.format
       );
       
       res.setHeader('Content-Type', result.contentType);
@@ -148,8 +147,7 @@ router.get('/:id/payments',
     try {
       const payments = await athleteService.getAthletePayments(
         req.params.id,
-        req.user.organizationId,
-        req.query
+        req.user.organizationId
       );
       res.json(ResponseFormatter.success(payments));
     } catch (error) {
