@@ -354,22 +354,27 @@ export class DocumentService {
   /**
    * Recupera documenti in scadenza
    */
-  async getExpiringDocuments(organizationId: string, days: number = 30) {
+  async getExpiringDocuments(organizationId: string, days: number = 30, athleteId?: string) {
     try {
       const futureDate = addDays(new Date(), days);
 
+      const where: any = {
+        organizationId,
+        expiryDate: {
+          gte: new Date(),
+          lte: futureDate
+        }
+      };
+
+      if (athleteId) {
+        where.athleteId = athleteId;
+      }
+
       const documents = await prisma.document.findMany({
-        where: {
-          organizationId,
-          expiryDate: {
-            gte: new Date(),
-            lte: futureDate
-          }
-        },
+        where,
         include: {
           athlete: true,
           type: true
-          // Rimosso uploadedBy perché è una stringa, non una relazione
         },
         orderBy: {
           expiryDate: 'asc'
@@ -380,6 +385,229 @@ export class DocumentService {
     } catch (error) {
       console.error('Error getting expiring documents:', error);
       throw new BadRequestError('Errore nel recupero dei documenti in scadenza');
+    }
+  }
+
+  /**
+   * Recupera documenti scaduti
+   */
+  async getExpiredDocuments(organizationId: string, athleteId?: string) {
+    try {
+      const where: any = {
+        organizationId,
+        status: 'EXPIRED'
+      };
+
+      if (athleteId) {
+        where.athleteId = athleteId;
+      }
+
+      const documents = await prisma.document.findMany({
+        where,
+        include: {
+          athlete: true,
+          type: true
+        },
+        orderBy: {
+          expiryDate: 'desc'
+        }
+      });
+
+      return documents;
+    } catch (error) {
+      console.error('Error getting expired documents:', error);
+      throw new BadRequestError('Errore nel recupero dei documenti scaduti');
+    }
+  }
+
+  /**
+   * Recupera documenti di un atleta
+   */
+  async getAthleteDocuments(athleteId: string, organizationId: string, filters?: any) {
+    try {
+      const where: any = {
+        athleteId,
+        organizationId
+      };
+
+      if (filters?.status) {
+        where.status = filters.status;
+      }
+
+      if (filters?.typeId) {
+        where.typeId = filters.typeId;
+      }
+
+      const documents = await prisma.document.findMany({
+        where,
+        include: {
+          type: true
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      return documents;
+    } catch (error) {
+      console.error('Error getting athlete documents:', error);
+      throw new BadRequestError('Errore nel recupero dei documenti dell\'atleta');
+    }
+  }
+
+  /**
+   * Recupera tipi di documento disponibili
+   */
+  async getDocumentTypes() {
+    try {
+      const types = await prisma.documentType.findMany({
+        orderBy: {
+          name: 'asc'
+        }
+      });
+
+      return types;
+    } catch (error) {
+      console.error('Error getting document types:', error);
+      throw new BadRequestError('Errore nel recupero dei tipi di documento');
+    }
+  }
+
+  /**
+   * Recupera documento per download
+   */
+  async getDocumentForDownload(id: string, organizationId: string) {
+    try {
+      const document = await prisma.document.findFirst({
+        where: { id, organizationId }
+      });
+
+      if (!document) {
+        throw new NotFoundError('Documento non trovato');
+      }
+
+      return document;
+    } catch (error) {
+      console.error('Error getting document for download:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload documenti multipli
+   */
+  async uploadBulkDocuments(
+    files: Express.Multer.File[],
+    data: {
+      athleteId: string;
+      typeId: number;
+      organizationId: string;
+      uploadedBy?: string;
+    }
+  ) {
+    try {
+      const results = {
+        uploaded: [] as any[],
+        failed: [] as any[]
+      };
+
+      for (const file of files) {
+        try {
+          const document = await this.uploadDocument(file, data);
+          results.uploaded.push(document);
+        } catch (error: any) {
+          results.failed.push({
+            filename: file.originalname,
+            error: error.message
+          });
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error uploading bulk documents:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Aggiorna documento
+   */
+  async updateDocument(
+    id: string,
+    organizationId: string,
+    data: {
+      typeId?: number;
+      issueDate?: string;
+      expiryDate?: string;
+      notes?: string;
+    }
+  ) {
+    try {
+      const document = await prisma.document.findFirst({
+        where: { id, organizationId }
+      });
+
+      if (!document) {
+        throw new NotFoundError('Documento non trovato');
+      }
+
+      const updateData: any = {};
+      
+      if (data.typeId !== undefined) updateData.typeId = data.typeId;
+      if (data.issueDate !== undefined) updateData.issueDate = new Date(data.issueDate);
+      if (data.expiryDate !== undefined) updateData.expiryDate = new Date(data.expiryDate);
+      if (data.notes !== undefined) updateData.notes = data.notes;
+
+      // Aggiorna status se necessario
+      if (updateData.expiryDate) {
+        const daysUntilExpiry = differenceInDays(updateData.expiryDate, new Date());
+        if (daysUntilExpiry < 0) {
+          updateData.status = 'EXPIRED';
+        } else if (daysUntilExpiry <= 30) {
+          updateData.status = 'EXPIRING';
+        } else {
+          updateData.status = 'VALID';
+        }
+      }
+
+      const updated = await prisma.document.update({
+        where: { id },
+        data: updateData,
+        include: {
+          athlete: true,
+          type: true
+        }
+      });
+
+      return updated;
+    } catch (error) {
+      console.error('Error updating document:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Controlla documenti in scadenza (per cron job)
+   */
+  async checkExpiringDocuments(organizationId: string) {
+    try {
+      // Aggiorna stati
+      await this.updateExpiredDocuments();
+
+      // Recupera documenti in scadenza
+      const expiring = await this.getExpiringDocuments(organizationId, 30);
+      const expired = await this.getExpiredDocuments(organizationId);
+
+      return {
+        checked: true,
+        expiring: expiring.length,
+        expired: expired.length,
+        message: `Trovati ${expiring.length} documenti in scadenza e ${expired.length} scaduti`
+      };
+    } catch (error) {
+      console.error('Error checking expiring documents:', error);
+      throw error;
     }
   }
 }

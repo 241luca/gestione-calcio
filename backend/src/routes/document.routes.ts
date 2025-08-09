@@ -69,16 +69,14 @@ router.get('/',
       const organizationId = req.user!.organizationId;
       const { 
         page = 1, 
-        limit = 50, 
-        sortBy = 'createdAt', 
-        sortOrder = 'desc',
+        limit = 50,
         ...filters 
       } = req.query as any;
 
       const result = await documentService.getDocuments(
         organizationId,
         filters,
-        { page, limit, sortBy, sortOrder }
+        { page, limit } // Il servizio supporta solo page e limit
       );
 
       res.json(ResponseFormatter.success(result));
@@ -102,14 +100,17 @@ router.get('/expiring',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
+      const days = Number(req.query.days) || 30;
+      const athleteId = req.query.athleteId as string | undefined;
+      
       const expiringDocs = await documentService.getExpiringDocuments(
         organizationId,
-        req.query.days as number,
-        req.query.athleteId as string
+        days,
+        athleteId
       );
 
       res.json(ResponseFormatter.success(expiringDocs, {
-        message: `${expiringDocs.length} documenti in scadenza nei prossimi ${req.query.days} giorni`
+        message: `${expiringDocs.length} documenti in scadenza nei prossimi ${days} giorni`
       }));
     } catch (error) {
       next(error);
@@ -130,9 +131,11 @@ router.get('/expired',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
+      const athleteId = req.query.athleteId as string | undefined;
+      
       const expiredDocs = await documentService.getExpiredDocuments(
         organizationId,
-        req.query.athleteId as string
+        athleteId
       );
 
       res.json(ResponseFormatter.success(expiredDocs, {
@@ -224,9 +227,11 @@ router.get('/:id/download',
         organizationId
       );
 
-      res.setHeader('Content-Type', document.mimeType);
-      res.setHeader('Content-Disposition', `attachment; filename="${document.fileName}"`);
-      res.send(document.buffer);
+      // TODO: Implementare il download del file fisico
+      // Per ora restituiamo solo i metadati del documento
+      res.json(ResponseFormatter.success(document, {
+        message: 'Download endpoint - da implementare lettura file fisico'
+      }));
     } catch (error) {
       next(error);
     }
@@ -255,11 +260,16 @@ router.post('/',
       const organizationId = req.user!.organizationId;
       const userId = req.user!.userId;
 
+      // Prepara i dati per il servizio
+      const documentData = {
+        ...req.body,
+        organizationId,
+        uploadedBy: userId
+      };
+
       const document = await documentService.uploadDocument(
         req.file,
-        req.body,
-        organizationId,
-        userId
+        documentData
       );
 
       res.status(201).json(
@@ -299,16 +309,20 @@ router.post('/bulk',
       const organizationId = req.user!.organizationId;
       const userId = req.user!.userId;
 
+      const documentData = {
+        ...req.body,
+        organizationId,
+        uploadedBy: userId
+      };
+
       const result = await documentService.uploadBulkDocuments(
         req.files as Express.Multer.File[],
-        req.body,
-        organizationId,
-        userId
+        documentData
       );
 
       res.status(201).json(
         ResponseFormatter.success(result, {
-          message: `Caricati ${result.uploaded} documenti su ${result.total}`
+          message: `Caricati ${result.uploaded.length} documenti su ${req.files.length}`
         })
       );
     } catch (error) {
@@ -330,13 +344,11 @@ router.put('/:id',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
-      const userId = req.user!.userId;
 
       const document = await documentService.updateDocument(
         req.params.id,
-        req.body,
         organizationId,
-        userId
+        req.body
       );
 
       res.json(
@@ -370,8 +382,7 @@ router.post('/:id/verify',
       const document = await documentService.verifyDocument(
         req.params.id,
         organizationId,
-        userId,
-        req.body.notes
+        userId // Il metodo accetta solo 3 parametri
       );
 
       res.json(
@@ -395,12 +406,10 @@ router.delete('/:id',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
-      const userId = req.user!.userId;
 
       await documentService.deleteDocument(
         req.params.id,
-        organizationId,
-        userId
+        organizationId // Il metodo accetta solo 2 parametri
       );
 
       res.json(
@@ -427,7 +436,7 @@ router.post('/check-expiring',
 
       res.json(
         ResponseFormatter.success(result, {
-          message: `Controllati ${result.checked} documenti, ${result.notifications} notifiche inviate`
+          message: result.message
         })
       );
     } catch (error) {

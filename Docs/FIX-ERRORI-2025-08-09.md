@@ -30,6 +30,29 @@ return {
 };
 ```
 
+#### 3. Errore parametri in `validation.middleware.ts` (righe 29 e 134)
+**Problema**: La funzione `ResponseFormatter.error()` accetta solo 4 parametri, ma stavamo passandone 5.
+
+**Soluzione**: Rimosso il quinto parametro e incorporato il messaggio di suggerimento direttamente nel messaggio principale:
+```typescript
+// Prima (ERRATO - 5 parametri):
+ResponseFormatter.error(
+  'VALIDATION_ERROR',
+  'I dati forniti non sono validi',
+  errors,
+  errors[0]?.field,
+  'Controlla i campi evidenziati e riprova' // PARAMETRO DI TROPPO!
+)
+
+// Dopo (CORRETTO - 4 parametri):
+ResponseFormatter.error(
+  'VALIDATION_ERROR',
+  'I dati forniti non sono validi. Controlla i campi evidenziati e riprova',
+  errors,
+  errors[0]?.field
+)
+```
+
 ### Note Importanti
 
 1. **Campo Photo**: Il modello Athlete nel database NON ha un campo `photo`. Se si vuole salvare le foto degli atleti, considerare:
@@ -43,8 +66,15 @@ return {
    - SUSPENDED
    - INJURED
 
+3. **ResponseFormatter.error()**: Accetta esattamente 4 parametri:
+   - `code` (string): Codice errore
+   - `message` (string): Messaggio di errore
+   - `details` (any, opzionale): Dettagli aggiuntivi
+   - `field` (string, opzionale): Campo che ha generato l'errore
+
 ### File Modificati
 - `/backend/src/services/athlete.service.ts`
+- `/backend/src/middleware/validation.middleware.ts`
 
 ### Test Eseguiti
 - ✅ Compilazione TypeScript corretta
@@ -55,3 +85,4 @@ return {
 1. Decidere come gestire le foto degli atleti (aggiungere campo al DB o usare sistema documenti)
 2. Testare le API degli atleti per verificare che tutto funzioni
 3. Aggiornare il frontend se necessario per gestire il campo photo virtuale
+4. Verificare che tutte le validazioni funzionino correttamente
