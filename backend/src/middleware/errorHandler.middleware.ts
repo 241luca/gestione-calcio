@@ -51,8 +51,7 @@ export const errorHandler = (
         'VALIDATION_ERROR',
         'I dati forniti non sono validi',
         errors,
-        errors[0]?.field,
-        'Controlla i campi evidenziati e riprova'
+        errors[0]?.field
       )
     );
   }
@@ -68,8 +67,7 @@ export const errorHandler = (
             'DUPLICATE_ERROR',
             `Il valore per ${field} è già in uso`,
             error.meta,
-            field,
-            'Usa un valore diverso'
+            field
           )
         );
 
