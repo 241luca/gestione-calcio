@@ -35,6 +35,13 @@ const AthletesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedAthletes, setSelectedAthletes] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Estrai info paginazione
+  const pagination = athletesData?.pagination || {};
+  const totalPages = pagination.totalPages || 1;
+  const hasNext = pagination.hasNext || false;
+  const hasPrev = pagination.hasPrev || false;
 
   // Handler CRUD
   const handleAdd = () => {

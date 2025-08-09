@@ -31,7 +31,7 @@ router.get('/',
     try {
       const { 
         page = 1, 
-        limit = 50, 
+        limit = 200,  // Aumentato da 50 a 200
         sortBy = 'lastName', 
         sortOrder = 'asc',
         ...filters 
