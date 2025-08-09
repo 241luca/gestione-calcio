@@ -588,6 +588,82 @@ export class DocumentService {
   }
 
   /**
+   * Recupera documenti in scadenza
+   */
+  async getExpiringDocuments(organizationId: string, days: number = 30, athleteId?: string) {
+    try {
+      const futureDate = addDays(new Date(), days);
+      const now = new Date();
+
+      const where: any = {
+        organizationId,
+        expiryDate: {
+          gte: now,
+          lte: futureDate
+        }
+      };
+
+      if (athleteId) {
+        where.athleteId = athleteId;
+      }
+
+      const documents = await prisma.document.findMany({
+        where,
+        include: {
+          athlete: true,
+          type: true
+        },
+        orderBy: {
+          expiryDate: 'asc'
+        }
+      });
+
+      // Aggiungi giorni mancanti alla scadenza
+      const documentsWithDays = documents.map(doc => ({
+        ...doc,
+        daysUntilExpiry: doc.expiryDate ? differenceInDays(doc.expiryDate, new Date()) : null
+      }));
+
+      return documentsWithDays;
+    } catch (error) {
+      console.error('Error getting expiring documents:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Recupera documenti scaduti
+   */
+  async getExpiredDocuments(organizationId: string, athleteId?: string) {
+    try {
+      const where: any = {
+        organizationId,
+        status: 'EXPIRED'
+      };
+
+      if (athleteId) {
+        where.athleteId = athleteId;
+      }
+
+      const documents = await prisma.document.findMany({
+        where,
+        include: {
+          athlete: true,
+          type: true
+        },
+        orderBy: {
+          expiryDate: 'desc'
+        }
+      });
+
+      return documents;
+    } catch (error) {
+      console.error('Error getting expired documents:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Controlla documenti in scadenza (per cron job)
    */
   async checkExpiringDocuments(organizationId: string) {

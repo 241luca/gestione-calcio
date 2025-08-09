@@ -1013,6 +1013,45 @@ export class PaymentService {
   }
 
   /**
+   * Recupera pagamenti scaduti
+   */
+  async getOverduePayments(organizationId: string) {
+    try {
+      const payments = await prisma.payment.findMany({
+        where: {
+          organizationId,
+          status: 'OVERDUE'
+        },
+        include: {
+          athlete: true,
+          type: true
+        },
+        orderBy: {
+          dueDate: 'desc'
+        }
+      });
+
+      // Calcola statistiche
+      const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+      const totalPaid = payments.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+      const totalRemaining = totalAmount - totalPaid;
+
+      return {
+        payments,
+        stats: {
+          count: payments.length,
+          totalAmount,
+          totalPaid,
+          totalRemaining
+        }
+      };
+    } catch (error) {
+      console.error('Error getting overdue payments:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Controlla e aggiorna i pagamenti scaduti (da eseguire con cron job)
    */
   async checkAndUpdateOverduePayments() {
