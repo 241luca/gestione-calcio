@@ -31,6 +31,11 @@ const LoginPage = ({ setIsAuthenticated }) => {
     try {
       const result = await authService.login(formData.email, formData.password);
       
+      console.log('🔍 Login result:', result);
+      console.log('🔍 Token salvato:', localStorage.getItem('token'));
+      console.log('🔍 OrganizationId salvato:', localStorage.getItem('organizationId'));
+      console.log('🔍 User salvato:', localStorage.getItem('user'));
+      
       if (result.success) {
         toast.success('Login effettuato con successo!');
         setIsAuthenticated(true);
