@@ -38,8 +38,8 @@ export class TrainingService {
           organizationId: data.organizationId,
           teamId: data.teamId,
           date: new Date(data.date),
-          startTime: new Date(data.startTime),
-          endTime: new Date(data.endTime),
+          startTime: data.startTime.toISOString(),
+          endTime: data.endTime.toISOString(),
           type: data.type || 'Allenamento',
           location: data.location || 'Campo principale',
           notes: data.notes,
@@ -204,8 +204,8 @@ export class TrainingService {
         data: {
           ...data,
           date: data.date ? new Date(data.date) : undefined,
-          startTime: data.startTime ? new Date(data.startTime) : undefined,
-          endTime: data.endTime ? new Date(data.endTime) : undefined
+          startTime: data.startTime ? data.startTime.toISOString() : undefined,
+          endTime: data.endTime ? data.endTime.toISOString() : undefined
         },
         include: {
           team: true,

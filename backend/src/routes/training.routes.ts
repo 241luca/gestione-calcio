@@ -99,10 +99,13 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     
     const training = await trainingService.createTrainingSession({
       organizationId,
-      ...validatedData,
+      teamId: validatedData.teamId,
       date: new Date(validatedData.date),
       startTime: new Date(validatedData.startTime),
-      endTime: new Date(validatedData.endTime)
+      endTime: new Date(validatedData.endTime),
+      type: validatedData.type,
+      location: validatedData.location,
+      notes: validatedData.notes
     });
 
     res.status(201).json(ResponseFormatter.success(training, {
@@ -127,15 +130,20 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     // Valida i dati
     const validatedData = updateTrainingSchema.parse(req.body);
     
+    const updateData: any = {};
+    
+    if (validatedData.date) updateData.date = new Date(validatedData.date);
+    if (validatedData.startTime) updateData.startTime = new Date(validatedData.startTime);
+    if (validatedData.endTime) updateData.endTime = new Date(validatedData.endTime);
+    if (validatedData.type) updateData.type = validatedData.type;
+    if (validatedData.location) updateData.location = validatedData.location;
+    if (validatedData.notes) updateData.notes = validatedData.notes;
+    if (validatedData.status) updateData.status = validatedData.status;
+    
     const training = await trainingService.updateTrainingSession(
       req.params.id,
       organizationId,
-      {
-        ...validatedData,
-        date: validatedData.date ? new Date(validatedData.date) : undefined,
-        startTime: validatedData.startTime ? new Date(validatedData.startTime) : undefined,
-        endTime: validatedData.endTime ? new Date(validatedData.endTime) : undefined
-      }
+      updateData
     );
 
     res.json(ResponseFormatter.success(training, {
