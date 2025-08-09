@@ -17,9 +17,13 @@ import toast from 'react-hot-toast';
 
 const DocumentsPage = () => {
   // Usa i nuovi hooks per caricare i dati
-  const { data: documents, loading: loadingDocs, error: errorDocs, refetch: refetchDocs } = useApiData('/documents');
-  const { data: athletes, loading: loadingAthletes } = useApiData('/athletes');
+  const { data: documentsData, loading: loadingDocs, error: errorDocs, refetch: refetchDocs } = useApiData('/documents');
+  const { data: athletesData, loading: loadingAthletes } = useApiData('/athletes');
   const { mutate } = useApiMutation();
+  
+  // Estrai gli array dal formato restituito dal backend
+  const documents = Array.isArray(documentsData) ? documentsData : [];
+  const athletes = Array.isArray(athletesData) ? athletesData : [];
   
   // Stati per UI
   const [searchTerm, setSearchTerm] = useState('');
@@ -119,8 +123,8 @@ const DocumentsPage = () => {
     }
   };
 
-  // Filtra documenti
-  const filteredDocuments = (documents || []).filter(doc => {
+  // Filtra documenti - documents è già garantito essere un array
+  const filteredDocuments = documents.filter(doc => {
     const matchesSearch = searchTerm === '' || 
       doc.athlete?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.athlete?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
