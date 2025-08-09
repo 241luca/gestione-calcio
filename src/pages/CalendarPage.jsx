@@ -9,7 +9,11 @@ import {
   FunnelIcon,
   PrinterIcon,
   ArrowDownTrayIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ListBulletIcon,
+  CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import { exportService } from '../services/exportService';
@@ -55,7 +59,7 @@ const CalendarPage = () => {
       return {
         ...training,
         type: 'training',
-        title: 'Allenamento',
+        title: training.type || 'Allenamento',
         color: 'bg-green-500',
         time: timeStr,
         team: teams.find(t => t.id === training.teamId)?.name || 'N/A',
@@ -63,6 +67,9 @@ const CalendarPage = () => {
       };
     })
   ];
+
+  // Ordina eventi per data
+  const sortedEvents = [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
 
   // Loading state
   const loading = loadingMatches || loadingTrainings || loadingTeams;
@@ -78,6 +85,14 @@ const CalendarPage = () => {
     });
   };
 
+  const formatShortDate = (date) => {
+    return new Date(date).toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
   // Funzione per ottenere i giorni del mese
   const getDaysInMonth = () => {
     const year = currentDate.getFullYear();
@@ -86,9 +101,11 @@ const CalendarPage = () => {
     const lastDay = new Date(year, month + 1, 0);
     const days = [];
     
-    // Aggiungi giorni vuoti all'inizio se necessario
-    const startDay = firstDay.getDay() || 7; // Converti domenica da 0 a 7
-    for (let i = 1; i < startDay; i++) {
+    // Aggiungi giorni vuoti all'inizio se necessario (Lunedì = 1, Domenica = 0)
+    const startDay = firstDay.getDay();
+    const emptyDays = startDay === 0 ? 6 : startDay - 1; // Converti per iniziare da Lunedì
+    
+    for (let i = 0; i < emptyDays; i++) {
       days.push(null);
     }
     
@@ -106,8 +123,9 @@ const CalendarPage = () => {
     const dateStr = date.toISOString().split('T')[0];
     return events.filter(event => {
       if (filters.type !== 'all' && event.type !== filters.type) return false;
-      if (filters.team !== 'all' && event.teamId !== parseInt(filters.team)) return false;
-      return event.date === dateStr;
+      if (filters.team !== 'all' && event.teamId !== filters.team) return false;
+      const eventDate = new Date(event.date).toISOString().split('T')[0];
+      return eventDate === dateStr;
     });
   };
 
@@ -160,7 +178,6 @@ const CalendarPage = () => {
       } else {
         // Crea un nuovo allenamento
         // Calcola startTime e endTime basandosi su time
-        const [hours, minutes] = formData.time.split(':');
         const startDateTime = new Date(`${formData.date}T${formData.time}:00`);
         const endDateTime = new Date(startDateTime);
         endDateTime.setHours(endDateTime.getHours() + 1, endDateTime.getMinutes() + 30); // 1h 30min di durata
@@ -220,64 +237,34 @@ const CalendarPage = () => {
     }
   };
 
-  // Funzione per esportare il calendario
-  const handleExport = () => {
-    const exportData = events.map(event => ({
-      Data: event.date,
-      Ora: event.time,
-      Tipo: event.type === 'match' ? 'Partita' : 'Allenamento',
-      Squadra: event.team,
-      Luogo: event.location,
-      Avversario: event.opponent || '-',
-      Competizione: event.competition || '-',
-      Note: event.notes || '-'
-    }));
-
-    exportService.exportToCSV(exportData, 'calendario');
-    toast.success('Calendario esportato');
+  // Funzione per esportare calendario
+  const handleExport = async () => {
+    try {
+      await exportService.exportCalendar(events, currentDate);
+      toast.success('Calendario esportato con successo');
+    } catch (error) {
+      toast.error('Errore durante l\'esportazione');
+    }
   };
 
   // Funzione per stampare
   const handlePrint = () => {
     window.print();
-    toast.success('Preparazione stampa...');
   };
 
-  // Funzione per ricaricare tutti i dati
-  const refetchAll = () => {
-    refetchMatches();
-    refetchTrainings();
-  };
-
-  // Loading state
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">Caricamento calendario...</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-red-900 mb-2">Errore nel caricamento</h3>
-          <p className="text-red-700 mb-4">{error}</p>
-          <button 
-            onClick={refetchAll} 
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-          >
-            Riprova
-          </button>
-        </div>
+      <div className="p-6 bg-red-50 text-red-700 rounded-lg">
+        <ExclamationTriangleIcon className="h-5 w-5 inline mr-2" />
+        Si è verificato un errore nel caricamento dei dati
       </div>
     );
   }
@@ -285,56 +272,52 @@ const CalendarPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white p-6 rounded-lg shadow-sm">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <CalendarIcon className="h-8 w-8 text-blue-600" />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Calendario</h1>
-              <p className="text-gray-600">Gestisci partite e allenamenti</p>
-            </div>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-            >
-              <FunnelIcon className="h-5 w-5" />
-              <span>Filtri</span>
-            </button>
-            <button
-              onClick={handlePrint}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-            >
-              <PrinterIcon className="h-5 w-5" />
-              <span>Stampa</span>
-            </button>
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-            >
-              <ArrowDownTrayIcon className="h-5 w-5" />
-              <span>Esporta</span>
-            </button>
-            <button
-              onClick={() => setShowEventModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-            >
-              <PlusIcon className="h-5 w-5" />
-              <span>Nuovo Evento</span>
-            </button>
-          </div>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold text-gray-900">Calendario</h1>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <FunnelIcon className="h-5 w-5 inline mr-2" />
+            Filtri
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <PrinterIcon className="h-5 w-5 inline mr-2" />
+            Stampa
+          </button>
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <ArrowDownTrayIcon className="h-5 w-5 inline mr-2" />
+            Esporta
+          </button>
+          <button
+            onClick={() => setShowEventModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <PlusIcon className="h-5 w-5 inline mr-2" />
+            Aggiungi Evento
+          </button>
         </div>
+      </div>
 
-        {/* Filtri */}
-        {showFilters && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg flex space-x-4">
+      {/* Filtri */}
+      {showFilters && (
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Squadra</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Squadra
+              </label>
               <select
                 value={filters.team}
                 onChange={(e) => setFilters({...filters, team: e.target.value})}
-                className="px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="all">Tutte le squadre</option>
                 {teams.map(team => (
@@ -343,100 +326,109 @@ const CalendarPage = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo
+              </label>
               <select
                 value={filters.type}
                 onChange={(e) => setFilters({...filters, type: e.target.value})}
-                className="px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="all">Tutti gli eventi</option>
                 <option value="match">Solo partite</option>
                 <option value="training">Solo allenamenti</option>
               </select>
             </div>
+            <div className="flex items-end">
+              <button
+                onClick={() => setFilters({ team: 'all', type: 'all' })}
+                className="px-4 py-2 text-sm text-blue-600 hover:text-blue-700"
+              >
+                Resetta filtri
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Controlli vista */}
+      <div className="flex justify-between items-center bg-white p-4 rounded-lg border border-gray-200">
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setView('month')}
+            className={`px-4 py-2 rounded-lg ${view === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+          >
+            <CalendarDaysIcon className="h-5 w-5 inline mr-2" />
+            Mese
+          </button>
+          <button
+            onClick={() => setView('list')}
+            className={`px-4 py-2 rounded-lg ${view === 'list' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+          >
+            <ListBulletIcon className="h-5 w-5 inline mr-2" />
+            Lista
+          </button>
+        </div>
+
+        {view === 'month' && (
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigateMonth(-1)}
+              className="p-2 hover:bg-gray-100 rounded"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <h2 className="text-lg font-medium">
+              {currentDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
+            </h2>
+            <button
+              onClick={() => navigateMonth(1)}
+              className="p-2 hover:bg-gray-100 rounded"
+            >
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
           </div>
         )}
       </div>
 
-      {/* Vista selezione */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setView('month')}
-              className={`px-4 py-2 rounded-lg ${view === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-            >
-              Vista Mensile
-            </button>
-            <button
-              onClick={() => setView('list')}
-              className={`px-4 py-2 rounded-lg ${view === 'list' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-            >
-              Vista Lista
-            </button>
-          </div>
-
-          {/* Navigazione mese */}
-          {view === 'month' && (
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => navigateMonth(-1)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                ←
-              </button>
-              <h2 className="text-lg font-semibold">
-                {currentDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
-              </h2>
-              <button
-                onClick={() => navigateMonth(1)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                →
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Vista calendario mensile */}
-        {view === 'month' && (
-          <div className="grid grid-cols-7 gap-1">
-            {/* Header giorni */}
+      {/* Vista Mese */}
+      {view === 'month' && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="grid grid-cols-7 bg-gray-50 border-b">
             {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => (
-              <div key={day} className="p-2 text-center font-semibold text-gray-700 bg-gray-50">
+              <div key={day} className="px-4 py-3 text-center text-sm font-medium text-gray-700">
                 {day}
               </div>
             ))}
-            
-            {/* Giorni del mese */}
+          </div>
+          <div className="grid grid-cols-7">
             {getDaysInMonth().map((day, index) => {
               const dayEvents = day ? getEventsForDay(day) : [];
               const isToday = day && day.toDateString() === new Date().toDateString();
               
               return (
-                <div 
-                  key={index} 
-                  className={`min-h-[100px] p-2 border ${day ? 'bg-white hover:bg-gray-50' : 'bg-gray-50'} ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+                <div
+                  key={index}
+                  className={`min-h-[100px] p-2 border-r border-b ${!day ? 'bg-gray-50' : ''} ${isToday ? 'bg-blue-50' : ''}`}
                 >
                   {day && (
                     <>
-                      <div className="font-semibold text-sm mb-1">
+                      <div className={`text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
                         {day.getDate()}
                       </div>
-                      <div className="space-y-1">
-                        {dayEvents.slice(0, 2).map(event => (
+                      <div className="mt-1 space-y-1">
+                        {dayEvents.slice(0, 3).map((event, i) => (
                           <div
-                            key={event.id}
-                            className={`text-xs p-1 rounded text-white ${event.color} cursor-pointer hover:opacity-80`}
+                            key={i}
                             onClick={() => setSelectedEvent(event)}
+                            className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${event.color} text-white truncate`}
                           >
-                            <div className="font-semibold">{event.time}</div>
-                            <div className="truncate">{event.title}</div>
+                            {event.time} - {event.title}
                           </div>
                         ))}
-                        {dayEvents.length > 2 && (
+                        {dayEvents.length > 3 && (
                           <div className="text-xs text-gray-500">
-                            +{dayEvents.length - 2} altri
+                            +{dayEvents.length - 3} altri
                           </div>
                         )}
                       </div>
@@ -446,70 +438,98 @@ const CalendarPage = () => {
               );
             })}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Vista lista */}
-        {view === 'list' && (
-          <div className="space-y-4">
-            {events
-              .filter(event => {
-                if (filters.type !== 'all' && event.type !== filters.type) return false;
-                if (filters.team !== 'all' && event.teamId !== parseInt(filters.team)) return false;
-                return true;
-              })
-              .sort((a, b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time))
-              .map(event => (
-                <div 
-                  key={`${event.type}-${event.id}`} 
-                  className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                  onClick={() => setSelectedEvent(event)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
+      {/* Vista Lista */}
+      {view === 'list' && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Data
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ora
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tipo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Evento
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Squadra
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Luogo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Azioni
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedEvents
+                  .filter(event => {
+                    if (filters.type !== 'all' && event.type !== filters.type) return false;
+                    if (filters.team !== 'all' && event.teamId !== filters.team) return false;
+                    return true;
+                  })
+                  .map((event, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatShortDate(event.date)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {event.time}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs rounded text-white ${event.color}`}>
                           {event.type === 'match' ? 'Partita' : 'Allenamento'}
                         </span>
-                        <span className="font-semibold">{event.title}</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <CalendarIcon className="h-4 w-4" />
-                          <span>{formatDate(event.date)}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <ClockIcon className="h-4 w-4" />
-                          <span>{event.time}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <UserGroupIcon className="h-4 w-4" />
-                          <span>{event.team}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <MapPinIcon className="h-4 w-4" />
-                          <span>{event.location}</span>
-                        </div>
-                      </div>
-                      {event.opponent && (
-                        <div className="mt-2 text-sm">
-                          <span className="font-medium">Avversario:</span> {event.opponent}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            
-            {events.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                Nessun evento trovato
-              </div>
-            )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {event.title}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {event.team}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {event.location}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => setSelectedEvent(event)}
+                          className="text-blue-600 hover:text-blue-900 mr-3"
+                        >
+                          Dettagli
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(event)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Elimina
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                {sortedEvents.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                      Nessun evento trovato
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Modal nuovo evento */}
+      {/* Modal per nuovo evento */}
       {showEventModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
@@ -536,27 +556,21 @@ const CalendarPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tipo di evento
                   </label>
-                  <div className="flex space-x-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        value="match"
-                        checked={formData.type === 'match'}
-                        onChange={(e) => setFormData({...formData, type: e.target.value})}
-                        className="mr-2"
-                      />
-                      <span>Partita</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        value="training"
-                        checked={formData.type === 'training'}
-                        onChange={(e) => setFormData({...formData, type: e.target.value})}
-                        className="mr-2"
-                      />
-                      <span>Allenamento</span>
-                    </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({...formData, type: 'match'})}
+                      className={`p-3 border rounded-lg ${formData.type === 'match' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                    >
+                      Partita
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({...formData, type: 'training'})}
+                      className={`p-3 border rounded-lg ${formData.type === 'training' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                    >
+                      Allenamento
+                    </button>
                   </div>
                 </div>
 
