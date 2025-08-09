@@ -86,3 +86,43 @@ ResponseFormatter.error(
 2. Testare le API degli atleti per verificare che tutto funzioni
 3. Aggiornare il frontend se necessario per gestire il campo photo virtuale
 4. Verificare che tutte le validazioni funzionino correttamente
+
+---
+
+## AGGIORNAMENTO: Errori in document.routes.ts (9 Agosto 2025 - ore 18:45)
+
+### Problemi Risolti nel DocumentService e Routes
+
+#### 1. Metodi mancanti nel DocumentService
+**Problema**: Le route chiamavano metodi che non esistevano nel servizio.
+
+**Metodi aggiunti**:
+- `getExpiredDocuments()` - per recuperare documenti scaduti
+- `getAthleteDocuments()` - per recuperare documenti di un singolo atleta
+- `getDocumentTypes()` - per recuperare i tipi di documento disponibili
+- `getDocumentForDownload()` - per preparare un documento per il download
+- `uploadBulkDocuments()` - per caricare più documenti contemporaneamente
+- `updateDocument()` - per aggiornare i metadati di un documento
+- `checkExpiringDocuments()` - per il controllo periodico dei documenti in scadenza
+
+#### 2. Parametri corretti nelle route
+**Problemi risolti**:
+- Rimosso `sortBy` e `sortOrder` dalla chiamata a `getDocuments()` (non supportati)
+- Corretto cast del parametro `days` da query string a numero
+- Rimosso parametro `notes` dalla chiamata a `verifyDocument()` (non supportato)
+- Rimosso parametro `userId` da `deleteDocument()` (non richiesto)
+- Sistemati tutti i parametri opzionali con tipo `undefined` invece di cast forzati
+
+#### 3. Allineamento completo tra Service e Routes
+Ora tutti i metodi chiamati dalle route esistono nel servizio con i parametri corretti.
+
+### File Modificati (Update)
+- `/backend/src/services/document.service.ts` - Aggiunti 8 nuovi metodi
+- `/backend/src/routes/document.routes.ts` - Corretti tutti i parametri delle chiamate
+
+### Test Eseguiti (Update)
+- ✅ Compilazione TypeScript corretta
+- ✅ Server backend avviato senza errori
+- ✅ Git commit e push eseguiti
+- ✅ Tutti i metodi del DocumentService ora esistono
+- ✅ Tutte le route sono allineate con i metodi del servizio

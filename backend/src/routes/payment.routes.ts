@@ -34,9 +34,7 @@ router.get('/',
       const organizationId = req.user!.organizationId;
       const { 
         page = 1, 
-        limit = 50, 
-        sortBy = 'dueDate', 
-        sortOrder = 'desc',
+        limit = 50,
         ...filters 
       } = req.query as any;
 
@@ -51,7 +49,7 @@ router.get('/',
       const result = await paymentService.getPayments(
         organizationId,
         filters,
-        { page, limit, sortBy, sortOrder }
+        { page, limit } // Rimosso sortBy e sortOrder che non sono supportati
       );
 
       res.json(ResponseFormatter.success(result));
@@ -75,10 +73,16 @@ router.get('/stats',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
+      
+      // getPaymentStats accetta solo organizationId e un Date opzionale per il mese
+      let monthDate: Date | undefined;
+      if (req.query.month) {
+        monthDate = new Date(req.query.month + '-01');
+      }
+      
       const stats = await paymentService.getPaymentStats(
         organizationId,
-        req.query.month as string,
-        req.query.year as string
+        monthDate
       );
 
       res.json(ResponseFormatter.success(stats));
@@ -97,10 +101,10 @@ router.get('/overdue',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
-      const overduePayments = await paymentService.getOverduePayments(organizationId);
+      const result = await paymentService.getOverduePayments(organizationId);
 
-      res.json(ResponseFormatter.success(overduePayments, {
-        message: `${overduePayments.length} pagamenti in ritardo`
+      res.json(ResponseFormatter.success(result, {
+        message: `${result.payments.length} pagamenti in ritardo`
       }));
     } catch (error) {
       next(error);
@@ -121,13 +125,15 @@ router.get('/upcoming',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
+      const days = Number(req.query.days) || 7;
+      
       const upcomingPayments = await paymentService.getUpcomingPayments(
         organizationId,
-        req.query.days as number
+        days
       );
 
       res.json(ResponseFormatter.success(upcomingPayments, {
-        message: `${upcomingPayments.length} pagamenti in scadenza nei prossimi ${req.query.days} giorni`
+        message: `${upcomingPayments.length} pagamenti in scadenza nei prossimi ${days} giorni`
       }));
     } catch (error) {
       next(error);
@@ -155,8 +161,7 @@ router.get('/athlete/:athleteId',
       const organizationId = req.user!.organizationId;
       const result = await paymentService.getPaymentsByAthlete(
         req.params.athleteId,
-        organizationId,
-        req.query as any
+        organizationId
       );
 
       res.json(ResponseFormatter.success(result));
@@ -199,11 +204,14 @@ router.post('/',
       const organizationId = req.user!.organizationId;
       const userId = req.user!.userId;
 
-      const payment = await paymentService.createPayment(
-        req.body,
+      const paymentData = {
+        ...req.body,
         organizationId,
-        userId
-      );
+        createdById: userId,
+        dueDate: new Date(req.body.dueDate)
+      };
+
+      const payment = await paymentService.createPayment(paymentData);
 
       res.status(201).json(
         ResponseFormatter.success(payment, {
@@ -234,15 +242,18 @@ router.post('/bulk',
       const organizationId = req.user!.organizationId;
       const userId = req.user!.userId;
 
-      const result = await paymentService.createBulkPayments(
-        req.body,
+      const bulkData = {
+        ...req.body,
         organizationId,
-        userId
-      );
+        createdById: userId,
+        dueDate: new Date(req.body.dueDate)
+      };
+
+      const result = await paymentService.createBulkPayments(bulkData);
 
       res.status(201).json(
         ResponseFormatter.success(result, {
-          message: `Creati ${result.created} pagamenti per ${result.athletes} atleti`
+          message: `Creati ${result.created.length} pagamenti su ${result.total}`
         })
       );
     } catch (error) {
@@ -264,13 +275,16 @@ router.put('/:id',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
-      const userId = req.user!.userId;
+
+      const updateData = {
+        ...req.body,
+        ...(req.body.dueDate && { dueDate: new Date(req.body.dueDate) })
+      };
 
       const payment = await paymentService.updatePayment(
         req.params.id,
-        req.body,
         organizationId,
-        userId
+        updateData
       );
 
       res.json(
@@ -297,13 +311,16 @@ router.post('/:id/pay',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
-      const userId = req.user!.userId;
+
+      const paymentData = {
+        ...req.body,
+        paymentDate: new Date(req.body.paymentDate)
+      };
 
       const payment = await paymentService.recordPayment(
         req.params.id,
-        req.body,
-        organizationId,
-        userId
+        paymentData,
+        organizationId
       );
 
       res.json(
@@ -333,9 +350,9 @@ router.post('/:id/receipt',
         organizationId
       );
 
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="ricevuta-${req.params.id}.pdf"`);
-      res.send(receipt);
+      res.json(ResponseFormatter.success(receipt, {
+        message: 'Ricevuta generata con successo'
+      }));
     } catch (error) {
       next(error);
     }
@@ -352,12 +369,10 @@ router.delete('/:id',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
-      const userId = req.user!.userId;
 
       await paymentService.deletePayment(
         req.params.id,
-        organizationId,
-        userId
+        organizationId
       );
 
       res.json(
@@ -385,15 +400,11 @@ router.post('/send-reminders',
     try {
       const organizationId = req.user!.organizationId;
       
-      const result = await paymentService.sendPaymentReminders(
-        organizationId,
-        req.body.paymentIds,
-        req.body.daysBeforeDue
-      );
+      const result = await paymentService.sendPaymentReminders(organizationId);
 
       res.json(
         ResponseFormatter.success(result, {
-          message: `Inviati ${result.sent} promemoria`
+          message: `Inviati ${result.remindersSent} promemoria`
         })
       );
     } catch (error) {
@@ -419,15 +430,17 @@ router.get('/export',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const organizationId = req.user!.organizationId;
+      const format = req.query.format || 'excel';
       
       const result = await paymentService.exportPayments(
         organizationId,
+        format as string,
         req.query as any
       );
 
-      res.setHeader('Content-Type', result.contentType);
-      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
-      res.send(result.buffer);
+      res.json(ResponseFormatter.success(result, {
+        message: 'Export generato con successo'
+      }));
     } catch (error) {
       next(error);
     }

@@ -799,6 +799,220 @@ export class PaymentService {
 
 
   /**
+   * Recupera lista pagamenti con filtri e paginazione
+   */
+  async getPayments(
+    organizationId: string,
+    filters: any = {},
+    pagination: { page: number; limit: number }
+  ) {
+    const { page = 1, limit = 50 } = pagination;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      organizationId,
+      ...(filters.status && { status: filters.status }),
+      ...(filters.athleteId && { athleteId: filters.athleteId }),
+      ...(filters.typeId && { typeId: filters.typeId })
+    };
+
+    if (filters.fromDate || filters.toDate) {
+      where.dueDate = {};
+      if (filters.fromDate) where.dueDate.gte = new Date(filters.fromDate);
+      if (filters.toDate) where.dueDate.lte = new Date(filters.toDate);
+    }
+
+    const [payments, total] = await Promise.all([
+      prisma.payment.findMany({
+        where,
+        include: {
+          athlete: true,
+          type: true
+        },
+        orderBy: { dueDate: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.payment.count({ where })
+    ]);
+
+    return {
+      payments,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  /**
+   * Recupera singolo pagamento per ID
+   */
+  async getPaymentById(id: string, organizationId: string) {
+    const payment = await prisma.payment.findFirst({
+      where: { id, organizationId },
+      include: {
+        athlete: true,
+        type: true
+      }
+    });
+
+    if (!payment) {
+      throw new NotFoundError('Pagamento non trovato');
+    }
+
+    return payment;
+  }
+
+  /**
+   * Recupera pagamenti in scadenza
+   */
+  async getUpcomingPayments(organizationId: string, days: number = 7) {
+    const today = new Date();
+    const futureDate = addDays(today, days);
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        organizationId,
+        status: 'PENDING',
+        dueDate: {
+          gte: today,
+          lte: futureDate
+        }
+      },
+      include: {
+        athlete: true,
+        type: true
+      },
+      orderBy: {
+        dueDate: 'asc'
+      }
+    });
+
+    return payments;
+  }
+
+  /**
+   * Aggiorna pagamento
+   */
+  async updatePayment(
+    id: string,
+    organizationId: string,
+    data: {
+      typeId?: number;
+      amount?: number;
+      dueDate?: Date;
+      description?: string;
+      notes?: string;
+    }
+  ) {
+    const payment = await prisma.payment.findFirst({
+      where: { id, organizationId }
+    });
+
+    if (!payment) {
+      throw new NotFoundError('Pagamento non trovato');
+    }
+
+    const updated = await prisma.payment.update({
+      where: { id },
+      data,
+      include: {
+        athlete: true,
+        type: true
+      }
+    });
+
+    return updated;
+  }
+
+  /**
+   * Elimina pagamento
+   */
+  async deletePayment(id: string, organizationId: string) {
+    const payment = await prisma.payment.findFirst({
+      where: { id, organizationId }
+    });
+
+    if (!payment) {
+      throw new NotFoundError('Pagamento non trovato');
+    }
+
+    if (payment.status === 'PAID') {
+      throw new BadRequestError('Non è possibile eliminare un pagamento già pagato');
+    }
+
+    await prisma.payment.delete({
+      where: { id }
+    });
+
+    return { success: true, message: 'Pagamento eliminato con successo' };
+  }
+
+  /**
+   * Crea pagamenti in blocco
+   */
+  async createBulkPayments(data: {
+    organizationId: string;
+    athleteIds: string[];
+    typeId: number;
+    amount: number;
+    dueDate: Date;
+    description?: string;
+    createdById: string;
+  }) {
+    return this.bulkCreatePayments(data);
+  }
+
+  /**
+   * Esporta pagamenti
+   */
+  async exportPayments(
+    organizationId: string,
+    format: string,
+    filters?: any
+  ) {
+    const where: any = { organizationId };
+
+    if (filters) {
+      if (filters.status) where.status = filters.status;
+      if (filters.fromDate) where.dueDate = { ...where.dueDate, gte: new Date(filters.fromDate) };
+      if (filters.toDate) where.dueDate = { ...where.dueDate, lte: new Date(filters.toDate) };
+    }
+
+    const payments = await prisma.payment.findMany({
+      where,
+      include: {
+        athlete: true,
+        type: true
+      },
+      orderBy: {
+        dueDate: 'desc'
+      }
+    });
+
+    const data = payments.map(p => ({
+      'Atleta': `${p.athlete.firstName} ${p.athlete.lastName}`,
+      'Tipo': p.type.name,
+      'Importo': p.amount,
+      'Scadenza': format(p.dueDate, 'dd/MM/yyyy'),
+      'Stato': p.status,
+      'Pagato': p.paidAmount || 0,
+      'Data Pagamento': p.paidDate ? format(p.paidDate, 'dd/MM/yyyy') : '',
+      'Metodo': p.paymentMethod || ''
+    }));
+
+    return {
+      data,
+      format,
+      filename: `pagamenti_${format(new Date(), 'yyyy-MM-dd')}.${format === 'csv' ? 'csv' : 'xlsx'}`,
+      contentType: format === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    };
+  }
+
+  /**
    * Controlla e aggiorna i pagamenti scaduti (da eseguire con cron job)
    */
   async checkAndUpdateOverduePayments() {
