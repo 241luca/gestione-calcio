@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   CurrencyEuroIcon, 
   PlusIcon, 
@@ -8,20 +8,25 @@ import {
   EnvelopeIcon,
   CalendarIcon,
   BuildingOfficeIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  ExclamationTriangleIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
-import api from '../services/api';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useApiData, useApiMutation } from '../hooks/useApiData';
 import UniversalActions from '../components/common/UniversalActions';
 import toast from 'react-hot-toast';
 
 function SponsorsPage() {
-  const [sponsors, setSponsors] = useState([]);
+  // Hook per recuperare dati dal backend
+  const { data: sponsors = [], loading, error, refetch } = useApiData('/sponsors');
+  const { mutate } = useApiMutation();
+
+  // Stati locali per UI
   const [selectedSponsors, setSelectedSponsors] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingSponsor, setEditingSponsor] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     type: 'MAIN',
@@ -36,83 +41,19 @@ function SponsorsPage() {
     logoUrl: ''
   });
 
-  useEffect(() => {
-    loadSponsors();
-  }, []);
-
-  const loadSponsors = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/sponsors');
-      if (response.data.success) {
-        setSponsors(response.data.data || []);
-      }
-    } catch (error) {
-      console.error('Errore caricamento sponsor:', error);
-      // Dati di esempio se l'API non è ancora pronta
-      setSponsors([
-        {
-          id: '1',
-          name: 'SportStore Milano',
-          type: 'MAIN',
-          contactPerson: 'Giovanni Bianchi',
-          email: 'info@sportstore.it',
-          phone: '+39 02 1234567',
-          amount: 10000,
-          startDate: '2024-01-01',
-          endDate: '2024-12-31',
-          description: 'Sponsor principale - Fornitura divise',
-          isActive: true
-        },
-        {
-          id: '2',
-          name: 'Pizzeria Da Mario',
-          type: 'SECONDARY',
-          contactPerson: 'Mario Rossi',
-          email: 'mario@pizzeria.it',
-          phone: '+39 333 7654321',
-          amount: 3000,
-          startDate: '2024-03-01',
-          endDate: '2025-02-28',
-          description: 'Sponsor cartellonistica campo',
-          isActive: true
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     try {
       if (editingSponsor) {
-        const response = await api.put(`/api/v1/sponsors/${editingSponsor.id}`, formData);
-        if (response.data.success) {
-          setSponsors(sponsors.map(s => s.id === editingSponsor.id ? response.data.data : s));
-        }
+        await mutate('put', `/sponsors/${editingSponsor.id}`, formData, 'Sponsor aggiornato con successo');
       } else {
-        const response = await api.post('/sponsors', formData);
-        if (response.data.success) {
-          setSponsors([...sponsors, response.data.data]);
-        }
+        await mutate('post', '/sponsors', formData, 'Sponsor aggiunto con successo');
       }
+      refetch();
       resetForm();
     } catch (error) {
-      console.error('Errore salvataggio sponsor:', error);
-      // Simulazione salvataggio
-      const newSponsor = {
-        id: Date.now().toString(),
-        ...formData,
-        amount: parseFloat(formData.amount),
-        isActive: true
-      };
-      if (editingSponsor) {
-        setSponsors(sponsors.map(s => s.id === editingSponsor.id ? newSponsor : s));
-      } else {
-        setSponsors([...sponsors, newSponsor]);
-      }
-      resetForm();
+      // Errore già gestito da mutate
     }
   };
 
@@ -120,7 +61,7 @@ function SponsorsPage() {
     setEditingSponsor(sponsor);
     setFormData({
       name: sponsor.name,
-      type: sponsor.type,
+      type: sponsor.type || 'MAIN',
       contactPerson: sponsor.contactPerson || '',
       email: sponsor.email || '',
       phone: sponsor.phone || '',
@@ -135,27 +76,29 @@ function SponsorsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Sei sicuro di voler eliminare questo sponsor?')) return;
+    if (!window.confirm('Sei sicuro di voler eliminare questo sponsor?')) return;
     
     try {
-      await api.delete(`/api/v1/sponsors/${id}`);
-      setSponsors(sponsors.filter(s => s.id !== id));
-      toast.success('Sponsor eliminato');
+      await mutate('delete', `/sponsors/${id}`, null, 'Sponsor eliminato con successo');
+      refetch();
     } catch (error) {
-      console.error('Errore eliminazione:', error);
-      // Simulazione eliminazione
-      setSponsors(sponsors.filter(s => s.id !== id));
-      toast.success('Sponsor eliminato');
+      // Errore già gestito da mutate
     }
   };
 
   const handleBulkDelete = async (sponsorsToDelete) => {
+    if (!window.confirm(`Sei sicuro di voler eliminare ${sponsorsToDelete.length} sponsor?`)) return;
+    
     try {
-      setSponsors(sponsors.filter(s => !sponsorsToDelete.find(del => del.id === s.id)));
+      // Elimina uno per uno (o implementa bulk delete nel backend)
+      for (const sponsor of sponsorsToDelete) {
+        await mutate('delete', `/sponsors/${sponsor.id}`, null);
+      }
       toast.success(`${sponsorsToDelete.length} sponsor eliminati`);
       setSelectedSponsors([]);
+      refetch();
     } catch (error) {
-      toast.error('Errore nell\'eliminazione');
+      // Errore già gestito da mutate
     }
   };
 
@@ -202,7 +145,7 @@ function SponsorsPage() {
   };
 
   const calculateTotalRevenue = () => {
-    return sponsors.reduce((sum, sponsor) => sum + (sponsor.amount || 0), 0);
+    return sponsors.reduce((sum, sponsor) => sum + (parseFloat(sponsor.amount) || 0), 0);
   };
 
   const getActiveSponsors = () => {
@@ -213,16 +156,34 @@ function SponsorsPage() {
     });
   };
 
+  // Loading state
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-48 bg-gray-200 rounded"></div>
-            ))}
+      <div className="p-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Caricamento sponsor...</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-red-900 mb-2">Errore nel caricamento</h3>
+          <p className="text-red-700 mb-4">{error}</p>
+          <button 
+            onClick={refetch} 
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Riprova
+          </button>
         </div>
       </div>
     );
@@ -353,7 +314,7 @@ function SponsorsPage() {
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">Importo annuale:</span>
-                      <span className="text-sm font-semibold text-gray-900">€{sponsor.amount?.toLocaleString() || 0}</span>
+                      <span className="text-sm font-semibold text-gray-900">€{parseFloat(sponsor.amount || 0).toLocaleString()}</span>
                     </div>
                     
                     {sponsor.contactPerson && (
@@ -416,9 +377,17 @@ function SponsorsPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {editingSponsor ? 'Modifica Sponsor' : 'Nuovo Sponsor'}
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingSponsor ? 'Modifica Sponsor' : 'Nuovo Sponsor'}
+              </h2>
+              <button
+                onClick={resetForm}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
             
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-2 gap-4">

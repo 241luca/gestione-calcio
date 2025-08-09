@@ -8,13 +8,21 @@ import {
   XMarkIcon,
   FunnelIcon,
   PrinterIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import { exportService } from '../services/exportService';
+import { useApiData, useApiMutation } from '../hooks/useApiData';
 
 const CalendarPage = () => {
-  const [events, setEvents] = useState([]);
+  // Hook per recuperare dati dal backend
+  const { data: matches = [], loading: loadingMatches, error: errorMatches, refetch: refetchMatches } = useApiData('/matches');
+  const { data: trainings = [], loading: loadingTrainings, error: errorTrainings, refetch: refetchTrainings } = useApiData('/training-sessions');
+  const { data: teams = [], loading: loadingTeams, error: errorTeams } = useApiData('/teams');
+  const { mutate } = useApiMutation();
+
+  // Stati locali per UI
   const [view, setView] = useState('month'); // month, week, list
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showEventModal, setShowEventModal] = useState(false);
@@ -26,71 +34,31 @@ const CalendarPage = () => {
     type: 'all'
   });
 
-  // Dati di esempio per squadre
-  const teams = [
-    { id: 1, name: 'Under 13' },
-    { id: 2, name: 'Under 15' },
-    { id: 3, name: 'Under 17' },
-    { id: 4, name: 'Prima Squadra' }
+  // Combina partite e allenamenti in un unico array di eventi
+  const events = [
+    ...matches.map(match => ({
+      ...match,
+      type: 'match',
+      title: `Partita vs ${match.opponent || 'TBD'}`,
+      color: 'bg-blue-500',
+      time: match.time || '00:00',
+      team: teams.find(t => t.id === match.teamId)?.name || 'N/A',
+      location: match.venue || match.location || 'Campo'
+    })),
+    ...trainings.map(training => ({
+      ...training,
+      type: 'training',
+      title: 'Allenamento',
+      color: 'bg-green-500',
+      time: training.time || '00:00',
+      team: teams.find(t => t.id === training.teamId)?.name || 'N/A',
+      location: training.location || 'Campo'
+    }))
   ];
 
-  // Dati di esempio per eventi
-  useEffect(() => {
-    // Simuliamo il caricamento degli eventi
-    const sampleEvents = [
-      {
-        id: 1,
-        title: 'Partita vs Roma FC',
-        type: 'match',
-        date: '2025-08-10',
-        time: '15:00',
-        team: 'Under 15',
-        teamId: 2,
-        location: 'Campo Comunale',
-        opponent: 'Roma FC',
-        competition: 'Campionato',
-        color: 'bg-blue-500'
-      },
-      {
-        id: 2,
-        title: 'Allenamento',
-        type: 'training',
-        date: '2025-08-08',
-        time: '18:00',
-        team: 'Under 15',
-        teamId: 2,
-        location: 'Campo B',
-        notes: 'Allenamento tattico',
-        color: 'bg-green-500'
-      },
-      {
-        id: 3,
-        title: 'Partita vs Milan Junior',
-        type: 'match',
-        date: '2025-08-15',
-        time: '10:30',
-        team: 'Under 13',
-        teamId: 1,
-        location: 'Campo Ospiti',
-        opponent: 'Milan Junior',
-        competition: 'Torneo Estate',
-        color: 'bg-blue-500'
-      },
-      {
-        id: 4,
-        title: 'Allenamento',
-        type: 'training',
-        date: '2025-08-09',
-        time: '17:00',
-        team: 'Prima Squadra',
-        teamId: 4,
-        location: 'Campo Principale',
-        notes: 'Preparazione fisica',
-        color: 'bg-green-500'
-      }
-    ];
-    setEvents(sampleEvents);
-  }, []);
+  // Loading state
+  const loading = loadingMatches || loadingTrainings || loadingTeams;
+  const error = errorMatches || errorTrainings || errorTeams;
 
   // Funzione per formattare la data
   const formatDate = (date) => {
@@ -155,7 +123,7 @@ const CalendarPage = () => {
     notes: ''
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.date || !formData.time || !formData.teamId) {
@@ -163,17 +131,40 @@ const CalendarPage = () => {
       return;
     }
 
-    const newEvent = {
-      id: events.length + 1,
-      ...formData,
-      team: teams.find(t => t.id === parseInt(formData.teamId))?.name,
-      color: formData.type === 'match' ? 'bg-blue-500' : 'bg-green-500'
-    };
-
-    setEvents([...events, newEvent]);
-    toast.success(formData.type === 'match' ? 'Partita aggiunta' : 'Allenamento aggiunto');
-    setShowEventModal(false);
-    resetForm();
+    try {
+      if (formData.type === 'match') {
+        // Crea una nuova partita
+        await mutate('post', '/matches', {
+          date: formData.date,
+          time: formData.time,
+          teamId: formData.teamId,
+          opponent: formData.opponent,
+          venue: formData.location,
+          competition: formData.competition,
+          notes: formData.notes,
+          homeTeamId: formData.teamId,
+          awayTeamId: null, // Partita in trasferta
+          status: 'SCHEDULED'
+        }, 'Partita aggiunta con successo');
+        refetchMatches();
+      } else {
+        // Crea un nuovo allenamento
+        await mutate('post', '/training-sessions', {
+          date: formData.date,
+          time: formData.time,
+          teamId: formData.teamId,
+          location: formData.location,
+          notes: formData.notes,
+          type: 'TRAINING'
+        }, 'Allenamento aggiunto con successo');
+        refetchTrainings();
+      }
+      
+      setShowEventModal(false);
+      resetForm();
+    } catch (error) {
+      // Errore già gestito da mutate
+    }
   };
 
   const resetForm = () => {
@@ -188,6 +179,26 @@ const CalendarPage = () => {
       competition: '',
       notes: ''
     });
+  };
+
+  // Funzione per eliminare un evento
+  const handleDeleteEvent = async (event) => {
+    if (!window.confirm(`Sei sicuro di voler eliminare questo ${event.type === 'match' ? 'match' : 'allenamento'}?`)) {
+      return;
+    }
+
+    try {
+      if (event.type === 'match') {
+        await mutate('delete', `/matches/${event.id}`, null, 'Partita eliminata con successo');
+        refetchMatches();
+      } else {
+        await mutate('delete', `/training-sessions/${event.id}`, null, 'Allenamento eliminato con successo');
+        refetchTrainings();
+      }
+      setSelectedEvent(null);
+    } catch (error) {
+      // Errore già gestito da mutate
+    }
   };
 
   // Funzione per esportare il calendario
@@ -212,6 +223,45 @@ const CalendarPage = () => {
     window.print();
     toast.success('Preparazione stampa...');
   };
+
+  // Funzione per ricaricare tutti i dati
+  const refetchAll = () => {
+    refetchMatches();
+    refetchTrainings();
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Caricamento calendario...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-red-900 mb-2">Errore nel caricamento</h3>
+          <p className="text-red-700 mb-4">{error}</p>
+          <button 
+            onClick={refetchAll} 
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Riprova
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -391,7 +441,7 @@ const CalendarPage = () => {
               .sort((a, b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time))
               .map(event => (
                 <div 
-                  key={event.id} 
+                  key={`${event.type}-${event.id}`} 
                   className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
                   onClick={() => setSelectedEvent(event)}
                 >
@@ -430,6 +480,12 @@ const CalendarPage = () => {
                   </div>
                 </div>
               ))}
+            
+            {events.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                Nessun evento trovato
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -593,12 +649,6 @@ const CalendarPage = () => {
                   />
                 </div>
 
-                {/* Titolo (automatico) */}
-                <input
-                  type="hidden"
-                  value={formData.title || (formData.type === 'match' ? `Partita vs ${formData.opponent}` : 'Allenamento')}
-                />
-
                 {/* Pulsanti */}
                 <div className="mt-6 flex justify-end space-x-3">
                   <button
@@ -698,6 +748,12 @@ const CalendarPage = () => {
                       Convocazioni
                     </button>
                   )}
+                  <button
+                    onClick={() => handleDeleteEvent(selectedEvent)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Elimina
+                  </button>
                   <button
                     onClick={() => setSelectedEvent(null)}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
