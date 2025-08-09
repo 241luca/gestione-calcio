@@ -32,21 +32,39 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Usa il nuovo authService per verificare l'autenticazione
+    // Verifica autenticazione
     const checkAuth = () => {
-      const authenticated = authService.isAuthenticated();
-      setIsAuthenticated(authenticated);
+      console.log('🔍 Checking authentication...');
       
-      // Se autenticato, programma il refresh del token
-      if (authenticated) {
-        authService.scheduleTokenRefresh();
+      // Controlla se c'è un token
+      const token = sessionStorage.getItem('token');
+      
+      if (token) {
+        console.log('✅ Token found, user is authenticated');
+        setIsAuthenticated(true);
+      } else {
+        console.log('❌ No token, user not authenticated');
+        setIsAuthenticated(false);
       }
       
       setLoading(false);
     };
     
     checkAuth();
+    
+    // Aggiungi listener per storage changes (per multi-tab)
+    window.addEventListener('storage', checkAuth);
+    
+    return () => {
+      window.removeEventListener('storage', checkAuth);
+    };
   }, []);
+
+  const handleLogout = () => {
+    console.log('🚪 Logout requested');
+    authService.logout();
+    setIsAuthenticated(false);
+  };
 
   if (loading) {
     return (
@@ -61,190 +79,74 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Router 
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-      >
+      <Router>
         <Routes>
-          {/* Route pubbliche */}
+          {/* Rotta di login */}
           <Route 
             path="/login" 
             element={
-              isAuthenticated ? 
-                <Navigate to="/dashboard" replace /> : 
+              isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
                 <LoginPage setIsAuthenticated={setIsAuthenticated} />
+              )
             } 
           />
 
-          {/* Route protette */}
+          {/* Rotte protette con Layout */}
           <Route
             path="/"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
-                <ErrorBoundary>
-                  <Layout setIsAuthenticated={setIsAuthenticated} />
-                </ErrorBoundary>
+                <Layout onLogout={handleLogout} />
               </ProtectedRoute>
             }
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={
-              <ErrorBoundary>
-                <DashboardPage />
-              </ErrorBoundary>
-            } />
-            <Route path="athletes" element={
-              <ErrorBoundary>
-                <AthletesPage />
-              </ErrorBoundary>
-            } />
-            <Route path="athletes/new" element={
-              <ErrorBoundary>
-                <AthleteFormPage />
-              </ErrorBoundary>
-            } />
-            <Route path="athletes/:id" element={
-              <ErrorBoundary>
-                <AthleteDetailPage />
-              </ErrorBoundary>
-            } />
-            <Route path="athletes/:id/edit" element={
-              <ErrorBoundary>
-                <AthleteFormPage />
-              </ErrorBoundary>
-            } />
-            <Route path="teams" element={
-              <ErrorBoundary>
-                <TeamsPage />
-              </ErrorBoundary>
-            } />
-            <Route path="competitions" element={
-              <ErrorBoundary>
-                <CompetitionsPage />
-              </ErrorBoundary>
-            } />
-            <Route path="staff" element={
-              <ErrorBoundary>
-                <StaffPage />
-              </ErrorBoundary>
-            } />
-            <Route path="sponsors" element={
-              <ErrorBoundary>
-                <SponsorsPage />
-              </ErrorBoundary>
-            } />
-            <Route path="documents" element={
-              <ErrorBoundary>
-                <DocumentsPage />
-              </ErrorBoundary>
-            } />
-            <Route path="payments" element={
-              <ErrorBoundary>
-                <PaymentsPage />
-              </ErrorBoundary>
-            } />
-            <Route path="transport" element={
-              <ErrorBoundary>
-                <TransportPage />
-              </ErrorBoundary>
-            } />
-            <Route path="notifications" element={
-              <ErrorBoundary>
-                <NotificationsPage />
-              </ErrorBoundary>
-            } />
-            <Route path="test-notifications" element={
-              <ErrorBoundary>
-                <TestNotifications />
-              </ErrorBoundary>
-            } />
-            <Route path="scheduler" element={
-              <ErrorBoundary>
-                <SchedulerPage />
-              </ErrorBoundary>
-            } />
-            <Route path="notification-settings" element={
-              <ErrorBoundary>
-                <NotificationSettingsPage />
-              </ErrorBoundary>
-            } />
-            <Route path="email-settings" element={
-              <ErrorBoundary>
-                <EmailSettingsPage />
-              </ErrorBoundary>
-            } />
-            <Route path="notification-templates" element={
-              <ErrorBoundary>
-                <NotificationTemplatesPage />
-              </ErrorBoundary>
-            } />
-            <Route path="calendar" element={
-              <ErrorBoundary>
-                <CalendarPage />
-              </ErrorBoundary>
-            } />
-            <Route path="settings" element={
-              <ErrorBoundary>
-                <SettingsPage />
-              </ErrorBoundary>
-            } />
-            <Route path="reports" element={
-              <ErrorBoundary>
-                <ReportsPage />
-              </ErrorBoundary>
-            } />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="athletes" element={<AthletesPage />} />
+            <Route path="athletes/:id" element={<AthleteDetailPage />} />
+            <Route path="athletes/new" element={<AthleteFormPage />} />
+            <Route path="athletes/:id/edit" element={<AthleteFormPage />} />
+            <Route path="teams" element={<TeamsPage />} />
+            <Route path="documents" element={<DocumentsPage />} />
+            <Route path="payments" element={<PaymentsPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="transport" element={<TransportPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="notifications/test" element={<TestNotifications />} />
+            <Route path="scheduler" element={<SchedulerPage />} />
+            <Route path="settings/notifications" element={<NotificationSettingsPage />} />
+            <Route path="settings/email" element={<EmailSettingsPage />} />
+            <Route path="settings/templates" element={<NotificationTemplatesPage />} />
+            <Route path="competitions" element={<CompetitionsPage />} />
+            <Route path="staff" element={<StaffPage />} />
+            <Route path="sponsors" element={<SponsorsPage />} />
           </Route>
 
-          {/* 404 - Pagina non trovata */}
-          <Route path="*" element={
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-              <div className="text-center">
-                <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
-                <p className="text-xl text-gray-600 mb-8">Pagina non trovata</p>
-                <a 
-                  href="/dashboard" 
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Torna alla Dashboard
-                </a>
-              </div>
-            </div>
-          } />
+          {/* Redirect per rotte non trovate */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-
+        
+        {/* Toast notifications */}
         <Toaster 
           position="top-right"
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#363636',
+              background: '#333',
               color: '#fff',
-              borderRadius: '8px',
-              padding: '16px',
             },
             success: {
               style: {
                 background: '#10b981',
               },
-              iconTheme: {
-                primary: '#fff',
-                secondary: '#10b981',
-              },
             },
             error: {
               style: {
                 background: '#ef4444',
-              },
-              iconTheme: {
-                primary: '#fff',
-                secondary: '#ef4444',
-              },
-            },
-            loading: {
-              style: {
-                background: '#3b82f6',
               },
             },
           }}

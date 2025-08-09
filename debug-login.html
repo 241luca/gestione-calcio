@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>🔍 Debug Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Login - Soccer Management</h1>
+    
+    <div class="test-section">
+        <h2>1️⃣ Test Backend Health</h2>
+        <button onclick="testBackendHealth()">Test Backend</button>
+        <div id="backend-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2️⃣ Test Login Diretto</h2>
+        <button onclick="testDirectLogin()">Test Login API</button>
+        <div id="login-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3️⃣ Test Database User</h2>
+        <button onclick="testDatabaseUser()">Verifica User Demo</button>
+        <div id="db-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4️⃣ Test Frontend Connection</h2>
+        <button onclick="testFrontendConnection()">Test Connessione Frontend</button>
+        <div id="frontend-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5️⃣ Console Output</h2>
+        <pre id="console-output"></pre>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api/v1';
+        
+        function log(message, type = 'info') {
+            const output = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            console.log(message);
+        }
+
+        async function testBackendHealth() {
+            const resultDiv = document.getElementById('backend-result');
+            resultDiv.innerHTML = '<p class="info">Testing backend...</p>';
+            
+            try {
+                log('Testing backend health...');
+                
+                // Test base URL
+                const healthResponse = await fetch('http://localhost:3000/api/health');
+                const healthData = await healthResponse.json();
+                
+                log(`Health check response: ${JSON.stringify(healthData)}`, 'success');
+                
+                resultDiv.innerHTML = `
+                    <p class="success">✅ Backend is running!</p>
+                    <pre>${JSON.stringify(healthData, null, 2)}</pre>
+                `;
+                
+                // Test database
+                if (healthData.database === 'connected') {
+                    log('Database connected successfully', 'success');
+                } else {
+                    log('Database connection issue', 'error');
+                }
+                
+            } catch (error) {
+                log(`Backend test failed: ${error.message}`, 'error');
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Backend non raggiungibile!</p>
+                    <p>Errore: ${error.message}</p>
+                    <p>Assicurati che il backend sia avviato con: <code>cd backend && npm run dev</code></p>
+                `;
+            }
+        }
+
+        async function testDirectLogin() {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.innerHTML = '<p class="info">Testing login...</p>';
+            
+            try {
+                log('Attempting login with demo credentials...');
+                
+                const loginData = {
+                    email: 'demo@soccermanager.com',
+                    password: 'demo123456'
+                };
+                
+                log(`Login payload: ${JSON.stringify(loginData)}`);
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(loginData)
+                });
+                
+                const responseText = await response.text();
+                log(`Response status: ${response.status}`);
+                log(`Response text: ${responseText}`);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error(`Invalid JSON response: ${responseText}`);
+                }
+                
+                if (data.success) {
+                    log('Login successful!', 'success');
+                    log(`Token received: ${data.data.token.substring(0, 20)}...`, 'success');
+                    log(`User: ${JSON.stringify(data.data.user)}`, 'success');
+                    
+                    // Save to sessionStorage
+                    sessionStorage.setItem('token', data.data.token);
+                    sessionStorage.setItem('user', JSON.stringify(data.data.user));
+                    sessionStorage.setItem('organizationId', data.data.user.organizationId);
+                    
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Login funzionante!</p>
+                        <p>User: ${data.data.user.email}</p>
+                        <p>Organization: ${data.data.user.organizationId}</p>
+                        <p>Token salvato in sessionStorage</p>
+                    `;
+                } else {
+                    log(`Login failed: ${data.error?.message || 'Unknown error'}`, 'error');
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ Login fallito</p>
+                        <p>Errore: ${data.error?.message || 'Errore sconosciuto'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+                
+            } catch (error) {
+                log(`Login test failed: ${error.message}`, 'error');
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Errore durante il test login</p>
+                    <p>Errore: ${error.message}</p>
+                `;
+            }
+        }
+
+        async function testDatabaseUser() {
+            const resultDiv = document.getElementById('db-result');
+            resultDiv.innerHTML = '<p class="info">Checking database...</p>';
+            
+            try {
+                log('Checking if demo user exists in database...');
+                
+                // Prima facciamo login per ottenere il token
+                const loginResponse = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'demo@soccermanager.com',
+                        password: 'demo123456'
+                    })
+                });
+                
+                const loginData = await loginResponse.json();
+                
+                if (loginData.success) {
+                    log('Demo user exists and password is correct', 'success');
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ User demo presente nel database</p>
+                        <p>Email: demo@soccermanager.com</p>
+                        <p>Password: demo123456</p>
+                    `;
+                } else {
+                    log('Demo user not found or wrong password', 'error');
+                    resultDiv.innerHTML = `
+                        <p class="error">⚠️ User demo non trovato o password errata</p>
+                        <p>Potrebbe essere necessario eseguire il seed del database</p>
+                        <button onclick="suggestSeedCommand()">Mostra comando seed</button>
+                        <div id="seed-command"></div>
+                    `;
+                }
+            } catch (error) {
+                log(`Database check failed: ${error.message}`, 'error');
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Errore verifica database</p>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+
+        async function testFrontendConnection() {
+            const resultDiv = document.getElementById('frontend-result');
+            resultDiv.innerHTML = '<p class="info">Testing frontend connection...</p>';
+            
+            try {
+                log('Checking frontend at http://localhost:5173...');
+                
+                // Test se il frontend è raggiungibile
+                const response = await fetch('http://localhost:5173', {
+                    mode: 'no-cors' // Evitiamo problemi CORS per questo test
+                });
+                
+                log('Frontend is reachable', 'success');
+                
+                // Verifica proxy configuration
+                log('Checking if frontend proxy is configured correctly...');
+                
+                resultDiv.innerHTML = `
+                    <p class="success">✅ Frontend attivo su http://localhost:5173</p>
+                    <p class="info">Proxy configurato per /api → http://localhost:3000</p>
+                    <p>Se il login non funziona dal frontend, potrebbe essere un problema di proxy o CORS</p>
+                `;
+                
+            } catch (error) {
+                log(`Frontend test failed: ${error.message}`, 'error');
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Frontend non raggiungibile</p>
+                    <p>Assicurati che sia avviato con: <code>npm run dev</code></p>
+                `;
+            }
+        }
+
+        function suggestSeedCommand() {
+            const seedDiv = document.getElementById('seed-command');
+            seedDiv.innerHTML = `
+                <pre>
+# Esegui questi comandi nel terminale:
+cd backend
+npx prisma db push
+npx prisma db seed
+
+# O usa lo script di setup:
+cd ..
+./scripts/seed-database.sh
+                </pre>
+            `;
+            log('Seed command displayed', 'info');
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            log('Debug Login Page Ready', 'info');
+            log('Click the buttons to test each component', 'info');
+            
+            // Auto-run backend test
+            setTimeout(() => {
+                testBackendHealth();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

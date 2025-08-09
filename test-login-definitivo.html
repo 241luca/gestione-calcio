@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>🔐 Test Login Definitivo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 40px;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .success {
+            color: #10b981;
+            font-weight: bold;
+        }
+        .error {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        .info {
+            color: #3b82f6;
+        }
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .result-box {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        .result-success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            display: block;
+        }
+        .result-error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            display: block;
+        }
+        .credentials-box {
+            background: #dbeafe;
+            border: 2px solid #3b82f6;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .credentials-box h3 {
+            margin-top: 0;
+            color: #1e40af;
+        }
+        .credentials-box code {
+            background: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Test Login Definitivo</h1>
+        
+        <div class="credentials-box">
+            <h3>📋 Credenziali da Usare</h3>
+            <p>Email: <code>demo@soccermanager.com</code></p>
+            <p>Password: <code>demo123456</code></p>
+        </div>
+
+        <div class="test-section">
+            <h3>1️⃣ Test Backend</h3>
+            <button onclick="testBackend()">Verifica Backend</button>
+            <div id="backend-result" class="result-box"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2️⃣ Test Login API Diretto</h3>
+            <button onclick="testLoginAPI()">Test Login API</button>
+            <div id="api-result" class="result-box"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3️⃣ Test Login via Frontend Service</h3>
+            <button onclick="testFrontendLogin()">Test Frontend Login</button>
+            <div id="frontend-result" class="result-box"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4️⃣ Test Completo End-to-End</h3>
+            <button onclick="testEndToEnd()">Test Completo</button>
+            <div id="e2e-result" class="result-box"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Console Log</h3>
+            <pre id="console-log"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api/v1';
+        
+        function log(message, type = 'info') {
+            const consoleEl = document.getElementById('console-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6';
+            consoleEl.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            console.log(message);
+        }
+
+        async function testBackend() {
+            const resultDiv = document.getElementById('backend-result');
+            resultDiv.className = 'result-box';
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                log('Testing backend health...');
+                const response = await fetch('http://localhost:3000/api/health');
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    resultDiv.className = 'result-box result-success';
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Backend Funzionante!</p>
+                        <p>Database: ${data.database}</p>
+                        <p>Socket.io: ${data.socketio || 'N/A'}</p>
+                    `;
+                    log('Backend OK', 'success');
+                } else {
+                    throw new Error('Backend unhealthy');
+                }
+            } catch (error) {
+                resultDiv.className = 'result-box result-error';
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Backend Non Raggiungibile</p>
+                    <p>Errore: ${error.message}</p>
+                    <p>Avvia con: cd backend && npm run dev</p>
+                `;
+                log(`Backend error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLoginAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.className = 'result-box';
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                log('Testing direct API login...');
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'demo@soccermanager.com',
+                        password: 'demo123456'
+                    })
+                });
+                
+                const data = await response.json();
+                log(`Response status: ${response.status}`);
+                log(`Response data: ${JSON.stringify(data).substring(0, 100)}...`);
+                
+                if (data.success) {
+                    resultDiv.className = 'result-box result-success';
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Login API Funzionante!</p>
+                        <p>Token ricevuto: ${data.data.token.substring(0, 30)}...</p>
+                        <p>User: ${data.data.user.email}</p>
+                        <p>Organization: ${data.data.user.organizationId}</p>
+                    `;
+                    
+                    // Salva in sessionStorage per test successivi
+                    sessionStorage.setItem('token', data.data.token);
+                    sessionStorage.setItem('organizationId', data.data.user.organizationId);
+                    
+                    log('Login API successful', 'success');
+                } else {
+                    throw new Error(data.error?.message || 'Login failed');
+                }
+            } catch (error) {
+                resultDiv.className = 'result-box result-error';
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Login API Fallito</p>
+                    <p>Errore: ${error.message}</p>
+                    <p>Verifica che l'utente demo esista nel database</p>
+                `;
+                log(`Login API error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testFrontendLogin() {
+            const resultDiv = document.getElementById('frontend-result');
+            resultDiv.className = 'result-box';
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                log('Testing frontend login service...');
+                
+                // Importa dinamicamente il servizio auth
+                const module = await import('/src/services/authService.js');
+                const authService = module.default;
+                
+                const result = await authService.login('demo@soccermanager.com', 'demo123456');
+                
+                if (result.success) {
+                    resultDiv.className = 'result-box result-success';
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Frontend Service Funzionante!</p>
+                        <p>Login completato con successo</p>
+                        <p>Token salvato in sessionStorage</p>
+                    `;
+                    log('Frontend login successful', 'success');
+                } else {
+                    throw new Error(result.error || 'Frontend login failed');
+                }
+            } catch (error) {
+                resultDiv.className = 'result-box result-error';
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Frontend Service Fallito</p>
+                    <p>Errore: ${error.message}</p>
+                    <p>Potrebbe essere un problema di importazione moduli</p>
+                `;
+                log(`Frontend error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testEndToEnd() {
+            const resultDiv = document.getElementById('e2e-result');
+            resultDiv.className = 'result-box';
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                log('Starting end-to-end test...');
+                
+                // Step 1: Backend health
+                log('Step 1: Checking backend...');
+                const healthResponse = await fetch('http://localhost:3000/api/health');
+                if (!healthResponse.ok) throw new Error('Backend not healthy');
+                
+                // Step 2: Login
+                log('Step 2: Attempting login...');
+                const loginResponse = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'demo@soccermanager.com',
+                        password: 'demo123456'
+                    })
+                });
+                
+                const loginData = await loginResponse.json();
+                if (!loginData.success) throw new Error('Login failed');
+                
+                const token = loginData.data.token;
+                const orgId = loginData.data.user.organizationId;
+                
+                // Step 3: Test authenticated endpoint
+                log('Step 3: Testing authenticated endpoint...');
+                const athletesResponse = await fetch(`${API_BASE}/athletes`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'X-Organization-ID': orgId
+                    }
+                });
+                
+                if (!athletesResponse.ok) throw new Error('Authenticated request failed');
+                
+                resultDiv.className = 'result-box result-success';
+                resultDiv.innerHTML = `
+                    <p class="success">✅ TEST COMPLETO SUPERATO!</p>
+                    <p>✅ Backend funzionante</p>
+                    <p>✅ Login funzionante</p>
+                    <p>✅ Autenticazione funzionante</p>
+                    <p><strong>Il sistema è pronto all'uso!</strong></p>
+                `;
+                log('End-to-end test PASSED!', 'success');
+                
+            } catch (error) {
+                resultDiv.className = 'result-box result-error';
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Test End-to-End Fallito</p>
+                    <p>Errore: ${error.message}</p>
+                `;
+                log(`E2E test failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-test backend on load
+        window.addEventListener('load', () => {
+            log('Test page loaded', 'info');
+            log('Ready to test login system', 'info');
+            setTimeout(testBackend, 500);
+        });
+    </script>
+</body>
+</html>

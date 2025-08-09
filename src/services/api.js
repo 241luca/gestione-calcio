@@ -14,18 +14,19 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // Aggiungi token se presente
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
     // Aggiungi organization ID se presente
-    let organizationId = localStorage.getItem('organizationId');
+    let organizationId = sessionStorage.getItem('organizationId');
     
     // FIX TEMPORANEO: Se manca organizationId, usa quello hardcoded
     if (!organizationId && token) {
+      // Usa l'ID reale dell'organizzazione dal database
       organizationId = '5d260bdd-d1e6-4004-8a81-711605f48aa3';
-      localStorage.setItem('organizationId', organizationId);
+      sessionStorage.setItem('organizationId', organizationId);
       console.log('⚠️ OrganizationId mancante, impostato default:', organizationId);
     }
     
@@ -91,9 +92,9 @@ api.interceptors.response.use(
     switch (status) {
       case 401:
         // Token scaduto o non valido
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('organizationId');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+        sessionStorage.removeItem('organizationId');
         
         // Solo reindirizza se non siamo già nella pagina di login
         if (window.location.pathname !== '/login') {
@@ -155,12 +156,12 @@ api.interceptors.response.use(
 
 // Helper per verificare se siamo autenticati
 export const isAuthenticated = () => {
-  return !!localStorage.getItem('token');
+  return !!sessionStorage.getItem('token');
 };
 
 // Helper per ottenere l'utente corrente
 export const getCurrentUser = () => {
-  const userStr = localStorage.getItem('user');
+  const userStr = sessionStorage.getItem('user');
   try {
     return userStr ? JSON.parse(userStr) : null;
   } catch (e) {
@@ -171,9 +172,9 @@ export const getCurrentUser = () => {
 
 // Helper per fare logout
 export const logout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  localStorage.removeItem('organizationId');
+  sessionStorage.removeItem('token');
+  sessionStorage.removeItem('user');
+  sessionStorage.removeItem('organizationId');
   window.location.href = '/login';
 };
 
@@ -186,14 +187,14 @@ export const authService = {
       if (response.data.success) {
         const { token, user, organizationId } = response.data.data;
         
-        // Salva token e dati utente
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
+        // Salva token e dati utente in sessionStorage
+        sessionStorage.setItem('token', token);
+        sessionStorage.setItem('user', JSON.stringify(user));
         
         // IMPORTANTE: Salva organization ID - può venire da user o direttamente dalla risposta
         const orgId = organizationId || user?.organizationId || user?.organization?.id;
         if (orgId) {
-          localStorage.setItem('organizationId', orgId);
+          sessionStorage.setItem('organizationId', orgId);
           console.log('✅ OrganizationId salvato:', orgId);
         } else {
           console.error('⚠️ OrganizationId non trovato nella risposta!');

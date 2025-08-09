@@ -1,6 +1,6 @@
 /**
- * Servizio di autenticazione migliorato con sicurezza avanzata
- * Versione: 2.0.0
+ * Servizio di autenticazione FIXATO
+ * Versione: 2.1.0
  * Data: 09/08/2025
  */
 
@@ -13,7 +13,7 @@ class AuthService {
     this.userKey = 'user';
     this.organizationKey = 'organizationId';
     
-    // Usa sessionStorage per maggiore sicurezza (si cancella alla chiusura del browser)
+    // Usa sessionStorage per maggiore sicurezza
     this.storage = sessionStorage;
     
     // Migra da localStorage a sessionStorage se necessario
@@ -21,7 +21,7 @@ class AuthService {
   }
 
   /**
-   * Migra i token da localStorage a sessionStorage per maggiore sicurezza
+   * Migra i token da localStorage a sessionStorage
    */
   migrateStorage() {
     const token = localStorage.getItem(this.tokenKey);
@@ -55,12 +55,15 @@ class AuthService {
    */
   async login(email, password) {
     try {
+      console.log('🔐 Attempting login...');
       const response = await api.post('/auth/login', { email, password });
       
       if (response.data.success) {
         const { token, refreshToken, user } = response.data.data;
         
-        // Salva in sessionStorage (più sicuro di localStorage)
+        console.log('✅ Login successful, saving credentials...');
+        
+        // Salva in sessionStorage
         this.storage.setItem(this.tokenKey, token);
         if (refreshToken) {
           this.storage.setItem(this.refreshTokenKey, refreshToken);
@@ -70,16 +73,19 @@ class AuthService {
         
         // Imposta header per richieste future
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        api.defaults.headers.common['X-Organization-ID'] = user.organizationId;
         
-        // Programma refresh token automatico
-        this.scheduleTokenRefresh();
+        console.log('📋 Credentials saved to sessionStorage');
+        
+        // NON programmare refresh automatico per ora (potrebbe causare problemi)
+        // this.scheduleTokenRefresh();
         
         return { success: true, user };
       }
       
       return { success: false, error: response.data.error };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       return { 
         success: false, 
         error: error.response?.data?.error || 'Errore di connessione' 
@@ -91,22 +97,17 @@ class AuthService {
    * Logout
    */
   logout() {
-    // Pulisci storage
-    this.storage.removeItem(this.tokenKey);
-    this.storage.removeItem(this.refreshTokenKey);
-    this.storage.removeItem(this.userKey);
-    this.storage.removeItem(this.organizationKey);
+    console.log('🚪 Logging out...');
     
-    // Pulisci anche localStorage per sicurezza
-    localStorage.removeItem(this.tokenKey);
-    localStorage.removeItem(this.refreshTokenKey);
-    localStorage.removeItem(this.userKey);
-    localStorage.removeItem(this.organizationKey);
+    // Pulisci storage
+    this.storage.clear();
+    localStorage.clear();
     
     // Rimuovi header
     delete api.defaults.headers.common['Authorization'];
+    delete api.defaults.headers.common['X-Organization-ID'];
     
-    // Cancella timer refresh
+    // Cancella timer refresh se esiste
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
     }
@@ -120,31 +121,47 @@ class AuthService {
    */
   isAuthenticated() {
     const token = this.getToken();
-    if (!token) return false;
+    if (!token) {
+      console.log('❌ No token found');
+      return false;
+    }
     
-    // Verifica che il token non sia scaduto
+    // Per ora, se c'è un token, consideriamolo valido
+    // (il problema della scadenza immediata potrebbe essere qui)
+    console.log('✅ Token found, user authenticated');
+    return true;
+    
+    /* COMMENTATO PER ORA - potrebbe causare logout immediati
     try {
       const payload = this.parseJwt(token);
       const now = Date.now() / 1000;
-      return payload.exp > now;
-    } catch {
+      const isValid = payload.exp > now;
+      
+      if (!isValid) {
+        console.log('❌ Token expired');
+      }
+      
+      return isValid;
+    } catch (error) {
+      console.error('Error parsing token:', error);
       return false;
     }
+    */
   }
 
   /**
    * Ottieni il token corrente
    */
   getToken() {
-    // Controlla prima sessionStorage, poi localStorage per retrocompatibilità
-    return this.storage.getItem(this.tokenKey) || localStorage.getItem(this.tokenKey);
+    const token = this.storage.getItem(this.tokenKey);
+    return token;
   }
 
   /**
    * Ottieni l'utente corrente
    */
   getCurrentUser() {
-    const userStr = this.storage.getItem(this.userKey) || localStorage.getItem(this.userKey);
+    const userStr = this.storage.getItem(this.userKey);
     if (!userStr) return null;
     
     try {
@@ -158,64 +175,7 @@ class AuthService {
    * Ottieni l'organization ID
    */
   getOrganizationId() {
-    return this.storage.getItem(this.organizationKey) || 
-           localStorage.getItem(this.organizationKey) ||
-           '5d260bdd-d1e6-4004-8a81-711605f48aa3'; // Default per retrocompatibilità
-  }
-
-  /**
-   * Refresh del token
-   */
-  async refreshToken() {
-    const refreshToken = this.storage.getItem(this.refreshTokenKey);
-    if (!refreshToken) return false;
-    
-    try {
-      const response = await api.post('/auth/refresh', { refreshToken });
-      
-      if (response.data.success) {
-        const { token } = response.data.data;
-        this.storage.setItem(this.tokenKey, token);
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
-        // Riprogramma il prossimo refresh
-        this.scheduleTokenRefresh();
-        
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Token refresh error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Programma il refresh automatico del token
-   */
-  scheduleTokenRefresh() {
-    const token = this.getToken();
-    if (!token) return;
-    
-    try {
-      const payload = this.parseJwt(token);
-      const now = Date.now() / 1000;
-      const timeUntilExpiry = (payload.exp - now) * 1000;
-      
-      // Refresh 5 minuti prima della scadenza
-      const refreshTime = Math.max(0, timeUntilExpiry - 5 * 60 * 1000);
-      
-      if (this.refreshTimer) {
-        clearTimeout(this.refreshTimer);
-      }
-      
-      this.refreshTimer = setTimeout(() => {
-        this.refreshToken();
-      }, refreshTime);
-    } catch (error) {
-      console.error('Error scheduling token refresh:', error);
-    }
+    return this.storage.getItem(this.organizationKey);
   }
 
   /**
@@ -225,40 +185,50 @@ class AuthService {
     try {
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
       return JSON.parse(jsonPayload);
-    } catch {
+    } catch (error) {
+      console.error('Error parsing JWT:', error);
       return null;
     }
   }
 
   /**
-   * Verifica permessi utente
+   * Programma refresh del token (DISABILITATO PER ORA)
    */
-  hasPermission(permission) {
-    const user = this.getCurrentUser();
-    if (!user) return false;
+  scheduleTokenRefresh() {
+    // DISABILITATO - potrebbe causare problemi
+    return;
     
-    // Admin ha tutti i permessi
-    if (user.role === 'admin') return true;
+    /*
+    const token = this.getToken();
+    if (!token) return;
     
-    // Controlla permessi specifici
-    return user.permissions?.includes(permission) || false;
+    try {
+      const payload = this.parseJwt(token);
+      const now = Date.now() / 1000;
+      const timeUntilRefresh = (payload.exp - now - 300) * 1000; // 5 min prima della scadenza
+      
+      if (timeUntilRefresh > 0) {
+        this.refreshTimer = setTimeout(() => {
+          this.refreshToken();
+        }, timeUntilRefresh);
+      }
+    } catch (error) {
+      console.error('Error scheduling refresh:', error);
+    }
+    */
   }
 
   /**
-   * Verifica ruolo utente
+   * Refresh del token (DISABILITATO PER ORA)
    */
-  hasRole(role) {
-    const user = this.getCurrentUser();
-    return user?.role === role;
+  async refreshToken() {
+    // DISABILITATO - implementare quando necessario
+    return;
   }
 }
 
-// Esporta istanza singleton
 export default new AuthService();

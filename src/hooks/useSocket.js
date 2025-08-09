@@ -15,8 +15,8 @@ export function useSocket() {
   const listenersRef = useRef(new Map());
 
   useEffect(() => {
-    // Recupera il token di autenticazione
-    const token = localStorage.getItem('token');
+    // Recupera il token di autenticazione da sessionStorage
+    const token = sessionStorage.getItem('token');
     
     if (!token) {
       console.log('⚠️ Nessun token trovato, socket non connesso');

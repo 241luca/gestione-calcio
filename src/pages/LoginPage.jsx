@@ -32,14 +32,18 @@ const LoginPage = ({ setIsAuthenticated }) => {
       const result = await authService.login(formData.email, formData.password);
       
       console.log('🔍 Login result:', result);
-      console.log('🔍 Token salvato:', localStorage.getItem('token'));
-      console.log('🔍 OrganizationId salvato:', localStorage.getItem('organizationId'));
-      console.log('🔍 User salvato:', localStorage.getItem('user'));
+      console.log('🔍 Token salvato:', sessionStorage.getItem('token'));
+      console.log('🔍 OrganizationId salvato:', sessionStorage.getItem('organizationId'));
+      console.log('🔍 User salvato:', sessionStorage.getItem('user'));
       
       if (result.success) {
+        console.log('✅ Login successful, setting authenticated...');
         toast.success('Login effettuato con successo!');
         setIsAuthenticated(true);
-        navigate('/dashboard');
+        // Forza un refresh per essere sicuri
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 100);
       } else {
         toast.error(result.error || 'Credenziali non valide');
       }
@@ -53,8 +57,8 @@ const LoginPage = ({ setIsAuthenticated }) => {
   // Funzione per riempire automaticamente i campi per test
   const fillTestCredentials = () => {
     setFormData({
-      email: 'admin@juventusacademymilano.it',
-      password: 'password123'
+      email: 'demo@soccermanager.com',
+      password: 'demo123456'
     });
     toast.success('Credenziali di test inserite');
   };
@@ -122,8 +126,29 @@ const LoginPage = ({ setIsAuthenticated }) => {
             </div>
           </form>
 
-          {/* Bottone per credenziali di test - solo per sviluppo */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
+          {/* Box credenziali demo - EVIDENZIATO */}
+          <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+            <div className="flex items-center mb-2">
+              <span className="text-2xl mr-2">🔐</span>
+              <p className="text-sm font-semibold text-blue-900">
+                Credenziali Demo
+              </p>
+            </div>
+            <div className="space-y-1 text-sm text-blue-800">
+              <p><strong>Email:</strong> demo@soccermanager.com</p>
+              <p><strong>Password:</strong> demo123456</p>
+            </div>
+            <button
+              type="button"
+              onClick={fillTestCredentials}
+              className="mt-3 w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              🚀 Compila automaticamente
+            </button>
+          </div>
+
+          {/* Vecchio bottone per compatibilità */}
+          <div className="mt-6 pt-6 border-t border-gray-200 hidden">
             <p className="text-center text-sm text-gray-600 mb-2">
               Per test rapido:
             </p>
@@ -135,8 +160,8 @@ const LoginPage = ({ setIsAuthenticated }) => {
               Usa credenziali di test
             </button>
             <p className="mt-2 text-center text-xs text-gray-500">
-              Email: admin@juventusacademymilano.it<br />
-              Password: password123
+              Email: demo@soccermanager.com<br />
+              Password: demo123456
             </p>
           </div>
         </div>

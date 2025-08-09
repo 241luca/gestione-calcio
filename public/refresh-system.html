@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>🔄 Refresh Sistema</title>
+    <style>
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            color: #333;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .success {
+            background: #10b981;
+        }
+        .warning {
+            background: #f59e0b;
+        }
+        .info {
+            padding: 20px;
+            background: #eff6ff;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        pre {
+            text-align: left;
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Refresh Completo Sistema</h1>
+        
+        <div class="info">
+            <p><strong>Questo pulirà tutto e ti permetterà di fare un login pulito</strong></p>
+        </div>
+
+        <button onclick="clearAndRefresh()">🧹 Pulisci Tutto e Ricarica</button>
+        <button onclick="testLogin()" class="success">✅ Test Login Diretto</button>
+        <button onclick="checkStatus()" class="warning">🔍 Controlla Stato</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function clearAndRefresh() {
+            console.log('Pulizia completa in corso...');
+            
+            // Pulisci tutto lo storage
+            sessionStorage.clear();
+            localStorage.clear();
+            
+            // Elimina tutti i cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            alert('✅ Pulizia completata! Ora ti porto al login...');
+            
+            // Redirect al login
+            window.location.href = '/login';
+        }
+
+        async function testLogin() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<p>Testing login...</p>';
+            
+            try {
+                const response = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'demo@soccermanager.com',
+                        password: 'demo123456'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Salva in sessionStorage
+                    sessionStorage.setItem('token', data.data.token);
+                    sessionStorage.setItem('user', JSON.stringify(data.data.user));
+                    sessionStorage.setItem('organizationId', data.data.user.organizationId);
+                    
+                    result.innerHTML = `
+                        <div class="info" style="background: #d1fae5; color: #065f46;">
+                            <h3>✅ Login Riuscito!</h3>
+                            <p>Token salvato correttamente</p>
+                            <p>Ora puoi andare alla <a href="/dashboard">Dashboard</a></p>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 2000);
+                } else {
+                    result.innerHTML = `
+                        <div class="info" style="background: #fee2e2; color: #991b1b;">
+                            <h3>❌ Login Fallito</h3>
+                            <p>${data.error?.message || 'Errore sconosciuto'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="info" style="background: #fee2e2; color: #991b1b;">
+                        <h3>❌ Errore</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function checkStatus() {
+            const result = document.getElementById('result');
+            
+            const token = sessionStorage.getItem('token');
+            const user = sessionStorage.getItem('user');
+            const orgId = sessionStorage.getItem('organizationId');
+            
+            result.innerHTML = `
+                <div class="info">
+                    <h3>📊 Stato Attuale</h3>
+                    <pre>
+Token: ${token ? '✅ Presente' : '❌ Mancante'}
+User: ${user ? '✅ Presente' : '❌ Mancante'}
+Organization: ${orgId || '❌ Mancante'}
+                    </pre>
+                    ${token ? '<p>Sei autenticato, puoi andare alla <a href="/dashboard">Dashboard</a></p>' : '<p>Non sei autenticato, fai <a href="/login">Login</a></p>'}
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

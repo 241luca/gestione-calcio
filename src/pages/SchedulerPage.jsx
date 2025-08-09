@@ -1,6 +1,6 @@
 // src/pages/SchedulerPage.jsx
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api'; // Usa il nostro api configurato
 import toast from 'react-hot-toast';
 import { 
   Clock, 
@@ -44,13 +44,7 @@ function SchedulerPage() {
 
   const loadSchedulerConfig = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        'http://localhost:3000/api/v1/scheduler/config',
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+      const response = await api.get('/scheduler/config');
       
       if (response.data.success) {
         setScheduleSettings(response.data.data.settings);
@@ -70,13 +64,7 @@ function SchedulerPage() {
 
   const loadExecutionHistory = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        'http://localhost:3000/api/v1/scheduler/history',
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+      const response = await api.get('/scheduler/history');
       
       if (response.data.success) {
         setExecutionHistory(response.data.data);

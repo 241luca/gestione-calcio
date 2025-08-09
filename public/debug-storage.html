@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>🔍 Debug Storage</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        pre {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .warning { color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Storage - Soccer Management</h1>
+    
+    <div>
+        <button onclick="checkStorage()">Check Storage</button>
+        <button onclick="simulateLogin()">Simulate Login</button>
+        <button onclick="clearAll()">Clear All Storage</button>
+        <button onclick="fixStorage()">Fix Storage</button>
+    </div>
+    
+    <h2>SessionStorage:</h2>
+    <pre id="session-storage"></pre>
+    
+    <h2>LocalStorage:</h2>
+    <pre id="local-storage"></pre>
+    
+    <h2>Console:</h2>
+    <pre id="console"></pre>
+
+    <script>
+        function log(msg, type = 'info') {
+            const console = document.getElementById('console');
+            const color = type === 'error' ? 'error' : type === 'success' ? 'success' : 'warning';
+            console.innerHTML += `<span class="${color}">${new Date().toLocaleTimeString()} - ${msg}</span>\n`;
+        }
+
+        function checkStorage() {
+            // Check sessionStorage
+            const sessionContent = {};
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                sessionContent[key] = sessionStorage.getItem(key);
+            }
+            document.getElementById('session-storage').textContent = JSON.stringify(sessionContent, null, 2);
+            
+            // Check localStorage
+            const localContent = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                localContent[key] = localStorage.getItem(key);
+            }
+            document.getElementById('local-storage').textContent = JSON.stringify(localContent, null, 2);
+            
+            // Log analysis
+            if (sessionContent.token) {
+                log('✅ Token found in sessionStorage', 'success');
+            } else {
+                log('❌ No token in sessionStorage', 'error');
+            }
+            
+            if (localContent.token) {
+                log('⚠️ Token found in localStorage (should be in sessionStorage)', 'warning');
+            }
+        }
+
+        async function simulateLogin() {
+            log('Starting login simulation...');
+            
+            try {
+                const response = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'demo@soccermanager.com',
+                        password: 'demo123456'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    log('✅ Login successful', 'success');
+                    
+                    // Save to sessionStorage (like authService does)
+                    sessionStorage.setItem('token', data.data.token);
+                    sessionStorage.setItem('user', JSON.stringify(data.data.user));
+                    sessionStorage.setItem('organizationId', data.data.user.organizationId);
+                    
+                    log('✅ Saved to sessionStorage', 'success');
+                    
+                    // Check storage
+                    setTimeout(checkStorage, 100);
+                } else {
+                    log('❌ Login failed: ' + (data.error?.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                log('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        function clearAll() {
+            sessionStorage.clear();
+            localStorage.clear();
+            log('🗑️ All storage cleared', 'warning');
+            checkStorage();
+        }
+
+        function fixStorage() {
+            log('🔧 Attempting to fix storage...');
+            
+            // Move everything from localStorage to sessionStorage
+            const keys = ['token', 'refreshToken', 'user', 'organizationId'];
+            let fixed = false;
+            
+            keys.forEach(key => {
+                const value = localStorage.getItem(key);
+                if (value) {
+                    sessionStorage.setItem(key, value);
+                    localStorage.removeItem(key);
+                    log(`Moved ${key} from localStorage to sessionStorage`, 'success');
+                    fixed = true;
+                }
+            });
+            
+            if (!fixed) {
+                log('Nothing to fix', 'warning');
+            }
+            
+            checkStorage();
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            log('Page loaded, checking storage...');
+            checkStorage();
+        });
+    </script>
+</body>
+</html>
