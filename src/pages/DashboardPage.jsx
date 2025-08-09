@@ -25,11 +25,15 @@ const DashboardPage = () => {
   // Calcola statistiche dagli atleti
   // athletesData è già l'array estratto dal hook useApiData
   const athletes = Array.isArray(athletesData) ? athletesData : [];
+  
+  // Gestione speciale per overduePayments che restituisce un oggetto con payments e stats
+  const overduePaymentsObj = overduePaymentsData?.payments ? overduePaymentsData : { payments: [], stats: {} };
+  
   const stats = {
     totalAthletes: athletes.length,
     activeAthletes: athletes.filter(a => a.status === 'ACTIVE').length,
     documentsExpiring: Array.isArray(expiringDocsData) ? expiringDocsData.length : 0,
-    pendingPayments: overduePaymentsData?.stats?.count || overduePaymentsData?.count || 0,
+    pendingPayments: overduePaymentsObj.stats?.count || 0,
     upcomingMatches: Array.isArray(upcomingMatchesData) ? upcomingMatchesData.length : 0,
     todayTrainings: Array.isArray(trainingsData) ? trainingsData.length : 0
   };
@@ -38,9 +42,9 @@ const DashboardPage = () => {
   const recentAthletes = athletes.slice(0, 5);
   const expiringDocs = (Array.isArray(expiringDocsData) ? expiringDocsData : []).slice(0, 5);
   const overduePayments = {
-    amount: overduePaymentsData?.stats?.totalAmount || overduePaymentsData?.totalAmount || 0,
-    count: overduePaymentsData?.stats?.count || overduePaymentsData?.count || 0,
-    payments: (overduePaymentsData?.payments || (Array.isArray(overduePaymentsData) ? overduePaymentsData : [])).slice(0, 3)
+    amount: overduePaymentsObj.stats?.totalAmount || 0,
+    count: overduePaymentsObj.stats?.count || 0,
+    payments: (overduePaymentsObj.payments || []).slice(0, 3)
   };
   const upcomingMatches = (Array.isArray(upcomingMatchesData) ? upcomingMatchesData : []).slice(0, 3);
 
