@@ -19,7 +19,8 @@ const createTrainingSchema = z.object({
   endTime: z.string(),
   type: z.string().optional(),
   location: z.string().optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  status: z.string().optional()
 });
 
 const updateTrainingSchema = createTrainingSchema.partial();
