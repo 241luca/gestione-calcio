@@ -42,8 +42,7 @@ export class TrainingService {
           endTime: data.endTime.toISOString(),
           type: data.type || 'Allenamento',
           location: data.location || 'Campo principale',
-          notes: data.notes,
-          status: 'SCHEDULED'
+          notes: data.notes
         },
         include: {
           team: true,
@@ -187,7 +186,6 @@ export class TrainingService {
       type?: string;
       location?: string;
       notes?: string;
-      status?: string;
     }
   ) {
     try {

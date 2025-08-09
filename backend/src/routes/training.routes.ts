@@ -19,8 +19,7 @@ const createTrainingSchema = z.object({
   endTime: z.string(),
   type: z.string().optional(),
   location: z.string().optional(),
-  notes: z.string().optional(),
-  status: z.string().optional()
+  notes: z.string().optional()
 });
 
 const updateTrainingSchema = createTrainingSchema.partial();
@@ -139,7 +138,6 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (validatedData.type) updateData.type = validatedData.type;
     if (validatedData.location) updateData.location = validatedData.location;
     if (validatedData.notes) updateData.notes = validatedData.notes;
-    if (validatedData.status) updateData.status = validatedData.status;
     
     const training = await trainingService.updateTrainingSession(
       req.params.id,

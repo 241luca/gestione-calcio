@@ -56,7 +56,6 @@ async function createSampleTrainings() {
             endTime: endTime.toISOString(),
             type: dayOffset === 5 ? 'Rifinitura' : 'Allenamento',
             location: dayOffset === 3 ? 'Campo B' : 'Campo principale',
-            status: 'SCHEDULED',
             notes: dayOffset === 5 
               ? 'Rifinitura pre-partita. Focus su schemi e calci piazzati.'
               : dayOffset === 3 
@@ -82,7 +81,6 @@ async function createSampleTrainings() {
           endTime: todayEnd.toISOString(),
           type: 'Allenamento',
           location: 'Campo principale',
-          status: 'SCHEDULED',
           notes: 'Allenamento di oggi - Focus su preparazione fisica e tecnica individuale'
         });
       }
