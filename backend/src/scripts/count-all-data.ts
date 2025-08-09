@@ -39,11 +39,11 @@ async function countAllData() {
       transportZones: await prisma.transportZone.count({ where: { organizationId: organization.id } }),
       // Tabelle di configurazione
       roles: await prisma.role.count(),
-      permissions: await prisma.permission.count(),
-      rolePermissions: await prisma.rolePermission.count(),
       documentTypes: await prisma.documentType.count(),
       paymentTypes: await prisma.paymentType.count(),
-      positions: await prisma.position.count()
+      positions: await prisma.position.count(),
+      users: await prisma.user.count(),
+      userOrganizations: await prisma.userOrganization.count()
     };
     
     console.log('📈 DATI PRINCIPALI:');
@@ -74,11 +74,11 @@ async function countAllData() {
     console.log('⚙️ DATI DI CONFIGURAZIONE:');
     console.log('=====================================');
     console.log(`👤 Ruoli:               ${counts.roles}`);
-    console.log(`🔐 Permessi:            ${counts.permissions}`);
-    console.log(`🔗 Ruoli-Permessi:      ${counts.rolePermissions}`);
     console.log(`📑 Tipi Documento:      ${counts.documentTypes}`);
     console.log(`💳 Tipi Pagamento:      ${counts.paymentTypes}`);
     console.log(`⚽ Posizioni:           ${counts.positions}`);
+    console.log(`👥 Utenti:              ${counts.users}`);
+    console.log(`🔗 Utenti-Org:          ${counts.userOrganizations}`);
     console.log('=====================================\n');
     
     // Analisi limiti necessari
@@ -106,9 +106,9 @@ async function countAllData() {
     
     console.log('\n📋 RIEPILOGO LIMITI ATTUALI:');
     console.log('================================');
-    console.log('⚽ Atleti:    limite 400   (hai ${counts.athletes})');
-    console.log('📄 Documenti: limite 1000  (hai ${counts.documents})');
-    console.log('💰 Pagamenti: limite 3000  (hai ${counts.payments})');
+    console.log(`⚽ Atleti:    limite 400   (hai ${counts.athletes})`);
+    console.log(`📄 Documenti: limite 1000  (hai ${counts.documents})`);
+    console.log(`💰 Pagamenti: limite 3000  (hai ${counts.payments})`);
     console.log('================================');
     
     // Suggerimenti
@@ -121,6 +121,12 @@ async function countAllData() {
     }
     if (counts.matches > 100) {
       console.log(`- Le partite (${counts.matches}) potrebbero necessitare paginazione`);
+    }
+    if (counts.matchRoster > 200) {
+      console.log(`- Le convocazioni (${counts.matchRoster}) potrebbero necessitare paginazione`);
+    }
+    if (counts.trainingAttendance > 500) {
+      console.log(`- Le presenze allenamento (${counts.trainingAttendance}) potrebbero necessitare paginazione`);
     }
     
     console.log('\n✅ ANALISI COMPLETATA!');
