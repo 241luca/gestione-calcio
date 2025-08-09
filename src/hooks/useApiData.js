@@ -40,29 +40,27 @@ export const useApiData = (endpoint, dependencies = []) => {
             'transportZones', 'positions', 'roles', 'users'
           ];
           
-          // Trova il primo array valido
-          let arrayData = null;
-          for (const key of possibleArrayKeys) {
-            if (Array.isArray(apiData[key])) {
-              arrayData = apiData[key];
-              console.log(`🎯 useApiData: Trovato array in '${key}' con ${apiData[key].length} elementi`);
-              break;
-            }
-          }
-          
-          // Se c'è paginazione, salva anche quella
-          if (apiData.pagination) {
-            setData({
-              items: arrayData || [],
-              pagination: apiData.pagination,
-              meta: apiData.meta || {}
-            });
-          } else if (arrayData) {
-            // Se abbiamo trovato un array, usa quello
-            setData(arrayData);
-          } else {
-            // Altrimenti restituisci l'oggetto completo (potrebbe avere athletes, documents, etc.)
+          // Se c'è paginazione o struttura complessa, mantieni l'oggetto completo
+          if (apiData.pagination || apiData.athletes || apiData.payments || apiData.stats) {
+            // Mantieni la struttura completa per endpoint che restituiscono oggetti strutturati
             setData(apiData);
+          } else {
+            // Trova il primo array valido
+            let arrayData = null;
+            for (const key of possibleArrayKeys) {
+              if (Array.isArray(apiData[key])) {
+                arrayData = apiData[key];
+                console.log(`🎯 useApiData: Trovato array in '${key}' con ${apiData[key].length} elementi`);
+                break;
+              }
+            }
+            
+            if (arrayData) {
+              setData(arrayData);
+            } else {
+              // Restituisci l'oggetto completo
+              setData(apiData);
+            }
           }
         } else {
           // Caso 3: formato non riconosciuto, usa array vuoto
