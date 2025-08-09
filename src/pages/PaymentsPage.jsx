@@ -1,6 +1,5 @@
 // src/pages/PaymentsPage.jsx
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { 
   CurrencyEuroIcon,
@@ -21,15 +20,32 @@ import {
 } from '@heroicons/react/24/outline';
 import { format, differenceInDays, isAfter, isBefore, startOfMonth, endOfMonth } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useApiData, useApiMutation } from '../hooks/useApiData';
 
 const PaymentsPage = () => {
-  const [payments, setPayments] = useState([]);
-  const [athletes, setAthletes] = useState([]);
-  const [paymentTypes, setPaymentTypes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState(null);
+  // Usa i nuovi hooks per caricare i dati
+  const { data: paymentsData, loading: loadingPayments, error: errorPayments, refetch: refetchPayments } = useApiData('/payments');
+  const { data: athletesData, loading: loadingAthletes } = useApiData('/athletes');
+  const { data: overdueData, loading: loadingOverdue } = useApiData('/payments/overdue');
+  const { mutate } = useApiMutation();
   
-  // Filtri
+  // Estrai gli array dal formato restituito dal backend
+  const payments = Array.isArray(paymentsData) ? paymentsData : (paymentsData?.payments || []);
+  const athletes = Array.isArray(athletesData) ? athletesData : [];
+  const overduePayments = overdueData?.payments || [];
+  const stats = overdueData?.stats || {};
+  
+  // Tipi di pagamento (per ora hardcoded, potremmo caricarli dal backend)
+  const paymentTypes = [
+    { id: 1, name: 'Quota Iscrizione', amount: 150 },
+    { id: 2, name: 'Quota Mensile', amount: 50 },
+    { id: 3, name: 'Quota Annuale', amount: 500 },
+    { id: 4, name: 'Kit Sportivo', amount: 80 },
+    { id: 5, name: 'Gita/Torneo', amount: 100 },
+    { id: 6, name: 'Altro', amount: 0 }
+  ];
+  
+  // Stati per UI
   const [filters, setFilters] = useState({
     status: 'all',
     athleteId: '',
@@ -70,109 +86,17 @@ const PaymentsPage = () => {
     description: ''
   });
 
-  useEffect(() => {
-    loadData();
-  }, [filters]);
-
-  const loadData = async () => {
+  // Handler per creare nuovo pagamento
+  const handleCreatePayment = async (e) => {
+    e.preventDefault();
+    
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const organizationId = localStorage.getItem('organizationId');
+      await mutate('post', '/payments', {
+        ...newPayment,
+        typeId: parseInt(newPayment.typeId),
+        amount: parseFloat(newPayment.amount)
+      }, 'Pagamento creato con successo');
       
-      // Costruisci query string per filtri
-      const params = new URLSearchParams();
-      if (filters.status !== 'all') params.append('status', filters.status);
-      if (filters.athleteId) params.append('athleteId', filters.athleteId);
-      if (filters.typeId) params.append('typeId', filters.typeId);
-      if (filters.month) {
-        const monthDate = new Date(filters.month);
-        params.append('fromDate', startOfMonth(monthDate).toISOString());
-        params.append('toDate', endOfMonth(monthDate).toISOString());
-      }
-
-      // Carica pagamenti
-      const paymentsRes = await axios.get(
-        `http://localhost:3000/api/v1/payments?${params}`,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'X-Organization-ID': organizationId
-          }
-        }
-      );
-      setPayments(paymentsRes.data.data || []);
-      
-      // Carica statistiche
-      const statsRes = await axios.get(
-        `http://localhost:3000/api/v1/payments/stats?month=${filters.month}`,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'X-Organization-ID': organizationId
-          }
-        }
-      );
-      setStats(statsRes.data.data);
-      
-      // Carica atleti (solo una volta)
-      if (athletes.length === 0) {
-        const athletesRes = await axios.get(
-          'http://localhost:3000/api/v1/athletes',
-          {
-            headers: { 
-              Authorization: `Bearer ${token}`,
-              'X-Organization-ID': organizationId
-            }
-          }
-        );
-        // Gestisci sia il formato con pagination che l'array diretto
-        const athletesData = athletesRes.data.data;
-        if (Array.isArray(athletesData)) {
-          setAthletes(athletesData);
-        } else if (athletesData && athletesData.athletes) {
-          setAthletes(athletesData.athletes);
-        } else {
-          setAthletes([]);
-        }
-      }
-      
-      // Carica tipi pagamento (solo una volta)
-      if (paymentTypes.length === 0) {
-        // Per ora usiamo tipi hardcoded, poi li prenderemo dal backend
-        setPaymentTypes([
-          { id: 1, name: 'Quota Iscrizione', amount: 150 },
-          { id: 2, name: 'Quota Mensile', amount: 50 },
-          { id: 3, name: 'Kit Allenamento', amount: 80 },
-          { id: 4, name: 'Trasferta', amount: 30 },
-          { id: 5, name: 'Altro', amount: 0 }
-        ]);
-      }
-    } catch (error) {
-      console.error('Errore caricamento dati:', error);
-      toast.error('Errore nel caricamento dei dati');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createPayment = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const organizationId = localStorage.getItem('organizationId');
-      
-      const response = await axios.post(
-        'http://localhost:3000/api/v1/payments',
-        newPayment,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'X-Organization-ID': organizationId
-          }
-        }
-      );
-      
-      toast.success('Pagamento creato con successo');
       setShowCreateModal(false);
       setNewPayment({
         athleteId: '',
@@ -182,30 +106,24 @@ const PaymentsPage = () => {
         description: '',
         notes: ''
       });
-      loadData();
+      refetchPayments();
     } catch (error) {
       console.error('Errore creazione pagamento:', error);
-      toast.error('Errore nella creazione del pagamento');
     }
   };
 
-  const recordPayment = async () => {
+  // Handler per registrare pagamento
+  const handleRecordPayment = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedPayment) return;
+    
     try {
-      const token = localStorage.getItem('token');
-      const organizationId = localStorage.getItem('organizationId');
+      await mutate('post', `/payments/${selectedPayment.id}/pay`, {
+        ...paymentRecord,
+        amount: parseFloat(paymentRecord.amount)
+      }, 'Pagamento registrato con successo');
       
-      await axios.post(
-        `http://localhost:3000/api/v1/payments/${selectedPayment.id}/pay`,
-        paymentRecord,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'X-Organization-ID': organizationId
-          }
-        }
-      );
-      
-      toast.success('Pagamento registrato con successo');
       setShowPaymentModal(false);
       setSelectedPayment(null);
       setPaymentRecord({
@@ -214,35 +132,27 @@ const PaymentsPage = () => {
         paymentMethod: 'cash',
         notes: ''
       });
-      loadData();
+      refetchPayments();
     } catch (error) {
       console.error('Errore registrazione pagamento:', error);
-      toast.error('Errore nella registrazione del pagamento');
     }
   };
 
-  const createBulkPayments = async () => {
+  // Handler per pagamenti multipli
+  const handleBulkCreate = async (e) => {
+    e.preventDefault();
+    
+    if (bulkPayment.athleteIds.length === 0) {
+      toast.error('Seleziona almeno un atleta');
+      return;
+    }
+    
     try {
-      const token = localStorage.getItem('token');
-      const organizationId = localStorage.getItem('organizationId');
-      
-      const response = await axios.post(
-        'http://localhost:3000/api/v1/payments/bulk',
-        bulkPayment,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'X-Organization-ID': organizationId
-          }
-        }
-      );
-      
-      const result = response.data.data;
-      toast.success(`Creati ${result.created.length} pagamenti su ${result.total}`);
-      
-      if (result.failed.length > 0) {
-        toast.error(`${result.failed.length} pagamenti non creati`);
-      }
+      await mutate('post', '/payments/bulk', {
+        ...bulkPayment,
+        typeId: parseInt(bulkPayment.typeId),
+        amount: parseFloat(bulkPayment.amount)
+      }, 'Pagamenti creati con successo');
       
       setShowBulkModal(false);
       setBulkPayment({
@@ -252,207 +162,121 @@ const PaymentsPage = () => {
         dueDate: format(new Date(), 'yyyy-MM-dd'),
         description: ''
       });
-      loadData();
+      refetchPayments();
     } catch (error) {
       console.error('Errore creazione pagamenti multipli:', error);
-      toast.error('Errore nella creazione dei pagamenti');
     }
   };
 
-  const updatePaymentStatus = async (paymentId, newStatus) => {
-    try {
-      const token = localStorage.getItem('token');
-      const organizationId = localStorage.getItem('organizationId');
-      
-      await axios.put(
-        `http://localhost:3000/api/v1/payments/${paymentId}`,
-        { status: newStatus },
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'X-Organization-ID': organizationId
-          }
-        }
-      );
-      
-      toast.success('Stato pagamento aggiornato');
-      loadData();
-    } catch (error) {
-      console.error('Errore aggiornamento stato:', error);
-      toast.error('Errore nell\'aggiornamento dello stato');
-    }
-  };
-
-  const downloadReceipt = async (paymentId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const organizationId = localStorage.getItem('organizationId');
-      
-      const response = await axios.get(
-        `http://localhost:3000/api/v1/payments/${paymentId}/receipt`,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'X-Organization-ID': organizationId
-          }
-        }
-      );
-      
-      // Converti base64 in blob e scarica
-      const pdfData = response.data.data.pdf;
-      const blob = new Blob(
-        [Uint8Array.from(atob(pdfData), c => c.charCodeAt(0))],
-        { type: 'application/pdf' }
-      );
-      
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `ricevuta_${response.data.data.receiptNumber}.pdf`;
-      link.click();
-      
-      window.URL.revokeObjectURL(url);
-      toast.success('Ricevuta scaricata');
-    } catch (error) {
-      console.error('Errore download ricevuta:', error);
-      toast.error('Errore nel download della ricevuta');
-    }
-  };
-
-  const sendReminders = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const organizationId = localStorage.getItem('organizationId');
-      
-      const response = await axios.post(
-        'http://localhost:3000/api/v1/payments/send-reminders',
-        {},
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'X-Organization-ID': organizationId
-          }
-        }
-      );
-      
-      const result = response.data.data;
-      toast.success(`Inviati ${result.remindersSent} promemoria`);
-    } catch (error) {
-      console.error('Errore invio promemoria:', error);
-      toast.error('Errore nell\'invio dei promemoria');
-    }
-  };
-
-  const exportToExcel = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const organizationId = localStorage.getItem('organizationId');
-      
-      const monthDate = new Date(filters.month);
-      const params = new URLSearchParams({
-        fromDate: startOfMonth(monthDate).toISOString(),
-        toDate: endOfMonth(monthDate).toISOString()
-      });
-      
-      const response = await axios.get(
-        `http://localhost:3000/api/v1/payments/export/excel?${params}`,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'X-Organization-ID': organizationId
-          }
-        }
-      );
-      
-      // Converti base64 in blob e scarica
-      const csvData = response.data.data.data;
-      const blob = new Blob(
-        [Uint8Array.from(atob(csvData), c => c.charCodeAt(0))],
-        { type: response.data.data.mimeType }
-      );
-      
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = response.data.data.filename;
-      link.click();
-      
-      window.URL.revokeObjectURL(url);
-      toast.success('Export Excel completato');
-    } catch (error) {
-      console.error('Errore export Excel:', error);
-      toast.error('Errore nell\'export Excel');
-    }
-  };
-
-  const downloadMonthlyReport = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const organizationId = localStorage.getItem('organizationId');
-      
-      const response = await axios.get(
-        `http://localhost:3000/api/v1/payments/report/monthly?month=${filters.month}`,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'X-Organization-ID': organizationId
-          }
-        }
-      );
-      
-      // Converti base64 in blob e scarica
-      const pdfData = response.data.data.pdf;
-      const blob = new Blob(
-        [Uint8Array.from(atob(pdfData), c => c.charCodeAt(0))],
-        { type: 'application/pdf' }
-      );
-      
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `report_pagamenti_${response.data.data.month}.pdf`;
-      link.click();
-      
-      window.URL.revokeObjectURL(url);
-      toast.success('Report mensile scaricato');
-    } catch (error) {
-      console.error('Errore download report:', error);
-      toast.error('Errore nel download del report');
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      PENDING: { color: 'bg-yellow-100 text-yellow-800', icon: ClockIcon, text: 'In Attesa' },
-      PAID: { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon, text: 'Pagato' },
-      OVERDUE: { color: 'bg-red-100 text-red-800', icon: ExclamationTriangleIcon, text: 'Scaduto' },
-      CANCELLED: { color: 'bg-gray-100 text-gray-800', icon: XCircleIcon, text: 'Annullato' },
-      PARTIAL: { color: 'bg-blue-100 text-blue-800', icon: BanknotesIcon, text: 'Parziale' }
-    };
+  // Handler per eliminare pagamento
+  const handleDeletePayment = async (paymentId) => {
+    if (!window.confirm('Sei sicuro di voler eliminare questo pagamento?')) return;
     
-    const badge = badges[status] || badges.PENDING;
-    const Icon = badge.icon;
-    
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.color}`}>
-        <Icon className="w-4 h-4 mr-1" />
-        {badge.text}
-      </span>
-    );
+    try {
+      await mutate('delete', `/payments/${paymentId}`, null, 'Pagamento eliminato con successo');
+      refetchPayments();
+    } catch (error) {
+      console.error('Errore eliminazione pagamento:', error);
+    }
   };
 
-  const getDaysUntilDue = (dueDate) => {
-    const days = differenceInDays(new Date(dueDate), new Date());
-    if (days < 0) return <span className="text-red-600">Scaduto da {Math.abs(days)} giorni</span>;
-    if (days === 0) return <span className="text-orange-600">Scade oggi</span>;
-    if (days <= 3) return <span className="text-yellow-600">Scade tra {days} giorni</span>;
-    return <span className="text-gray-600">Scade tra {days} giorni</span>;
+  // Handler per generare ricevuta
+  const handleGenerateReceipt = async (paymentId) => {
+    try {
+      const response = await mutate('post', `/payments/${paymentId}/receipt`, null, null);
+      // TODO: Gestire il download del PDF
+      toast.success('Ricevuta generata con successo');
+    } catch (error) {
+      console.error('Errore generazione ricevuta:', error);
+    }
   };
+
+  // Filtra pagamenti
+  const filteredPayments = payments.filter(payment => {
+    let matches = true;
+    
+    if (filters.status !== 'all') {
+      matches = matches && payment.status === filters.status;
+    }
+    
+    if (filters.athleteId) {
+      matches = matches && payment.athleteId === filters.athleteId;
+    }
+    
+    if (filters.typeId) {
+      matches = matches && payment.typeId === parseInt(filters.typeId);
+    }
+    
+    return matches;
+  });
+
+  // Calcola statistiche
+  const dashboardStats = {
+    totalExpected: payments.reduce((sum, p) => sum + p.amount, 0),
+    totalCollected: payments.filter(p => p.status === 'PAID').reduce((sum, p) => sum + (p.paidAmount || 0), 0),
+    totalPending: payments.filter(p => p.status === 'PENDING').reduce((sum, p) => sum + p.amount, 0),
+    totalOverdue: overduePayments.reduce((sum, p) => sum + p.amount, 0),
+    overdueCount: overduePayments.length
+  };
+
+  // Helper per ottenere nome atleta
+  const getAthleteName = (athleteId) => {
+    const athlete = athletes.find(a => a.id === athleteId);
+    return athlete ? `${athlete.firstName} ${athlete.lastName}` : 'Atleta sconosciuto';
+  };
+
+  // Helper per ottenere nome tipo pagamento
+  const getPaymentTypeName = (typeId) => {
+    const type = paymentTypes.find(t => t.id === typeId);
+    return type ? type.name : 'Tipo sconosciuto';
+  };
+
+  // Helper per formattare importo
+  const formatAmount = (amount) => {
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount);
+  };
+
+  // Helper per ottenere classe CSS per status
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'PAID':
+        return 'bg-green-100 text-green-800';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'OVERDUE':
+        return 'bg-red-100 text-red-800';
+      case 'CANCELLED':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Helper per ottenere icona status
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'PAID':
+        return <CheckCircleIcon className="w-5 h-5" />;
+      case 'PENDING':
+        return <ClockIcon className="w-5 h-5" />;
+      case 'OVERDUE':
+        return <ExclamationTriangleIcon className="w-5 h-5" />;
+      case 'CANCELLED':
+        return <XCircleIcon className="w-5 h-5" />;
+      default:
+        return null;
+    }
+  };
+
+  const loading = loadingPayments || loadingAthletes || loadingOverdue;
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg text-gray-600">Caricamento pagamenti...</div>
       </div>
     );
   }
@@ -460,150 +284,128 @@ const PaymentsPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white shadow-sm rounded-lg p-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestione Pagamenti</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Gestisci quote, pagamenti e situazione economica
-            </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gestione Pagamenti</h1>
+          <p className="text-gray-600 mt-1">Gestisci quote e pagamenti degli atleti</p>
+        </div>
+        
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowBulkModal(true)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <BanknotesIcon className="w-5 h-5 mr-2" />
+            Pagamenti Multipli
+          </button>
+          
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            <PlusIcon className="w-5 h-5 mr-2" />
+            Nuovo Pagamento
+          </button>
+        </div>
+      </div>
+
+      {/* Statistiche Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Totale Previsto</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {formatAmount(dashboardStats.totalExpected)}
+              </p>
+            </div>
+            <CurrencyEuroIcon className="w-8 h-8 text-blue-500" />
           </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={downloadMonthlyReport}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-            >
-              <ChartBarIcon className="h-5 w-5" />
-              <span>Report Mensile</span>
-            </button>
-            <button
-              onClick={sendReminders}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-            >
-              <CalendarIcon className="h-5 w-5" />
-              <span>Invia Promemoria</span>
-            </button>
-            <button
-              onClick={() => setShowBulkModal(true)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-            >
-              <BanknotesIcon className="h-5 w-5" />
-              <span>Pagamenti Multipli</span>
-            </button>
-            <button
-              onClick={exportToExcel}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-            >
-              <ArrowDownTrayIcon className="h-5 w-5" />
-              <span>Export Excel</span>
-            </button>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-            >
-              <PlusIcon className="h-5 w-5" />
-              <span>Nuovo Pagamento</span>
-            </button>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Incassato</p>
+              <p className="text-2xl font-bold text-green-600">
+                {formatAmount(dashboardStats.totalCollected)}
+              </p>
+            </div>
+            <CheckCircleIcon className="w-8 h-8 text-green-500" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">In Attesa</p>
+              <p className="text-2xl font-bold text-yellow-600">
+                {formatAmount(dashboardStats.totalPending)}
+              </p>
+            </div>
+            <ClockIcon className="w-8 h-8 text-yellow-500" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Scaduti</p>
+              <p className="text-2xl font-bold text-red-600">
+                {formatAmount(dashboardStats.totalOverdue)}
+              </p>
+              <p className="text-xs text-gray-500">{dashboardStats.overdueCount} pagamenti</p>
+            </div>
+            <ExclamationTriangleIcon className="w-8 h-8 text-red-500" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Tasso Riscossione</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {dashboardStats.totalExpected > 0 
+                  ? Math.round((dashboardStats.totalCollected / dashboardStats.totalExpected) * 100)
+                  : 0}%
+              </p>
+            </div>
+            <ChartBarIcon className="w-8 h-8 text-blue-500" />
           </div>
         </div>
       </div>
 
-      {/* Statistiche */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CurrencyEuroIcon className="h-8 w-8 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Totale Previsto</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  €{stats.totalExpected?.toFixed(2) || '0.00'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CheckCircleIcon className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Incassato</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  €{stats.totalCollected?.toFixed(2) || '0.00'}
-                </p>
-                <p className="text-xs text-green-600">
-                  {stats.collectionRate || 0}% riscosso
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ClockIcon className="h-8 w-8 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">In Attesa</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  €{stats.totalPending?.toFixed(2) || '0.00'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Scaduti</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  €{stats.totalOverdue?.toFixed(2) || '0.00'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Filtri */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="bg-white p-4 rounded-lg shadow">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Stato
             </label>
             <select
               value={filters.status}
               onChange={(e) => setFilters({...filters, status: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">Tutti</option>
               <option value="PENDING">In Attesa</option>
-              <option value="PAID">Pagati</option>
-              <option value="OVERDUE">Scaduti</option>
-              <option value="PARTIAL">Parziali</option>
-              <option value="CANCELLED">Annullati</option>
+              <option value="PAID">Pagato</option>
+              <option value="OVERDUE">Scaduto</option>
+              <option value="CANCELLED">Annullato</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Atleta
             </label>
             <select
               value={filters.athleteId}
               onChange={(e) => setFilters({...filters, athleteId: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Tutti</option>
-              {Array.isArray(athletes) && athletes.map(athlete => (
+              <option value="">Tutti gli atleti</option>
+              {athletes.map(athlete => (
                 <option key={athlete.id} value={athlete.id}>
                   {athlete.firstName} {athlete.lastName}
                 </option>
@@ -612,15 +414,15 @@ const PaymentsPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tipo Pagamento
             </label>
             <select
               value={filters.typeId}
               onChange={(e) => setFilters({...filters, typeId: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Tutti</option>
+              <option value="">Tutti i tipi</option>
               {paymentTypes.map(type => (
                 <option key={type.id} value={type.id}>
                   {type.name}
@@ -630,35 +432,21 @@ const PaymentsPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Mese
             </label>
             <input
               type="month"
               value={filters.month}
               onChange={(e) => setFilters({...filters, month: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={() => setFilters({
-                status: 'all',
-                athleteId: '',
-                typeId: '',
-                month: format(new Date(), 'yyyy-MM')
-              })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Reset Filtri
-            </button>
           </div>
         </div>
       </div>
 
       {/* Tabella Pagamenti */}
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -678,35 +466,30 @@ const PaymentsPage = () => {
                 Stato
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Note
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Azioni
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {payments.map((payment) => (
+            {filteredPayments.map((payment) => (
               <tr key={payment.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
-                    {payment.athlete?.firstName} {payment.athlete?.lastName}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {payment.athlete?.fiscalCode}
+                    {getAthleteName(payment.athleteId)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{payment.type?.name}</div>
-                  <div className="text-sm text-gray-500">{payment.description}</div>
+                  <div className="text-sm text-gray-900">
+                    {getPaymentTypeName(payment.typeId)}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    €{payment.amount?.toFixed(2)}
+                  <div className="text-sm font-semibold text-gray-900">
+                    {formatAmount(payment.amount)}
                   </div>
-                  {payment.paidAmount > 0 && payment.paidAmount < payment.amount && (
-                    <div className="text-sm text-gray-500">
-                      Pagato: €{payment.paidAmount?.toFixed(2)}
+                  {payment.paidAmount && payment.paidAmount !== payment.amount && (
+                    <div className="text-xs text-green-600">
+                      Pagato: {formatAmount(payment.paidAmount)}
                     </div>
                   )}
                 </td>
@@ -714,56 +497,59 @@ const PaymentsPage = () => {
                   <div className="text-sm text-gray-900">
                     {format(new Date(payment.dueDate), 'dd/MM/yyyy')}
                   </div>
-                  <div className="text-sm">
-                    {payment.status !== 'PAID' && getDaysUntilDue(payment.dueDate)}
-                  </div>
+                  {payment.status === 'OVERDUE' && (
+                    <div className="text-xs text-red-600">
+                      Scaduto da {differenceInDays(new Date(), new Date(payment.dueDate))} giorni
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {getStatusBadge(payment.status)}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(payment.status)}`}>
+                    {getStatusIcon(payment.status)}
+                    <span className="ml-1">
+                      {payment.status === 'PAID' && 'Pagato'}
+                      {payment.status === 'PENDING' && 'In Attesa'}
+                      {payment.status === 'OVERDUE' && 'Scaduto'}
+                      {payment.status === 'CANCELLED' && 'Annullato'}
+                    </span>
+                  </span>
                 </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-500 max-w-xs truncate">
-                    {payment.notes}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex justify-end space-x-2">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div className="flex space-x-2">
                     {payment.status === 'PENDING' && (
                       <button
                         onClick={() => {
                           setSelectedPayment(payment);
                           setPaymentRecord({
-                            amount: payment.amount,
-                            paymentDate: format(new Date(), 'yyyy-MM-dd'),
-                            paymentMethod: 'cash',
-                            notes: ''
+                            ...paymentRecord,
+                            amount: payment.amount.toString()
                           });
                           setShowPaymentModal(true);
                         }}
                         className="text-green-600 hover:text-green-900"
                         title="Registra Pagamento"
                       >
-                        <BanknotesIcon className="h-5 w-5" />
+                        <BanknotesIcon className="w-5 h-5" />
                       </button>
                     )}
                     
                     {payment.status === 'PAID' && (
                       <button
-                        onClick={() => downloadReceipt(payment.id)}
+                        onClick={() => handleGenerateReceipt(payment.id)}
                         className="text-blue-600 hover:text-blue-900"
-                        title="Scarica Ricevuta"
+                        title="Genera Ricevuta"
                       >
-                        <DocumentArrowDownIcon className="h-5 w-5" />
+                        <PrinterIcon className="w-5 h-5" />
                       </button>
                     )}
                     
-                    {payment.status === 'PENDING' && (
+                    {payment.status !== 'PAID' && (
                       <button
-                        onClick={() => updatePaymentStatus(payment.id, 'CANCELLED')}
+                        onClick={() => handleDeletePayment(payment.id)}
                         className="text-red-600 hover:text-red-900"
-                        title="Annulla"
+                        title="Elimina"
                       >
-                        <XCircleIcon className="h-5 w-5" />
+                        <XCircleIcon className="w-5 h-5" />
                       </button>
                     )}
                   </div>
@@ -773,50 +559,33 @@ const PaymentsPage = () => {
           </tbody>
         </table>
         
-        {payments.length === 0 && (
-          <div className="text-center py-12">
-            <CurrencyEuroIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Nessun pagamento</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Non ci sono pagamenti da visualizzare.
-            </p>
-            <div className="mt-6">
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-                Crea Pagamento
-              </button>
-            </div>
+        {filteredPayments.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            Nessun pagamento trovato
           </div>
         )}
       </div>
 
       {/* Modal Nuovo Pagamento */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4">
-            <div className="fixed inset-0 transition-opacity" onClick={() => setShowCreateModal(false)}>
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 max-w-md w-full z-10">
-              <h3 className="text-lg font-medium mb-4">Nuovo Pagamento</h3>
-              
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Nuovo Pagamento</h2>
+            
+            <form onSubmit={handleCreatePayment}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Atleta *
                   </label>
                   <select
                     value={newPayment.athleteId}
                     onChange={(e) => setNewPayment({...newPayment, athleteId: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
-                    <option value="">Seleziona atleta...</option>
-                    {Array.isArray(athletes) && athletes.map(athlete => (
+                    <option value="">Seleziona atleta</option>
+                    {athletes.map(athlete => (
                       <option key={athlete.id} value={athlete.id}>
                         {athlete.firstName} {athlete.lastName}
                       </option>
@@ -825,34 +594,34 @@ const PaymentsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tipo Pagamento *
                   </label>
                   <select
                     value={newPayment.typeId}
                     onChange={(e) => {
-                      const type = paymentTypes.find(t => t.id === parseInt(e.target.value));
+                      const typeId = e.target.value;
+                      const type = paymentTypes.find(t => t.id === parseInt(typeId));
                       setNewPayment({
                         ...newPayment,
-                        typeId: e.target.value,
-                        amount: type?.amount || '',
-                        description: type?.name || ''
+                        typeId,
+                        amount: type?.amount?.toString() || ''
                       });
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
-                    <option value="">Seleziona tipo...</option>
+                    <option value="">Seleziona tipo</option>
                     {paymentTypes.map(type => (
                       <option key={type.id} value={type.id}>
-                        {type.name} {type.amount > 0 && `(€${type.amount})`}
+                        {type.name}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Importo (€) *
                   </label>
                   <input
@@ -860,92 +629,88 @@ const PaymentsPage = () => {
                     step="0.01"
                     value={newPayment.amount}
                     onChange={(e) => setNewPayment({...newPayment, amount: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Data Scadenza *
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Scadenza *
                   </label>
                   <input
                     type="date"
                     value={newPayment.dueDate}
                     onChange={(e) => setNewPayment({...newPayment, dueDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Descrizione
                   </label>
                   <input
                     type="text"
                     value={newPayment.description}
                     onChange={(e) => setNewPayment({...newPayment, description: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Note
                   </label>
                   <textarea
                     value={newPayment.notes}
                     onChange={(e) => setNewPayment({...newPayment, notes: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows="3"
                   />
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end space-x-3">
+              <div className="flex justify-end space-x-3 mt-6">
                 <button
+                  type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
                 >
                   Annulla
                 </button>
                 <button
-                  onClick={createPayment}
-                  disabled={!newPayment.athleteId || !newPayment.typeId || !newPayment.amount}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Crea Pagamento
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
       {/* Modal Registra Pagamento */}
       {showPaymentModal && selectedPayment && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4">
-            <div className="fixed inset-0 transition-opacity" onClick={() => setShowPaymentModal(false)}>
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Registra Pagamento</h2>
+            
+            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+              <p className="text-sm text-gray-600">Atleta</p>
+              <p className="font-semibold">{getAthleteName(selectedPayment.athleteId)}</p>
+              <p className="text-sm text-gray-600 mt-2">Tipo</p>
+              <p className="font-semibold">{getPaymentTypeName(selectedPayment.typeId)}</p>
+              <p className="text-sm text-gray-600 mt-2">Importo Dovuto</p>
+              <p className="font-semibold text-lg">{formatAmount(selectedPayment.amount)}</p>
             </div>
-
-            <div className="bg-white rounded-lg p-6 max-w-md w-full z-10">
-              <h3 className="text-lg font-medium mb-4">Registra Pagamento</h3>
-              
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Atleta:</p>
-                <p className="font-medium">
-                  {selectedPayment.athlete?.firstName} {selectedPayment.athlete?.lastName}
-                </p>
-                <p className="text-sm text-gray-600 mt-2">Importo dovuto:</p>
-                <p className="font-medium text-lg">€{selectedPayment.amount?.toFixed(2)}</p>
-              </div>
-
+            
+            <form onSubmit={handleRecordPayment}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Importo Pagato (€) *
                   </label>
                   <input
@@ -953,113 +718,93 @@ const PaymentsPage = () => {
                     step="0.01"
                     value={paymentRecord.amount}
                     onChange={(e) => setPaymentRecord({...paymentRecord, amount: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Data Pagamento *
                   </label>
                   <input
                     type="date"
                     value={paymentRecord.paymentDate}
                     onChange={(e) => setPaymentRecord({...paymentRecord, paymentDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Metodo Pagamento
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Metodo di Pagamento *
                   </label>
                   <select
                     value={paymentRecord.paymentMethod}
                     onChange={(e) => setPaymentRecord({...paymentRecord, paymentMethod: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   >
                     <option value="cash">Contanti</option>
                     <option value="bank_transfer">Bonifico</option>
-                    <option value="card">Carta</option>
+                    <option value="credit_card">Carta di Credito</option>
                     <option value="check">Assegno</option>
                     <option value="other">Altro</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Note
                   </label>
                   <textarea
                     value={paymentRecord.notes}
                     onChange={(e) => setPaymentRecord({...paymentRecord, notes: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows="3"
                   />
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end space-x-3">
+              <div className="flex justify-end space-x-3 mt-6">
                 <button
-                  onClick={() => setShowPaymentModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setSelectedPayment(null);
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
                 >
                   Annulla
                 </button>
                 <button
-                  onClick={recordPayment}
-                  disabled={!paymentRecord.amount}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  type="submit"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                 >
                   Registra Pagamento
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
       {/* Modal Pagamenti Multipli */}
       {showBulkModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4">
-            <div className="fixed inset-0 transition-opacity" onClick={() => setShowBulkModal(false)}>
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full z-10">
-              <h3 className="text-lg font-medium mb-4">Crea Pagamenti Multipli</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Crea lo stesso pagamento per più atleti contemporaneamente (es. quota mensile)
-              </p>
-              
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Crea Pagamenti Multipli</h2>
+            
+            <form onSubmit={handleBulkCreate}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Seleziona Atleti *
                   </label>
-                  <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
-                    <div className="mb-2">
-                      <button
-                        onClick={() => {
-                          const allIds = athletes.filter(a => a.status === 'ACTIVE').map(a => a.id);
-                          setBulkPayment({...bulkPayment, athleteIds: allIds});
-                        }}
-                        className="text-sm text-blue-600 hover:text-blue-800 mr-4"
-                      >
-                        Seleziona tutti
-                      </button>
-                      <button
-                        onClick={() => setBulkPayment({...bulkPayment, athleteIds: []})}
-                        className="text-sm text-gray-600 hover:text-gray-800"
-                      >
-                        Deseleziona tutti
-                      </button>
-                    </div>
-                    {Array.isArray(athletes) && athletes.map(athlete => (
-                      <label key={athlete.id} className="flex items-center py-1">
+                  <div className="border border-gray-300 rounded-lg p-4 max-h-48 overflow-y-auto">
+                    {athletes.map(athlete => (
+                      <label key={athlete.id} className="flex items-center space-x-2 py-1">
                         <input
                           type="checkbox"
                           checked={bulkPayment.athleteIds.includes(athlete.id)}
@@ -1076,122 +821,133 @@ const PaymentsPage = () => {
                               });
                             }
                           }}
-                          className="mr-2"
+                          className="rounded text-blue-600"
                         />
                         <span className="text-sm">
                           {athlete.firstName} {athlete.lastName}
-                          {athlete.status !== 'ACTIVE' && (
-                            <span className="ml-2 text-xs text-gray-500">({athlete.status})</span>
-                          )}
                         </span>
                       </label>
                     ))}
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {bulkPayment.athleteIds.length} atleti selezionati
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tipo Pagamento *
-                    </label>
-                    <select
-                      value={bulkPayment.typeId}
-                      onChange={(e) => {
-                        const type = paymentTypes.find(t => t.id === parseInt(e.target.value));
-                        setBulkPayment({
-                          ...bulkPayment,
-                          typeId: e.target.value,
-                          amount: type?.amount || '',
-                          description: type?.name || ''
-                        });
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      required
+                  <div className="mt-2 flex justify-between text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setBulkPayment({
+                        ...bulkPayment,
+                        athleteIds: athletes.map(a => a.id)
+                      })}
+                      className="text-blue-600 hover:text-blue-800"
                     >
-                      <option value="">Seleziona tipo...</option>
-                      {paymentTypes.map(type => (
-                        <option key={type.id} value={type.id}>
-                          {type.name} {type.amount > 0 && `(€${type.amount})`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Importo (€) *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={bulkPayment.amount}
-                      onChange={(e) => setBulkPayment({...bulkPayment, amount: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      required
-                    />
+                      Seleziona tutti
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBulkPayment({
+                        ...bulkPayment,
+                        athleteIds: []
+                      })}
+                      className="text-gray-600 hover:text-gray-800"
+                    >
+                      Deseleziona tutti
+                    </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Data Scadenza *
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo Pagamento *
+                  </label>
+                  <select
+                    value={bulkPayment.typeId}
+                    onChange={(e) => {
+                      const typeId = e.target.value;
+                      const type = paymentTypes.find(t => t.id === parseInt(typeId));
+                      setBulkPayment({
+                        ...bulkPayment,
+                        typeId,
+                        amount: type?.amount?.toString() || ''
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Seleziona tipo</option>
+                    {paymentTypes.map(type => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Importo (€) *
                   </label>
                   <input
-                    type="date"
-                    value={bulkPayment.dueDate}
-                    onChange={(e) => setBulkPayment({...bulkPayment, dueDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    type="number"
+                    step="0.01"
+                    value={bulkPayment.amount}
+                    onChange={(e) => setBulkPayment({...bulkPayment, amount: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Scadenza *
+                  </label>
+                  <input
+                    type="date"
+                    value={bulkPayment.dueDate}
+                    onChange={(e) => setBulkPayment({...bulkPayment, dueDate: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Descrizione
                   </label>
                   <input
                     type="text"
                     value={bulkPayment.description}
                     onChange={(e) => setBulkPayment({...bulkPayment, description: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    placeholder="es. Quota mensile Gennaio 2025"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+              </div>
 
-                {bulkPayment.athleteIds.length > 0 && bulkPayment.amount && (
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm font-medium text-blue-900">
-                      Riepilogo:
-                    </p>
-                    <p className="text-sm text-blue-700 mt-1">
-                      Verranno creati {bulkPayment.athleteIds.length} pagamenti da €{bulkPayment.amount} ciascuno
-                    </p>
-                    <p className="text-sm font-medium text-blue-900 mt-1">
-                      Totale: €{(bulkPayment.athleteIds.length * parseFloat(bulkPayment.amount || 0)).toFixed(2)}
-                    </p>
-                  </div>
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm font-medium text-blue-900">
+                  Riepilogo: {bulkPayment.athleteIds.length} atleti selezionati
+                </p>
+                {bulkPayment.amount && (
+                  <p className="text-sm text-blue-700 mt-1">
+                    Totale: {formatAmount(parseFloat(bulkPayment.amount) * bulkPayment.athleteIds.length)}
+                  </p>
                 )}
               </div>
 
-              <div className="mt-6 flex justify-end space-x-3">
+              <div className="flex justify-end space-x-3 mt-6">
                 <button
+                  type="button"
                   onClick={() => setShowBulkModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
                 >
                   Annulla
                 </button>
                 <button
-                  onClick={createBulkPayments}
-                  disabled={bulkPayment.athleteIds.length === 0 || !bulkPayment.typeId || !bulkPayment.amount}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  disabled={bulkPayment.athleteIds.length === 0}
                 >
                   Crea {bulkPayment.athleteIds.length} Pagamenti
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
