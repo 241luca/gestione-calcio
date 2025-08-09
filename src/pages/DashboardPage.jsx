@@ -20,7 +20,8 @@ const DashboardPage = () => {
   const { data: expiringDocsData, loading: loadingDocs, error: errorDocs } = useApiData('/documents/expiring?days=30');
   const { data: overduePaymentsData, loading: loadingPayments, error: errorPayments } = useApiData('/payments/overdue');
   const { data: upcomingMatchesData, loading: loadingMatches, error: errorMatches } = useApiData('/matches/upcoming?limit=5');
-  const { data: trainingsData, loading: loadingTrainings } = useApiData('/training-sessions/today');
+  // Commentiamo training sessions per ora finché non implementiamo l'endpoint
+  // const { data: trainingsData, loading: loadingTrainings } = useApiData('/training-sessions/today');
 
   // Calcola statistiche dagli atleti
   // athletesData è già l'array estratto dal hook useApiData
@@ -35,7 +36,7 @@ const DashboardPage = () => {
     documentsExpiring: Array.isArray(expiringDocsData) ? expiringDocsData.length : 0,
     pendingPayments: overduePaymentsObj.stats?.count || 0,
     upcomingMatches: Array.isArray(upcomingMatchesData) ? upcomingMatchesData.length : 0,
-    todayTrainings: Array.isArray(trainingsData) ? trainingsData.length : 0
+    todayTrainings: 0 // Per ora 0 finché non implementiamo l'endpoint
   };
 
   // Dati per i widget
@@ -48,8 +49,8 @@ const DashboardPage = () => {
   };
   const upcomingMatches = (Array.isArray(upcomingMatchesData) ? upcomingMatchesData : []).slice(0, 3);
 
-  // Loading state generale
-  const loading = loadingAthletes || loadingDocs || loadingPayments || loadingMatches || loadingTrainings;
+  // Loading state generale - rimosso loadingTrainings
+  const loading = loadingAthletes || loadingDocs || loadingPayments || loadingMatches;
   
   // Error handling - mostra dashboard anche con errori parziali
   const hasError = errorAthletes && errorDocs && errorPayments && errorMatches;
