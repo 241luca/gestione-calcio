@@ -1,41 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   MagnifyingGlassIcon,
   UserGroupIcon,
   ExclamationTriangleIcon,
   EyeIcon,
-  PencilIcon
+  PencilIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
-import { athleteService } from '../services/api';
+import { useApiData, useApiMutation } from '../hooks/useApiData';
 import toast from 'react-hot-toast';
 import UniversalActions from '../components/common/UniversalActions';
 
 const AthletesPage = () => {
   const navigate = useNavigate();
-  const [athletes, setAthletes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Usa il nuovo hook per caricare i dati
+  const { data: athletes, loading, error, refetch } = useApiData('/athletes');
+  const { mutate } = useApiMutation();
+  
+  // Stati locali per UI
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedAthletes, setSelectedAthletes] = useState([]);
-
-  useEffect(() => {
-    loadAthletes();
-  }, []);
-
-  const loadAthletes = async () => {
-    try {
-      setLoading(true);
-      const response = await athleteService.getAll();
-      if (response.success && response.data) {
-        setAthletes(response.data.athletes || []);
-      }
-    } catch (error) {
-      toast.error('Errore nel caricamento degli atleti');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Handler CRUD
   const handleAdd = () => {
@@ -51,18 +38,25 @@ const AthletesPage = () => {
   };
 
   const handleDelete = async (athletesToDelete) => {
+    if (!window.confirm(`Sei sicuro di voler eliminare ${athletesToDelete.length} atlet${athletesToDelete.length === 1 ? 'a' : 'i'}?`)) {
+      return;
+    }
+
     try {
+      // Elimina tutti gli atleti selezionati
       for (const athlete of athletesToDelete) {
-        await athleteService.delete(athlete.id);
+        await mutate('delete', `/athletes/${athlete.id}`, null, null);
       }
       
-      setAthletes(athletes.filter(a => !athletesToDelete.includes(a)));
+      // Pulisci la selezione
       setSelectedAthletes([]);
       
-      toast.success(`${athletesToDelete.length} atlet${athletesToDelete.length === 1 ? 'a' : 'i'} eliminat${athletesToDelete.length === 1 ? 'o' : 'i'}`);
-      loadAthletes();
+      // Ricarica i dati
+      await refetch();
+      
+      toast.success(`${athletesToDelete.length} atlet${athletesToDelete.length === 1 ? 'a eliminato' : 'i eliminati'} con successo`);
     } catch (error) {
-      toast.error('Errore durante l\'eliminazione');
+      console.error('Errore eliminazione:', error);
     }
   };
 
@@ -75,15 +69,15 @@ const AthletesPage = () => {
       { key: 'birthDate', label: 'Data Nascita' },
       { key: 'email', label: 'Email' },
       { key: 'phone', label: 'Telefono' },
-      { key: 'team', label: 'Squadra' },
+      { key: 'team', label: 'Squadra', formatter: (team) => team?.name || 'Non assegnato' },
       { key: 'status', label: 'Stato' }
     ],
     filename: 'atleti_export',
-    title: 'Report Atleti - ASD Juventus Academy Milano'
+    title: 'Report Atleti - Sistema Gestione Calcio'
   };
 
   // Filtra atleti
-  const filteredAthletes = athletes.filter(athlete => {
+  const filteredAthletes = (athletes || []).filter(athlete => {
     const matchesSearch = searchTerm === '' || 
       `${athlete.firstName} ${athlete.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       athlete.fiscalCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -103,114 +97,136 @@ const AthletesPage = () => {
     }
   };
 
-  const isSelected = (athlete) => {
-    return selectedAthletes.find(a => a.id === athlete.id) !== undefined;
+  const toggleSelectAll = () => {
+    if (selectedAthletes.length === filteredAthletes.length) {
+      setSelectedAthletes([]);
+    } else {
+      setSelectedAthletes([...filteredAthletes]);
+    }
   };
 
+  const isSelected = (athlete) => {
+    return selectedAthletes.some(a => a.id === athlete.id);
+  };
+
+  // Stati derivati
+  const stats = {
+    total: athletes?.length || 0,
+    active: athletes?.filter(a => a.status === 'ACTIVE').length || 0,
+    injured: athletes?.filter(a => a.status === 'INJURED').length || 0,
+    suspended: athletes?.filter(a => a.status === 'SUSPENDED').length || 0
+  };
+
+  // Mostra loading
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="bg-white rounded-lg shadow p-4 mb-4">
-            <div className="h-10 bg-gray-200 rounded"></div>
-          </div>
-          <div className="bg-white rounded-lg shadow">
-            {[1,2,3,4,5].map(i => (
-              <div key={i} className="p-4 border-b">
-                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-              </div>
-            ))}
+      <div className="p-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Caricamento atleti...</p>
           </div>
         </div>
       </div>
     );
   }
 
+  // Mostra errore
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-red-900 mb-2">Errore nel caricamento</h3>
+          <p className="text-red-700 mb-4">{error}</p>
+          <button
+            onClick={refetch}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Riprova
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
+    <div className="p-8">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestione Atleti</h1>
-            <p className="text-gray-600 mt-1">
-              {athletes.length} atleti totali • {filteredAthletes.length} visualizzati
-              {selectedAthletes.length > 0 && ` • ${selectedAthletes.length} selezionati`}
-            </p>
-          </div>
-          
-          {/* Statistiche rapide */}
-          <div className="flex gap-4">
-            <div className="bg-green-50 px-4 py-2 rounded-lg">
-              <span className="text-green-800 font-medium">
-                {athletes.filter(a => a.status === 'ACTIVE').length} Attivi
-              </span>
-            </div>
-            <div className="bg-red-50 px-4 py-2 rounded-lg">
-              <span className="text-red-800 font-medium">
-                {athletes.filter(a => a.status === 'INJURED').length} Infortunati
-              </span>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Atleti</h1>
+        <p className="text-gray-600">Gestisci l'anagrafica degli atleti della società</p>
+      </div>
+
+      {/* Statistiche */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <UserGroupIcon className="h-10 w-10 text-blue-500 mr-3" />
+            <div>
+              <p className="text-sm text-gray-500">Totale</p>
+              <p className="text-2xl font-bold">{stats.total}</p>
             </div>
           </div>
         </div>
-
-        {/* Barra azioni principale */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
-          <div className="flex items-center justify-between">
-            {/* Selezione rapida */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSelectedAthletes(filteredAthletes)}
-                className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-              >
-                Seleziona tutti
-              </button>
-              {selectedAthletes.length > 0 && (
-                <button
-                  onClick={() => setSelectedAthletes([])}
-                  className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                >
-                  Deseleziona
-                </button>
-              )}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+              <span className="text-green-600 font-bold">{stats.active}</span>
             </div>
-            
-            {/* Azioni universali con solo icone */}
-            <UniversalActions
-              entityName="atleta"
-              entityNamePlural="atleti"
-              selectedItems={selectedAthletes}
-              allItems={filteredAthletes}
-              onAdd={handleAdd}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              exportConfig={exportConfig}
-              variant="toolbar"
-            />
+            <div>
+              <p className="text-sm text-gray-500">Attivi</p>
+              <p className="text-xl font-semibold">{stats.active}</p>
+            </div>
           </div>
         </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="h-10 w-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+              <span className="text-red-600 font-bold">{stats.injured}</span>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Infortunati</p>
+              <p className="text-xl font-semibold">{stats.injured}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="h-10 w-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+              <span className="text-yellow-600 font-bold">{stats.suspended}</span>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Sospesi</p>
+              <p className="text-xl font-semibold">{stats.suspended}</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        {/* Filtri */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex gap-4">
-            {/* Ricerca */}
-            <div className="flex-1 relative">
+      {/* Controlli */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+          {/* Ricerca */}
+          <div className="flex-1 w-full lg:max-w-md">
+            <div className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Cerca per nome, codice fiscale o email..."
+                placeholder="Cerca per nome, cognome, CF o email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+          </div>
 
-            {/* Filtro stato */}
+          {/* Filtri */}
+          <div className="flex items-center gap-4">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tutti gli stati</option>
               <option value="ACTIVE">Attivi</option>
@@ -218,16 +234,35 @@ const AthletesPage = () => {
               <option value="SUSPENDED">Sospesi</option>
               <option value="INACTIVE">Inattivi</option>
             </select>
+
+            {selectedAthletes.length > 0 && (
+              <span className="text-sm text-gray-600">
+                {selectedAthletes.length} selezionat{selectedAthletes.length === 1 ? 'o' : 'i'}
+              </span>
+            )}
           </div>
+
+          {/* Azioni */}
+          <UniversalActions
+            onAdd={handleAdd}
+            onDelete={selectedAthletes.length > 0 ? () => handleDelete(selectedAthletes) : null}
+            onExport={() => console.log('Export')}
+            onImport={() => console.log('Import')}
+            exportData={filteredAthletes}
+            exportConfig={exportConfig}
+            addLabel="Nuovo Atleta"
+            entityName="atleti"
+            selectedCount={selectedAthletes.length}
+          />
         </div>
       </div>
 
-      {/* Tabella Atleti */}
+      {/* Tabella o messaggio vuoto */}
       {filteredAthletes.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
+        <div className="bg-white rounded-lg shadow p-8 text-center">
           <UserGroupIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {searchTerm || filterStatus !== 'all' ? 'Nessun atleta trovato' : 'Nessun atleta registrato'}
+            Nessun atleta trovato
           </h3>
           <p className="text-gray-500 mb-4">
             {searchTerm || filterStatus !== 'all' 
@@ -248,6 +283,14 @@ const AthletesPage = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedAthletes.length === filteredAthletes.length}
+                    onChange={toggleSelectAll}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Atleta
                 </th>
@@ -272,12 +315,20 @@ const AthletesPage = () => {
               {filteredAthletes.map((athlete) => (
                 <tr 
                   key={athlete.id} 
-                  className={`hover:bg-gray-50 cursor-pointer transition-colors ${
-                    isSelected(athlete) ? 'bg-blue-50 hover:bg-blue-100' : ''
+                  className={`hover:bg-gray-50 transition-colors ${
+                    isSelected(athlete) ? 'bg-blue-50' : ''
                   }`}
-                  onClick={() => handleView(athlete)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={isSelected(athlete)}
+                      onChange={() => toggleSelection(athlete)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap cursor-pointer" onClick={() => handleView(athlete)}>
                     <div className="flex items-center">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
@@ -354,15 +405,12 @@ const AthletesPage = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleSelection(athlete);
+                          handleDelete([athlete]);
                         }}
-                        className={`px-2 py-1 text-xs rounded ${
-                          isSelected(athlete)
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        title="Elimina"
                       >
-                        {isSelected(athlete) ? 'Selezionato' : 'Seleziona'}
+                        <TrashIcon className="h-5 w-5" />
                       </button>
                     </div>
                   </td>
