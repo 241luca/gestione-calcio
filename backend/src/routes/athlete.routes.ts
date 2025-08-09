@@ -31,7 +31,7 @@ router.get('/',
     try {
       const { 
         page = 1, 
-        limit = 200,  // Aumentato da 50 a 200
+        limit = 400,  // Aumentato a 400 per vedere tutti i 327 atleti
         sortBy = 'lastName', 
         sortOrder = 'asc',
         ...filters 
