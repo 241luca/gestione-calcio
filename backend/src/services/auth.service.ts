@@ -48,7 +48,11 @@ class AuthService {
         where: { email },
         include: {
           role: true,
-          organization: true
+          organizations: {
+            include: {
+              organization: true
+            }
+          }
         }
       });
 
@@ -77,12 +81,22 @@ class AuthService {
         });
       }
 
+      // Recupera la prima organizzazione dell'utente
+      const userOrg = user.organizations?.[0];
+      
+      if (!userOrg) {
+        return res.status(403).json({
+          success: false,
+          error: 'Utente non associato a nessuna organizzazione'
+        });
+      }
+
       // Genera il token JWT
       const token = jwt.sign(
         {
           userId: user.id,
           email: user.email,
-          organizationId: user.organizationId,
+          organizationId: userOrg.organizationId,
           roleId: user.roleId,
           roleName: user.role?.name,
           permissions: user.role?.permissions || []
@@ -105,8 +119,13 @@ class AuthService {
       res.json({
         success: true,
         data: {
-          user: userWithoutPassword,
+          user: {
+            ...userWithoutPassword,
+            organizationId: userOrg.organizationId,
+            organizationName: userOrg.organization?.name
+          },
           token,
+          organizationId: userOrg.organizationId,
           expiresIn: process.env.JWT_EXPIRES_IN || '24h'
         }
       });

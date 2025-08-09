@@ -176,15 +176,16 @@ export const authService = {
       const response = await api.post('/auth/login', { email, password });
       
       if (response.data.success) {
-        const { token, user } = response.data.data;
+        const { token, user, organizationId } = response.data.data;
         
         // Salva token e dati utente
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         
-        // Salva organization ID se presente
-        if (user.organizationId) {
-          localStorage.setItem('organizationId', user.organizationId);
+        // Salva organization ID - può venire da user o direttamente dalla risposta
+        const orgId = organizationId || user.organizationId;
+        if (orgId) {
+          localStorage.setItem('organizationId', orgId);
         }
         
         return { success: true, data: response.data.data };
