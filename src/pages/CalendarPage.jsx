@@ -45,15 +45,23 @@ const CalendarPage = () => {
       team: teams.find(t => t.id === match.teamId)?.name || 'N/A',
       location: match.venue || match.location || 'Campo'
     })),
-    ...trainings.map(training => ({
-      ...training,
-      type: 'training',
-      title: 'Allenamento',
-      color: 'bg-green-500',
-      time: training.time || '00:00',
-      team: teams.find(t => t.id === training.teamId)?.name || 'N/A',
-      location: training.location || 'Campo'
-    }))
+    ...trainings.map(training => {
+      // Estrai l'ora da startTime
+      const startTime = training.startTime ? new Date(training.startTime) : null;
+      const timeStr = startTime ? 
+        `${startTime.getHours().toString().padStart(2, '0')}:${startTime.getMinutes().toString().padStart(2, '0')}` : 
+        '00:00';
+      
+      return {
+        ...training,
+        type: 'training',
+        title: 'Allenamento',
+        color: 'bg-green-500',
+        time: timeStr,
+        team: teams.find(t => t.id === training.teamId)?.name || 'N/A',
+        location: training.location || 'Campo'
+      };
+    })
   ];
 
   // Loading state
@@ -116,6 +124,8 @@ const CalendarPage = () => {
     type: 'match',
     date: '',
     time: '',
+    startTime: '',
+    endTime: '',
     teamId: '',
     location: '',
     opponent: '',
@@ -149,13 +159,20 @@ const CalendarPage = () => {
         refetchMatches();
       } else {
         // Crea un nuovo allenamento
+        // Calcola startTime e endTime basandosi su time
+        const [hours, minutes] = formData.time.split(':');
+        const startDateTime = new Date(`${formData.date}T${formData.time}:00`);
+        const endDateTime = new Date(startDateTime);
+        endDateTime.setHours(endDateTime.getHours() + 1, endDateTime.getMinutes() + 30); // 1h 30min di durata
+        
         await mutate('post', '/training-sessions', {
           date: formData.date,
-          time: formData.time,
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
           teamId: formData.teamId,
           location: formData.location,
           notes: formData.notes,
-          type: 'TRAINING'
+          type: formData.notes || 'Allenamento'
         }, 'Allenamento aggiunto con successo');
         refetchTrainings();
       }
@@ -173,6 +190,8 @@ const CalendarPage = () => {
       type: 'match',
       date: '',
       time: '',
+      startTime: '',
+      endTime: '',
       teamId: '',
       location: '',
       opponent: '',
