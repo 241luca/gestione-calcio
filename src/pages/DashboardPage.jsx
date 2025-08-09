@@ -23,25 +23,26 @@ const DashboardPage = () => {
   const { data: trainingsData, loading: loadingTrainings } = useApiData('/training-sessions/today');
 
   // Calcola statistiche dagli atleti
-  const athletes = athletesData?.athletes || athletesData || [];
+  // athletesData è già l'array estratto dal hook useApiData
+  const athletes = Array.isArray(athletesData) ? athletesData : [];
   const stats = {
     totalAthletes: athletes.length,
     activeAthletes: athletes.filter(a => a.status === 'ACTIVE').length,
-    documentsExpiring: expiringDocsData?.length || 0,
+    documentsExpiring: Array.isArray(expiringDocsData) ? expiringDocsData.length : 0,
     pendingPayments: overduePaymentsData?.stats?.count || overduePaymentsData?.count || 0,
-    upcomingMatches: upcomingMatchesData?.length || 0,
-    todayTrainings: trainingsData?.length || 0
+    upcomingMatches: Array.isArray(upcomingMatchesData) ? upcomingMatchesData.length : 0,
+    todayTrainings: Array.isArray(trainingsData) ? trainingsData.length : 0
   };
 
   // Dati per i widget
   const recentAthletes = athletes.slice(0, 5);
-  const expiringDocs = (expiringDocsData || []).slice(0, 5);
+  const expiringDocs = (Array.isArray(expiringDocsData) ? expiringDocsData : []).slice(0, 5);
   const overduePayments = {
     amount: overduePaymentsData?.stats?.totalAmount || overduePaymentsData?.totalAmount || 0,
     count: overduePaymentsData?.stats?.count || overduePaymentsData?.count || 0,
-    payments: (overduePaymentsData?.payments || overduePaymentsData || []).slice(0, 3)
+    payments: (overduePaymentsData?.payments || (Array.isArray(overduePaymentsData) ? overduePaymentsData : [])).slice(0, 3)
   };
-  const upcomingMatches = (upcomingMatchesData || []).slice(0, 3);
+  const upcomingMatches = (Array.isArray(upcomingMatchesData) ? upcomingMatchesData : []).slice(0, 3);
 
   // Loading state generale
   const loading = loadingAthletes || loadingDocs || loadingPayments || loadingMatches || loadingTrainings;
