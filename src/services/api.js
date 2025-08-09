@@ -20,7 +20,15 @@ api.interceptors.request.use(
     }
     
     // Aggiungi organization ID se presente
-    const organizationId = localStorage.getItem('organizationId');
+    let organizationId = localStorage.getItem('organizationId');
+    
+    // FIX TEMPORANEO: Se manca organizationId, usa quello hardcoded
+    if (!organizationId && token) {
+      organizationId = '5d260bdd-d1e6-4004-8a81-711605f48aa3';
+      localStorage.setItem('organizationId', organizationId);
+      console.log('⚠️ OrganizationId mancante, impostato default:', organizationId);
+    }
+    
     if (organizationId) {
       config.headers['X-Organization-ID'] = organizationId;
     }
