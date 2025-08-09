@@ -34,6 +34,8 @@ const CalendarPage = () => {
   const [eventType, setEventType] = useState('match'); // match, training
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [expandedDays, setExpandedDays] = useState(new Set()); // Per tracciare i giorni espansi
+  const [showDayEventsModal, setShowDayEventsModal] = useState(null); // Per mostrare tutti gli eventi di un giorno
   const [filters, setFilters] = useState({
     team: 'all',
     type: 'all'
@@ -444,19 +446,32 @@ const CalendarPage = () => {
             {getDaysInMonth().map((day, index) => {
               const dayEvents = day ? getEventsForDay(day) : [];
               const isToday = day && day.toDateString() === new Date().toDateString();
+              const dayKey = day ? day.toISOString().split('T')[0] : `empty-${index}`;
+              const isExpanded = expandedDays.has(dayKey);
+              const visibleEvents = isExpanded ? dayEvents : dayEvents.slice(0, 3);
+              
+              const toggleExpand = () => {
+                const newExpanded = new Set(expandedDays);
+                if (isExpanded) {
+                  newExpanded.delete(dayKey);
+                } else {
+                  newExpanded.add(dayKey);
+                }
+                setExpandedDays(newExpanded);
+              };
               
               return (
                 <div
                   key={index}
-                  className={`min-h-[100px] p-2 border-r border-b ${!day ? 'bg-gray-50' : ''} ${isToday ? 'bg-blue-50' : ''}`}
+                  className={`min-h-[100px] ${isExpanded ? 'min-h-[150px]' : ''} p-2 border-r border-b ${!day ? 'bg-gray-50' : ''} ${isToday ? 'bg-blue-50' : ''} relative`}
                 >
                   {day && (
                     <>
-                      <div className={`text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+                      <div className={`text-sm font-medium mb-1 ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
                         {day.getDate()}
                       </div>
-                      <div className="mt-1 space-y-1">
-                        {dayEvents.slice(0, 3).map((event, i) => (
+                      <div className={`space-y-1 ${isExpanded ? 'max-h-none' : 'max-h-[80px] overflow-hidden'}`}>
+                        {visibleEvents.map((event, i) => (
                           <div
                             key={i}
                             onClick={() => setSelectedEvent(event)}
@@ -465,12 +480,36 @@ const CalendarPage = () => {
                             {event.time} - {event.title}
                           </div>
                         ))}
-                        {dayEvents.length > 3 && (
-                          <div className="text-xs text-gray-500">
-                            +{dayEvents.length - 3} altri
-                          </div>
-                        )}
                       </div>
+                      {dayEvents.length > 3 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (dayEvents.length > 6) {
+                              // Se ci sono più di 6 eventi, apri il modal
+                              setShowDayEventsModal({ date: day, events: dayEvents });
+                            } else {
+                              // Altrimenti espandi inline
+                              toggleExpand();
+                            }
+                          }}
+                          className="absolute bottom-1 right-1 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          {isExpanded ? (
+                            <span className="flex items-center">
+                              <ChevronLeftIcon className="h-3 w-3 rotate-90" />
+                              Riduci
+                            </span>
+                          ) : (
+                            <span className="flex items-center">
+                              +{dayEvents.length - 3} altri
+                              {dayEvents.length > 6 && (
+                                <ChevronRightIcon className="h-3 w-3" />
+                              )}
+                            </span>
+                          )}
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -531,7 +570,15 @@ const CalendarPage = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {event.title}
+                        <div>
+                          <div className="font-medium">{event.title}</div>
+                          {event.type === 'match' && event.opponent && (
+                            <div className="text-xs text-gray-500">vs {event.opponent}</div>
+                          )}
+                          {event.type === 'training' && event.type && (
+                            <div className="text-xs text-gray-500">{event.type}</div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {event.team}
@@ -738,6 +785,75 @@ const CalendarPage = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal per tutti gli eventi del giorno */}
+      {showDayEventsModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
+            <div className="fixed inset-0 transition-opacity" onClick={() => setShowDayEventsModal(null)}>
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <div className="inline-block w-full max-w-2xl p-6 my-8 text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Eventi del {formatDate(showDayEventsModal.date)}
+                </h3>
+                <button
+                  onClick={() => setShowDayEventsModal(null)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {showDayEventsModal.events.map((event, index) => (
+                  <div
+                    key={index}
+                    className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition"
+                    onClick={() => {
+                      setSelectedEvent(event);
+                      setShowDayEventsModal(null);
+                    }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-1 text-xs rounded text-white ${event.color}`}>
+                            {event.type === 'match' ? 'Partita' : 'Allenamento'}
+                          </span>
+                          <span className="font-medium">{event.time}</span>
+                        </div>
+                        <h4 className="mt-1 font-medium">{event.title}</h4>
+                        <div className="mt-1 text-sm text-gray-600">
+                          <span className="inline-flex items-center">
+                            <MapPinIcon className="h-4 w-4 mr-1" />
+                            {event.location}
+                          </span>
+                          <span className="inline-flex items-center ml-4">
+                            <UserGroupIcon className="h-4 w-4 mr-1" />
+                            {event.team}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => setShowDayEventsModal(null)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Chiudi
+                </button>
+              </div>
             </div>
           </div>
         </div>
