@@ -1,6 +1,3 @@
-// Schema del database per il sistema di gestione società di calcio
-// Versione: 4.0.0 - Schema completo e allineato con tutti i componenti
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,163 +7,131 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==========================================
-// MODELLI PRINCIPALI
-// ==========================================
-
-// Organizzazione (Società di calcio)
 model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  taxCode   String?  @unique
-  address   String?
-  city      String?
-  province  String?
-  zipCode   String?
-  email     String?
-  phone     String?
-  website   String?
-  logo      String?
-  foundedYear        Int?
-  president          String?
-  colors             String[]
-  registrationNumber String?
-  bankAccount        String?
-  socialLinks        Json?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relazioni
-  users              User[]
-  athletes           Athlete[]
-  teams              Team[]
-  documents          Document[]
-  payments           Payment[]
-  matches            Match[]
-  trainings          TrainingSession[]
-  transportZones     TransportZone[]
-  transportRoutes    TransportRoute[]
-  notifications      Notification[]
+  id                    String                 @id @default(uuid())
+  name                  String
+  taxCode               String?                @unique
+  address               String?
+  city                  String?
+  province              String?
+  zipCode               String?
+  email                 String?
+  phone                 String?
+  website               String?
+  logo                  String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  bankAccount           String?
+  colors                String[]
+  foundedYear           Int?
+  president             String?
+  registrationNumber    String?
+  socialLinks           Json?
+  athletes              Athlete[]
+  auditLogs             AuditLog[]
+  competitions          Competition[]
+  documents             Document[]
+  emailLogs             EmailLog[]
+  injuries              Injury[]
+  matches               Match[]
   notificationTemplates NotificationTemplate[]
-  organizationSettings OrganizationSettings?
-  auditLogs          AuditLog[]
-  emailLogs          EmailLog[]
-  competitions       Competition[]
-  venues             Venue[]
-  staffMembers       Staff[]
-  sponsors           Sponsor[]
-  injuries           Injury[]
+  notifications         Notification[]
+  organizationSettings  OrganizationSettings?
+  payments              Payment[]
+  sponsors              Sponsor[]
+  staffMembers          Staff[]
+  teams                 Team[]
+  trainings             TrainingSession[]
+  transportRoutes       TransportRoute[]
+  transportZones        TransportZone[]
+  users                 User[]
+  venues                Venue[]
 
   @@map("organizations")
 }
 
-// Utenti del sistema
 model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
-  password       String
-  firstName      String
-  lastName       String
-  phone          String?
-  role           Role      @relation(fields: [roleId], references: [id])
-  roleId         String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
-  isActive       Boolean   @default(true)
-  emailVerified  Boolean   @default(false)
-  lastLogin      DateTime?
-  
-  // Preferenze notifiche (JSON)
-  preferences    Json?     @default("{}")
-  
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  // Relazioni
-  createdPayments   Payment[]  @relation("CreatedBy")
-  notifications     Notification[]
-  auditLogs         AuditLog[]
+  id              String         @id @default(uuid())
+  email           String         @unique
+  password        String
+  firstName       String
+  lastName        String
+  phone           String?
+  roleId          String
+  organizationId  String
+  isActive        Boolean        @default(true)
+  lastLogin       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  emailVerified   Boolean        @default(false)
+  preferences     Json?          @default("{}")
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+  createdPayments Payment[]      @relation("CreatedBy")
+  organization    Organization   @relation(fields: [organizationId], references: [id])
+  role            Role           @relation(fields: [roleId], references: [id])
 
   @@index([email])
   @@index([organizationId])
   @@map("users")
 }
 
-// Ruoli utente
 model Role {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  organizationId String? // Per ruoli specifici dell'organizzazione
-  permissions Json?    // Array di permessi
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relazioni
-  users User[]
+  id             String   @id @default(uuid())
+  name           String   @unique
+  description    String?
+  permissions    Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organizationId String?
+  users          User[]
 
   @@map("roles")
 }
 
-// Atleti
 model Athlete {
-  id             String        @id @default(uuid())
-  firstName      String
-  lastName       String
-  birthDate      DateTime
-  birthPlace     String?
-  nationality    String        @default("Italiana")
-  fiscalCode     String?       @unique
-  email          String?
-  phone          String?
-  address        String?
-  city           String?
-  province       String?
-  zipCode        String?
-  
-  // Dati sportivi
-  team           Team?         @relation(fields: [teamId], references: [id])
-  teamId         String?
-  position       Position?     @relation(fields: [positionId], references: [id])
-  positionId     String?
-  jerseyNumber   Int?
-  status         AthleteStatus @default(ACTIVE)
-  height         Int?          // in cm
-  weight         Int?          // in kg
-  footPreference String?       // RIGHT, LEFT, BOTH
-  
-  // Trasporti
-  transportZone        TransportZone? @relation(fields: [transportZoneId], references: [id])
-  transportZoneId      String?
-  hasTransportService  Boolean       @default(false)
-  
-  // Dati genitori/tutori
-  parentName     String?
-  parentPhone    String?
-  parentEmail    String?
-  
-  // Dati medici
-  medicalNotes   String?
-  allergies      String?
-  
-  // Note
-  notes          String?
-  
-  organization   Organization  @relation(fields: [organizationId], references: [id])
-  organizationId String
-  
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  // Relazioni
-  documents      Document[]
-  payments       Payment[]
-  attendances    TrainingAttendance[]
-  matchRoster    MatchRoster[]
-  matchStats     MatchStats[]
-  injuries       Injury[]
-  transportBookings TransportBooking[]
+  id                  String               @id @default(uuid())
+  firstName           String
+  lastName            String
+  birthDate           DateTime
+  birthPlace          String?
+  nationality         String               @default("Italiana")
+  fiscalCode          String?              @unique
+  email               String?
+  phone               String?
+  address             String?
+  city                String?
+  province            String?
+  zipCode             String?
+  teamId              String?
+  positionId          String?
+  jerseyNumber        Int?
+  status              AthleteStatus        @default(ACTIVE)
+  parentName          String?
+  parentPhone         String?
+  parentEmail         String?
+  medicalNotes        String?
+  allergies           String?
+  organizationId      String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  transportZoneId     String?
+  footPreference      String?
+  hasTransportService Boolean              @default(false)
+  height              Int?
+  notes               String?
+  weight              Int?
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  position            Position?            @relation(fields: [positionId], references: [id])
+  team                Team?                @relation(fields: [teamId], references: [id])
+  transportZone       TransportZone?       @relation(fields: [transportZoneId], references: [id])
+  documents           Document[]
+  injuries            Injury[]
+  matchRoster         MatchRoster[]
+  matchStats          MatchStats[]
+  payments            Payment[]
+  attendances         TrainingAttendance[]
+  transportBookings   TransportBooking[]
 
   @@index([organizationId])
   @@index([teamId])
@@ -174,77 +139,51 @@ model Athlete {
   @@map("athletes")
 }
 
-// Stati atleta
-enum AthleteStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-  INJURED
-}
-
-// Squadre
 model Team {
-  id             String       @id @default(uuid())
+  id             String            @id @default(uuid())
   name           String
-  category       String       // Es: "U12", "U14", ecc.
-  season         String       // Es: "2024/2025"
-  coachId        String?      // ID dell'allenatore principale (da Staff)
-  
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  category       String
+  season         String
   organizationId String
-  
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  // Relazioni
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  coachId        String?
   athletes       Athlete[]
-  homeMatches    Match[]      @relation("HomeTeam")
-  awayMatches    Match[]      @relation("AwayTeam")
-  trainings      TrainingSession[]
+  awayMatches    Match[]           @relation("AwayTeam")
+  homeMatches    Match[]           @relation("HomeTeam")
   staffMembers   Staff[]
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  trainings      TrainingSession[]
 
   @@index([organizationId])
   @@map("teams")
 }
 
-// Posizioni di gioco
 model Position {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  abbreviation String?  // Es: "POR", "DIF", "CEN", "ATT"
-  description String?
-
-  // Relazioni
-  athletes    Athlete[]
+  id           String    @id @default(uuid())
+  name         String    @unique
+  description  String?
+  abbreviation String?
+  athletes     Athlete[]
 
   @@map("positions")
 }
 
-// ==========================================
-// GESTIONE DOCUMENTI
-// ==========================================
-
-// Tipi di documento
 model DocumentType {
   id           Int        @id @default(autoincrement())
   name         String     @unique
   description  String?
   isRequired   Boolean    @default(false)
   hasExpiry    Boolean    @default(false)
-  validityDays Int?       // Giorni di validità predefiniti
-
-  // Relazioni
+  validityDays Int?
   documents    Document[]
 
   @@map("document_types")
 }
 
-// Documenti
 model Document {
   id             String         @id @default(uuid())
-  athlete        Athlete        @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   athleteId      String
-  type           DocumentType   @relation(fields: [typeId], references: [id])
   typeId         Int
   fileName       String
   fileUrl        String
@@ -254,19 +193,17 @@ model Document {
   expiryDate     DateTime?
   status         DocumentStatus @default(VALID)
   notes          String?
-  
-  // Tracking upload e verifica
-  uploadedBy     String?        // ID utente che ha caricato
   uploadedAt     DateTime       @default(now())
   isVerified     Boolean        @default(false)
-  verifiedBy     String?        // ID utente che ha verificato
   verifiedAt     DateTime?
-  
-  organization   Organization   @relation(fields: [organizationId], references: [id])
   organizationId String
-  
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  uploadedBy     String?
+  verifiedBy     String?
+  athlete        Athlete        @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  type           DocumentType   @relation(fields: [typeId], references: [id])
 
   @@index([athleteId])
   @@index([organizationId])
@@ -274,55 +211,40 @@ model Document {
   @@map("documents")
 }
 
-// Stati documento
-enum DocumentStatus {
-  VALID
-  EXPIRING
-  EXPIRED
-}
-
-// ==========================================
-// GESTIONE PAGAMENTI
-// ==========================================
-
-// Tipi di pagamento
 model PaymentType {
   id          Int       @id @default(autoincrement())
   name        String    @unique
   description String?
   amount      Float     @default(0)
   isRecurring Boolean   @default(false)
-  frequency   String?   // MONTHLY, YEARLY, ONE_TIME
+  frequency   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
-  // Relazioni
   payments    Payment[]
 
   @@map("payment_types")
 }
 
-// Pagamenti
 model Payment {
-  id             String         @id @default(uuid())
-  organization   Organization   @relation(fields: [organizationId], references: [id])
-  organizationId String
-  athlete        Athlete        @relation(fields: [athleteId], references: [id])
+  id             String        @id @default(uuid())
   athleteId      String
-  type           PaymentType    @relation(fields: [typeId], references: [id])
   typeId         Int
   amount         Float
-  paidAmount     Float?         @default(0)
   dueDate        DateTime
   paidDate       DateTime?
-  status         PaymentStatus  @default(PENDING)
+  status         PaymentStatus @default(PENDING)
   paymentMethod  String?
-  description    String?
   notes          String?
-  createdBy      User          @relation("CreatedBy", fields: [createdById], references: [id])
   createdById    String
+  organizationId String
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  description    String?
+  paidAmount     Float?        @default(0)
+  athlete        Athlete       @relation(fields: [athleteId], references: [id])
+  createdBy      User          @relation("CreatedBy", fields: [createdById], references: [id])
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  type           PaymentType   @relation(fields: [typeId], references: [id])
 
   @@index([organizationId])
   @@index([athleteId])
@@ -331,41 +253,24 @@ model Payment {
   @@map("payments")
 }
 
-// Stati pagamento
-enum PaymentStatus {
-  PENDING
-  PAID
-  PARTIAL
-  OVERDUE
-  CANCELLED
-}
-
-// ==========================================
-// GESTIONE PARTITE E ALLENAMENTI
-// ==========================================
-
-// Competizioni
 model Competition {
   id             String       @id @default(uuid())
   name           String
-  type           String       // CAMPIONATO, COPPA, TORNEO, AMICHEVOLE
-  category       String       // U12, U14, U16, etc.
+  type           String
   season         String
   startDate      DateTime
   endDate        DateTime?
-  description    String?
-  organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-
-  // Relazioni
+  description    String?
+  category       String
+  organization   Organization @relation(fields: [organizationId], references: [id])
   matches        Match[]
 
   @@map("competitions")
 }
 
-// Campi da gioco
 model Venue {
   id             String       @id @default(uuid())
   name           String
@@ -373,56 +278,45 @@ model Venue {
   city           String
   province       String?
   capacity       Int?
-  type           String       @default("HOME") // HOME, AWAY, NEUTRAL
-  isHome         Boolean      @default(false) // Campo di casa
-  surface        String?      // ERBA_NATURALE, ERBA_SINTETICA, TERRA
-  hasLighting    Boolean      @default(false)
-  notes          String?      // Note aggiuntive
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  type           String       @default("HOME")
   organizationId String
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-
-  // Relazioni
+  hasLighting    Boolean      @default(false)
+  surface        String?
+  isHome         Boolean      @default(false)
+  notes          String?
   matches        Match[]
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@map("venues")
 }
 
-// Partite
 model Match {
-  id              String        @id @default(uuid())
-  homeTeam        Team?         @relation("HomeTeam", fields: [homeTeamId], references: [id])
-  homeTeamId      String
-  awayTeam        Team?         @relation("AwayTeam", fields: [awayTeamId], references: [id])
-  awayTeamId      String
-  date            DateTime
-  time            String?       // Orario separato
-  venue           Venue?        @relation(fields: [venueId], references: [id])
-  venueId         String?
-  competition     Competition?  @relation(fields: [competitionId], references: [id])
-  competitionId   String?
-  matchType       String        @default("CAMPIONATO") // CAMPIONATO, COPPA, AMICHEVOLE, TORNEO
-  
-  // Risultato
-  homeScore       Int?
-  awayScore       Int?
-  status          MatchStatus   @default(SCHEDULED)
-  
-  // Dettagli aggiuntivi
-  isHome          Boolean       @default(true)
-  opponentName    String?       // Nome squadra avversaria se esterna
-  notes           String?
-  
-  organization    Organization  @relation(fields: [organizationId], references: [id])
-  organizationId  String
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  // Relazioni
-  roster          MatchRoster[]
-  stats           MatchStats[]
+  id                 String              @id @default(uuid())
+  homeTeamId         String
+  awayTeamId         String
+  date               DateTime
+  time               String?
+  homeScore          Int?
+  awayScore          Int?
+  status             MatchStatus         @default(SCHEDULED)
+  notes              String?
+  organizationId     String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  competitionId      String?
+  venueId            String?
+  isHome             Boolean             @default(true)
+  matchType          String              @default("CAMPIONATO")
+  opponentName       String?
+  roster             MatchRoster[]
+  stats              MatchStats[]
+  awayTeam           Team                @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  competition        Competition?        @relation(fields: [competitionId], references: [id])
+  homeTeam           Team                @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  organization       Organization        @relation(fields: [organizationId], references: [id])
+  venue              Venue?              @relation(fields: [venueId], references: [id])
   transportSchedules TransportSchedule[]
 
   @@index([organizationId])
@@ -430,70 +324,54 @@ model Match {
   @@map("matches")
 }
 
-// Stati partita
-enum MatchStatus {
-  SCHEDULED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-  POSTPONED
-}
-
-// Convocazioni partita
 model MatchRoster {
   id        String   @id @default(uuid())
-  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   matchId   String
-  athlete   Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   athleteId String
-  position  String?  // Posizione in campo per questa partita
   isStarter Boolean  @default(false)
-  isPresent Boolean? // Presenza effettiva
   notes     String?
+  isPresent Boolean?
+  position  String?
+  athlete   Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   @@unique([matchId, athleteId])
   @@map("match_rosters")
 }
 
-// Statistiche partita per atleta
 model MatchStats {
-  id          String  @id @default(uuid())
-  match       Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  matchId     String
-  athlete     Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  athleteId   String
-  minutesPlayed Int   @default(0)
-  goals       Int     @default(0)
-  assists     Int     @default(0)
-  yellowCards Int     @default(0)
-  redCards    Int     @default(0)
-  notes       String?
+  id            String  @id @default(uuid())
+  matchId       String
+  athleteId     String
+  minutesPlayed Int     @default(0)
+  goals         Int     @default(0)
+  assists       Int     @default(0)
+  yellowCards   Int     @default(0)
+  redCards      Int     @default(0)
+  notes         String?
+  athlete       Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  match         Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   @@unique([matchId, athleteId])
   @@map("match_stats")
 }
 
-// Sessioni di allenamento
 model TrainingSession {
-  id             String       @id @default(uuid())
-  team           Team         @relation(fields: [teamId], references: [id])
-  teamId         String
-  date           DateTime
-  startTime      String
-  endTime        String
-  location       String?
-  type           String?      // TECNICO, TATTICO, FISICO, PARTITA
-  description    String?
-  notes          String?
-  
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
-  
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  // Relazioni
-  attendances    TrainingAttendance[]
+  id                 String               @id @default(uuid())
+  teamId             String
+  date               DateTime
+  startTime          String
+  endTime            String
+  location           String?
+  type               String?
+  description        String?
+  organizationId     String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  notes              String?
+  attendances        TrainingAttendance[]
+  organization       Organization         @relation(fields: [organizationId], references: [id])
+  team               Team                 @relation(fields: [teamId], references: [id])
   transportSchedules TransportSchedule[]
 
   @@index([teamId])
@@ -501,87 +379,70 @@ model TrainingSession {
   @@map("training_sessions")
 }
 
-// Presenze allenamento
 model TrainingAttendance {
   id        String          @id @default(uuid())
-  session   TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   sessionId String
-  athlete   Athlete         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   athleteId String
   present   Boolean         @default(false)
-  reason    String?         // Motivo assenza
+  reason    String?
   notes     String?
+  athlete   Athlete         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  session   TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, athleteId])
   @@map("training_attendances")
 }
 
-// ==========================================
-// GESTIONE INFORTUNI
-// ==========================================
-
 model Injury {
-  id                String       @id @default(uuid())
-  athlete           Athlete      @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  athleteId         String
-  injuryDate        DateTime
-  injuryType        String?      // MUSCOLARE, DISTORSIONE, CONTUSIONE, FRATTURA, ALTRO
-  bodyPart          String?      // Parte del corpo infortunata
-  description       String
-  severity          String?      // LIEVE, MODERATA, GRAVE
-  estimatedRecoveryDays Int?     // Giorni stimati di recupero
-  isRecovered       Boolean      @default(false)
-  recoveryDate      DateTime?
-  notes             String?
-  
-  organization      Organization @relation(fields: [organizationId], references: [id])
-  organizationId    String
-  
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  id                    String       @id @default(uuid())
+  athleteId             String
+  injuryDate            DateTime
+  description           String
+  severity              String?
+  isRecovered           Boolean      @default(false)
+  recoveryDate          DateTime?
+  notes                 String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  bodyPart              String?
+  estimatedRecoveryDays Int?
+  injuryType            String?
+  organizationId        String
+  athlete               Athlete      @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  organization          Organization @relation(fields: [organizationId], references: [id])
 
   @@index([athleteId])
   @@map("injuries")
 }
 
-// ==========================================
-// SISTEMA TRASPORTI
-// ==========================================
-
 model TransportZone {
   id             String       @id @default(uuid())
   name           String
   description    String?
-  organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-
-  // Relazioni
   athletes       Athlete[]
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@map("transport_zones")
 }
 
-// ==========================================
-// SISTEMA NOTIFICHE
-// ==========================================
-
 model Notification {
   id             String       @id @default(uuid())
-  user           User?        @relation(fields: [userId], references: [id])
   userId         String?
-  organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
-  type           String       // DOCUMENT_EXPIRING, PAYMENT_OVERDUE, MATCH_REMINDER, etc.
+  type           String
   title          String
   message        String
   link           String?
-  priority       String       @default("normal") // low, normal, high, urgent
+  priority       String       @default("normal")
   isRead         Boolean      @default(false)
   readAt         DateTime?
   data           Json?
   createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User?        @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([organizationId])
@@ -589,81 +450,59 @@ model Notification {
   @@map("notifications")
 }
 
-// Template notifiche personalizzabili
 model NotificationTemplate {
   id             String       @id @default(uuid())
-  organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   name           String
-  type           String       // Tipo di notifica (document_expiry, payment_overdue, etc.)
-  title          String       // Template titolo con variabili {{variable}}
-  message        String       // Template messaggio con variabili
-  emailSubject   String?      // Template oggetto email
-  emailBody      String?      // Template corpo email HTML
-  variables      Json         // Array di variabili disponibili
+  type           String
+  title          String
+  message        String
+  emailSubject   String?
+  emailBody      String?
+  variables      Json
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, type])
   @@map("notification_templates")
 }
 
-// ==========================================
-// IMPOSTAZIONI E CONFIGURAZIONI
-// ==========================================
-
-// Impostazioni organizzazione
 model OrganizationSettings {
-  id             String       @id @default(uuid())
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String       @unique
-  
-  // Email Settings
-  emailProvider  String?      @default("brevo") // brevo, sendgrid, smtp
-  emailApiKey    String?      // Encrypted
-  emailFrom      String?      @default("noreply@soccermanager.com")
-  emailFromName  String?      @default("Soccer Manager")
-  emailEnabled   Boolean      @default(false)
-  
-  // Notification Preferences (default per nuovi utenti)
-  defaultPreferences Json?    @default("{}")
-  
-  // Other Settings
-  timezone       String       @default("Europe/Rome")
-  dateFormat     String       @default("DD/MM/YYYY")
-  currency       String       @default("EUR")
-  language       String       @default("it")
-  
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                 String       @id @default(uuid())
+  organizationId     String       @unique
+  emailProvider      String?      @default("brevo")
+  emailApiKey        String?
+  emailFrom          String?      @default("noreply@soccermanager.com")
+  emailFromName      String?      @default("Soccer Manager")
+  emailEnabled       Boolean      @default(false)
+  defaultPreferences Json?        @default("{}")
+  timezone           String       @default("Europe/Rome")
+  dateFormat         String       @default("DD/MM/YYYY")
+  currency           String       @default("EUR")
+  language           String       @default("it")
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  organization       Organization @relation(fields: [organizationId], references: [id])
 
   @@map("organization_settings")
 }
 
-// ==========================================
-// AUDIT E LOGGING
-// ==========================================
-
-// Audit log per tracciamento modifiche
 model AuditLog {
   id             String       @id @default(uuid())
-  organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
-  user           User?        @relation(fields: [userId], references: [id])
   userId         String?
-  
-  action         String       // CREATE, UPDATE, DELETE, LOGIN, LOGOUT
-  entityType     String       // ATHLETE, DOCUMENT, PAYMENT, etc.
-  entityId       String?      // ID dell'entità modificata
-  
-  oldValues      Json?        // Valori precedenti
-  newValues      Json?        // Nuovi valori
-  
+  action         String
+  entityType     String
+  entityId       String?
+  oldValues      Json?
+  newValues      Json?
   ipAddress      String?
   userAgent      String?
-  
   createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User?        @relation(fields: [userId], references: [id])
 
   @@index([organizationId])
   @@index([userId])
@@ -672,24 +511,19 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// Log delle email inviate
 model EmailLog {
   id             String       @id @default(uuid())
-  organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
-  
-  to             String       // Email destinatario
+  to             String
   subject        String
-  body           String?      @db.Text
-  
-  status         String       // SENT, FAILED, BOUNCED
-  provider       String?      // brevo, sendgrid, etc.
-  providerId     String?      // ID del provider
-  
-  error          String?      // Errore se fallito
-  
+  body           String?
+  status         String
+  provider       String?
+  providerId     String?
+  error          String?
   sentAt         DateTime?
   createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@index([organizationId])
   @@index([to])
@@ -697,93 +531,68 @@ model EmailLog {
   @@map("email_logs")
 }
 
-// ==========================================
-// STAFF TECNICO
-// ==========================================
-
 model Staff {
-  id             String       @id @default(uuid())
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
-  
-  // Link a User (opzionale)
-  userId         String?
-  
-  // Dati anagrafici
-  firstName      String
-  lastName       String
-  fiscalCode     String?
-  birthDate      DateTime?
-  birthPlace     String?
-  nationality    String       @default("Italiana")
-  
-  // Contatti
-  email          String?
-  phone          String?
-  mobile         String?
-  address        String?
-  city           String?
-  province       String?
-  zipCode        String?
-  
-  // Info professionali
-  role           String?      // Legacy field
-  staffRole      String?      // COACH, ASSISTANT_COACH, MEDICAL, etc.
-  qualification  String?
-  qualifications String?
-  licenseNumber  String?
-  licenseType    String?
-  licenseExpiry  DateTime?
-  specialization String?
-  
-  // Contratto
-  contractType   String       @default("VOLUNTEER")
-  contractStart  DateTime?
-  contractEnd    DateTime?
-  startDate      DateTime?
-  salary         Float?
-  paymentFrequency String?
-  
-  // Team
-  team           Team?        @relation(fields: [teamId], references: [id])
-  teamId         String?
-  teamIds        String[]     // Multiple teams
-  primaryTeamId  String?      // Primary team
-  
-  // Permessi
-  canAccessSystem      Boolean @default(false)
-  canManageAthletes    Boolean @default(false)
-  canManagePayments    Boolean @default(false)
-  canManageDocuments   Boolean @default(false)
-  canViewReports       Boolean @default(false)
-  canSendNotifications Boolean @default(false)
-  permissions          Json?
-  
-  // Certificazioni
-  hasCriminalCheck     Boolean @default(false)
-  criminalCheckDate    DateTime?
-  criminalCheckExpiry  DateTime?
-  hasMedicalCertificate Boolean @default(false)
-  medicalCertificateDate DateTime?
+  id                       String       @id @default(uuid())
+  organizationId           String
+  firstName                String
+  lastName                 String
+  role                     String?
+  teamId                   String?
+  email                    String?
+  phone                    String?
+  qualification            String?
+  startDate                DateTime?
+  contractEnd              DateTime?
+  salary                   Float?
+  isActive                 Boolean      @default(true)
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+  licenseExpiry            DateTime?
+  licenseNumber            String?
+  qualifications           String?
+  address                  String?
+  allergies                String?
+  birthDate                DateTime?
+  birthPlace               String?
+  bloodType                String?
+  canAccessSystem          Boolean      @default(false)
+  canManageAthletes        Boolean      @default(false)
+  canManageDocuments       Boolean      @default(false)
+  canManagePayments        Boolean      @default(false)
+  canSendNotifications     Boolean      @default(false)
+  canViewReports           Boolean      @default(false)
+  city                     String?
+  contractStart            DateTime?
+  contractType             String       @default("VOLUNTEER")
+  criminalCheckDate        DateTime?
+  criminalCheckExpiry      DateTime?
+  deletedAt                DateTime?
+  emergencyContact         String?
+  emergencyPhone           String?
+  fiscalCode               String?
+  hasCriminalCheck         Boolean      @default(false)
+  hasMedicalCertificate    Boolean      @default(false)
+  licenseType              String?
+  medicalCertificateDate   DateTime?
   medicalCertificateExpiry DateTime?
-  
-  // Emergenza
-  emergencyContact String?
-  emergencyPhone   String?
-  bloodType        String?
-  allergies        String?
-  medicalNotes     String?
-  
-  // Metadata
-  status         String       @default("ACTIVE")
-  profilePhoto   String?
-  notes          String?
-  tags           String[]
-  isActive       Boolean      @default(true)
-  deletedAt      DateTime?
-  
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  medicalNotes             String?
+  mobile                   String?
+  nationality              String       @default("Italiana")
+  notes                    String?
+  paymentFrequency         String?
+  permissions              Json?
+  primaryTeamId            String?
+  profilePhoto             String?
+  province                 String?
+  specialization           String?
+  staffRole                String?
+  status                   String       @default("ACTIVE")
+  tags                     String[]
+  teamIds                  String[]
+  zipCode                  String?
+  userId                   String?
+  organization             Organization @relation(fields: [organizationId], references: [id])
+  team                     Team?        @relation(fields: [teamId], references: [id])
 
   @@index([organizationId])
   @@index([teamId])
@@ -793,109 +602,152 @@ model Staff {
   @@map("staff")
 }
 
-// ==========================================
-// SPONSOR
-// ==========================================
-
 model Sponsor {
   id             String       @id @default(uuid())
-  organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   name           String
-  type           String       // MAIN, SECONDARY, TECHNICAL
+  type           String
   contactPerson  String?
-  contactEmail   String?      // Email contatto
-  contactPhone   String?      // Telefono contatto
   email          String?
   phone          String?
   website        String?
   logoUrl        String?
-  amount         Float?       // Importo annuale
-  status         String       @default("ACTIVE") // ACTIVE, INACTIVE, EXPIRED
+  amount         Float?
   startDate      DateTime?
   endDate        DateTime?
   description    String?
-  notes          String?      // Note aggiuntive
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  contactEmail   String?
+  contactPhone   String?
+  notes          String?
+  status         String       @default("ACTIVE")
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@map("sponsors")
 }
 
-// ==========================================
-// SISTEMA TRASPORTI COMPLETO
-// ==========================================
-
-// Route di trasporto
-model TransportRoute {
-  id             String       @id @default(uuid())
-  organization   Organization @relation(fields: [organizationId], references: [id])
+model TrainingSession {
+  id             String              @id @default(uuid())
   organizationId String
-  name           String       // Nome della route (es. "Linea Centro", "Linea Nord")
-  description    String?
-  driver         String?      // Nome autista
-  vehiclePlate   String?      // Targa veicolo
-  capacity       Int          @default(8) // Capacità veicolo
-  startPoint     String?      // Punto di partenza
-  endPoint       String?      // Punto di arrivo
-  stops          Json?        // Array di fermate intermedie
-  distance       Float?       // Distanza in km
-  estimatedTime  Int?         // Tempo stimato in minuti
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  teamId         String
+  date           DateTime
+  type           String?             @default("Allenamento")
+  location       String?             @default("Campo principale")
+  notes          String?
+  status         String              @default("SCHEDULED")
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  team           Team                @relation(fields: [teamId], references: [id])
+  attendances    TrainingAttendance[]
+  schedules      TransportSchedule[]
 
-  // Relazioni
+  @@map("training_sessions")
+}
+
+model TrainingAttendance {
+  id         String          @id @default(uuid())
+  sessionId  String
+  athleteId  String
+  present    Boolean         @default(false)
+  notes      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  
+  session    TrainingSession @relation(fields: [sessionId], references: [id])
+  athlete    Athlete         @relation(fields: [athleteId], references: [id])
+
+  @@unique([sessionId, athleteId])
+  @@map("training_attendances")
+}
+
+model TransportRoute {
+  id             String              @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  startPoint     String?
+  endPoint       String?
+  stops          Json?
+  distance       Float?
+  estimatedTime  Int?
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  capacity       Int                 @default(8)
+  driver         String?
+  vehiclePlate   String?
+  organization   Organization        @relation(fields: [organizationId], references: [id])
   schedules      TransportSchedule[]
 
   @@map("transport_routes")
 }
 
-// Programmazione trasporti
 model TransportSchedule {
-  id             String       @id @default(uuid())
-  route          TransportRoute @relation(fields: [routeId], references: [id])
-  routeId        String
-  
-  // Collegamenti opzionali a partite o allenamenti
-  match          Match?       @relation(fields: [matchId], references: [id])
-  matchId        String?
-  session        TrainingSession? @relation(fields: [sessionId], references: [id])
-  sessionId      String?
-  
-  // Orari
-  pickupTime     DateTime     // Orario partenza
-  returnTime     DateTime?    // Orario ritorno
-  
-  // Dettagli trasporto
-  status         String       @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
-  notes          String?
-  
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  // Relazioni
-  bookings       TransportBooking[]
+  id         String             @id @default(uuid())
+  routeId    String
+  notes      String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  matchId    String?
+  pickupTime DateTime
+  returnTime DateTime?
+  sessionId  String?
+  status     String             @default("SCHEDULED")
+  bookings   TransportBooking[]
+  match      Match?             @relation(fields: [matchId], references: [id])
+  route      TransportRoute     @relation(fields: [routeId], references: [id])
+  session    TrainingSession?   @relation(fields: [sessionId], references: [id])
 
   @@map("transport_schedules")
 }
 
-// Prenotazioni trasporto
 model TransportBooking {
-  id             String            @id @default(uuid())
-  schedule       TransportSchedule @relation(fields: [scheduleId], references: [id])
-  scheduleId     String
-  athlete        Athlete           @relation(fields: [athleteId], references: [id])
-  athleteId      String
-  bookingDate    DateTime          @default(now()) // Data della prenotazione
-  pickupPoint    String?           // Punto di salita
-  dropoffPoint   String?           // Punto di discesa
-  status         String            @default("CONFIRMED") // CONFIRMED, CANCELLED, COMPLETED
-  notes          String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id           String            @id @default(uuid())
+  scheduleId   String
+  athleteId    String
+  bookingDate  DateTime          @default(now())
+  pickupPoint  String?
+  dropoffPoint String?
+  status       String            @default("CONFIRMED")
+  notes        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  athlete      Athlete           @relation(fields: [athleteId], references: [id])
+  schedule     TransportSchedule @relation(fields: [scheduleId], references: [id])
 
   @@unique([scheduleId, athleteId])
   @@map("transport_bookings")
+}
+
+enum AthleteStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  INJURED
+}
+
+enum DocumentStatus {
+  VALID
+  EXPIRING
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+  PARTIAL
+}
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  POSTPONED
 }

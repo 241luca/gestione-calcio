@@ -14,7 +14,6 @@ export class TrainingService {
     organizationId: string;
     teamId: string;
     date: Date;
-    duration?: number;
     type?: string;
     location?: string;
     notes?: string;
@@ -37,7 +36,6 @@ export class TrainingService {
           organizationId: data.organizationId,
           teamId: data.teamId,
           date: new Date(data.date),
-          duration: data.duration || 90,
           type: data.type || 'Allenamento',
           location: data.location || 'Campo principale',
           notes: data.notes,
@@ -180,7 +178,6 @@ export class TrainingService {
     organizationId: string,
     data: {
       date?: Date;
-      duration?: number;
       type?: string;
       location?: string;
       notes?: string;
@@ -277,7 +274,7 @@ export class TrainingService {
 
       // Crea le nuove presenze
       const attendanceRecords = await prisma.trainingAttendance.createMany({
-        data: attendance.map(a => ({
+        data: attendances.map(a => ({
           sessionId,
           athleteId: a.athleteId,
           present: a.present,

@@ -15,7 +15,6 @@ router.use(authenticate);
 const createTrainingSchema = z.object({
   teamId: z.string().uuid(),
   date: z.string(),
-  duration: z.number().min(30).max(180).optional(),
   type: z.string().optional(),
   location: z.string().optional(),
   notes: z.string().optional()
