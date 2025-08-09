@@ -16,8 +16,11 @@ const AthletesPage = () => {
   const navigate = useNavigate();
   
   // Usa il nuovo hook per caricare i dati
-  const { data: athletes, loading, error, refetch } = useApiData('/athletes');
+  const { data: athletesData, loading, error, refetch } = useApiData('/athletes');
   const { mutate } = useApiMutation();
+  
+  // Estrai l'array di atleti dal formato restituito dal backend
+  const athletes = Array.isArray(athletesData) ? athletesData : [];
   
   // Stati locali per UI
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,8 +79,8 @@ const AthletesPage = () => {
     title: 'Report Atleti - Sistema Gestione Calcio'
   };
 
-  // Filtra atleti
-  const filteredAthletes = (athletes || []).filter(athlete => {
+  // Filtra atleti - athletes è già garantito essere un array
+  const filteredAthletes = athletes.filter(athlete => {
     const matchesSearch = searchTerm === '' || 
       `${athlete.firstName} ${athlete.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       athlete.fiscalCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -25,6 +25,7 @@ import venueRoutes from './routes/venues.routes';
 import reportRoutes from './routes/reports.routes';
 import schedulerRoutes from './routes/scheduler.routes';
 import settingsRoutes from './routes/settings.routes';
+import trainingRoutes from './routes/training.routes';
 
 // Carica le variabili d'ambiente
 dotenv.config();
@@ -90,6 +91,7 @@ app.use('/api/v1/venues', venueRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/scheduler', schedulerRoutes);
 app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/training-sessions', trainingRoutes);
 
 // Route health check
 app.get('/health', async (req: Request, res: Response) => {
