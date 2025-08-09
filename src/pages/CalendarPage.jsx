@@ -38,6 +38,10 @@ const CalendarPage = () => {
     type: 'all'
   });
 
+  // Debug: verifica i dati ricevuti
+  console.log('🏃 Trainings ricevuti:', trainings.length);
+  console.log('⚽ Matches ricevuti:', matches.length);
+  
   // Combina partite e allenamenti in un unico array di eventi
   const events = [
     ...matches.map(match => ({
@@ -47,7 +51,7 @@ const CalendarPage = () => {
       color: 'bg-blue-500',
       time: match.time || '00:00',
       team: teams.find(t => t.id === match.teamId)?.name || 'N/A',
-      location: match.venue || match.location || 'Campo'
+      location: typeof match.venue === 'object' ? match.venue.name : (match.venue || match.location || 'Campo')
     })),
     ...trainings.map(training => {
       // Estrai l'ora da startTime
@@ -123,8 +127,15 @@ const CalendarPage = () => {
     const dateStr = date.toISOString().split('T')[0];
     return events.filter(event => {
       if (filters.type !== 'all' && event.type !== filters.type) return false;
-      if (filters.team !== 'all' && event.teamId !== filters.team) return false;
-      const eventDate = new Date(event.date).toISOString().split('T')[0];
+      if (filters.team !== 'all' && event.teamId !== filters.team && event.teamId !== parseInt(filters.team)) return false;
+      // Gestisci date in formati diversi
+      let eventDate;
+      if (event.date) {
+        // Se event.date è già una stringa ISO, usala direttamente
+        eventDate = event.date.split('T')[0];
+      } else {
+        return false;
+      }
       return eventDate === dateStr;
     });
   };
@@ -475,7 +486,7 @@ const CalendarPage = () => {
                 {sortedEvents
                   .filter(event => {
                     if (filters.type !== 'all' && event.type !== filters.type) return false;
-                    if (filters.team !== 'all' && event.teamId !== filters.team) return false;
+                    if (filters.team !== 'all' && event.teamId !== filters.team && event.teamId !== parseInt(filters.team)) return false;
                     return true;
                   })
                   .map((event, index) => (
