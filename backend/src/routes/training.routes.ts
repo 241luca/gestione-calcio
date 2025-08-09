@@ -128,7 +128,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     const training = await trainingService.updateTrainingSession(
       req.params.id,
       organizationId,
-      validatedData
+      {
+        ...validatedData,
+        date: validatedData.date ? new Date(validatedData.date) : undefined
+      }
     );
 
     res.json(ResponseFormatter.success(training, {
