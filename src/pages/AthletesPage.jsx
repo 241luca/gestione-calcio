@@ -20,7 +20,13 @@ const AthletesPage = () => {
   const { mutate } = useApiMutation();
   
   // Estrai l'array di atleti dal formato restituito dal backend
-  const athletes = Array.isArray(athletesData) ? athletesData : [];
+  const athletes = Array.isArray(athletesData) ? athletesData : (athletesData?.athletes || []);
+  
+  console.log('🔍 DEBUG AthletesPage:');
+  console.log('  - athletesData raw:', athletesData);
+  console.log('  - athletes estratti:', athletes);
+  console.log('  - athletes.length:', athletes.length);
+  console.log('  - Array.isArray(athletes):', Array.isArray(athletes));
   
   // Stati locali per UI
   const [searchTerm, setSearchTerm] = useState('');

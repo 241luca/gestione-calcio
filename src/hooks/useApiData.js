@@ -45,6 +45,7 @@ export const useApiData = (endpoint, dependencies = []) => {
           for (const key of possibleArrayKeys) {
             if (Array.isArray(apiData[key])) {
               arrayData = apiData[key];
+              console.log(`🎯 useApiData: Trovato array in '${key}' con ${apiData[key].length} elementi`);
               break;
             }
           }
@@ -56,9 +57,12 @@ export const useApiData = (endpoint, dependencies = []) => {
               pagination: apiData.pagination,
               meta: apiData.meta || {}
             });
+          } else if (arrayData) {
+            // Se abbiamo trovato un array, usa quello
+            setData(arrayData);
           } else {
-            // Altrimenti solo l'array
-            setData(arrayData || []);
+            // Altrimenti restituisci l'oggetto completo (potrebbe avere athletes, documents, etc.)
+            setData(apiData);
           }
         } else {
           // Caso 3: formato non riconosciuto, usa array vuoto
