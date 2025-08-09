@@ -20,14 +20,14 @@ import { toast } from 'react-hot-toast';
 const EventDetailModal = ({ event, onClose, onEdit, onDelete, teams = [] }) => {
   const [showEditForm, setShowEditForm] = useState(false);
   const [editData, setEditData] = useState({
-    date: event.date,
-    time: event.time,
-    teamId: event.teamId,
-    location: event.location,
+    date: event.date ? event.date.split('T')[0] : '',
+    time: event.time || '',
+    teamId: event.teamId || '',
+    location: event.location || '',
     opponent: event.opponent || '',
     competition: event.competition || '',
     notes: event.notes || '',
-    type: event.type
+    type: event.type || 'training'
   });
 
   if (!event) return null;
@@ -223,53 +223,53 @@ const EventDetailModal = ({ event, onClose, onEdit, onDelete, teams = [] }) => {
                 )}
               </div>
 
-              {/* Azioni */}
+              {/* Azioni - Solo icone */}
               <div className="border-t pt-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="flex justify-center space-x-3">
                   {/* Modifica */}
                   <button
                     onClick={handleEdit}
-                    className="flex items-center justify-center space-x-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
+                    className="p-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
+                    title="Modifica"
                   >
-                    <PencilIcon className="h-4 w-4" />
-                    <span className="text-sm">Modifica</span>
+                    <PencilIcon className="h-5 w-5" />
                   </button>
 
                   {/* Elimina */}
                   <button
                     onClick={handleDelete}
-                    className="flex items-center justify-center space-x-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                    className="p-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                    title="Elimina"
                   >
-                    <TrashIcon className="h-4 w-4" />
-                    <span className="text-sm">Elimina</span>
+                    <TrashIcon className="h-5 w-5" />
                   </button>
 
                   {/* Stampa */}
                   <button
                     onClick={handlePrint}
-                    className="flex items-center justify-center space-x-2 px-3 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition"
+                    className="p-3 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition"
+                    title="Stampa"
                   >
-                    <PrinterIcon className="h-4 w-4" />
-                    <span className="text-sm">Stampa</span>
+                    <PrinterIcon className="h-5 w-5" />
                   </button>
 
                   {/* Condividi */}
                   <button
                     onClick={handleShare}
-                    className="flex items-center justify-center space-x-2 px-3 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition"
+                    className="p-3 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition"
+                    title="Condividi"
                   >
-                    <ShareIcon className="h-4 w-4" />
-                    <span className="text-sm">Condividi</span>
+                    <ShareIcon className="h-5 w-5" />
                   </button>
 
                   {/* Convocazioni (solo per partite) */}
                   {event.type === 'match' && (
                     <button
                       onClick={handleConvocazioni}
-                      className="flex items-center justify-center space-x-2 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition"
+                      className="p-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition"
+                      title="Convocazioni"
                     >
-                      <UserPlusIcon className="h-4 w-4" />
-                      <span className="text-sm">Convocazioni</span>
+                      <UserPlusIcon className="h-5 w-5" />
                     </button>
                   )}
 
@@ -277,29 +277,29 @@ const EventDetailModal = ({ event, onClose, onEdit, onDelete, teams = [] }) => {
                   {event.type === 'training' && (
                     <button
                       onClick={handlePresenze}
-                      className="flex items-center justify-center space-x-2 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition"
+                      className="p-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition"
+                      title="Presenze"
                     >
-                      <UserPlusIcon className="h-4 w-4" />
-                      <span className="text-sm">Presenze</span>
+                      <UserPlusIcon className="h-5 w-5" />
                     </button>
                   )}
 
                   {/* Report */}
                   <button
                     onClick={handleReport}
-                    className="flex items-center justify-center space-x-2 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition"
+                    className="p-3 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition"
+                    title="Report"
                   >
-                    <ChartBarIcon className="h-4 w-4" />
-                    <span className="text-sm">Report</span>
+                    <ChartBarIcon className="h-5 w-5" />
                   </button>
 
                   {/* Duplica */}
                   <button
                     onClick={() => toast.success('Funzione duplica in arrivo...')}
-                    className="flex items-center justify-center space-x-2 px-3 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition"
+                    className="p-3 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition"
+                    title="Duplica"
                   >
-                    <DocumentTextIcon className="h-4 w-4" />
-                    <span className="text-sm">Duplica</span>
+                    <DocumentTextIcon className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -327,7 +327,7 @@ const EventDetailModal = ({ event, onClose, onEdit, onDelete, teams = [] }) => {
                     </label>
                     <input
                       type="date"
-                      value={editData.date}
+                      value={editData.date ? editData.date.split('T')[0] : ''}
                       onChange={(e) => setEditData({...editData, date: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                       required
