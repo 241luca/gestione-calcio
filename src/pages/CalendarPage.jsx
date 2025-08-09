@@ -18,6 +18,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { exportService } from '../services/exportService';
 import { useApiData, useApiMutation } from '../hooks/useApiData';
+import EventDetailModal from '../components/calendar/EventDetailModal';
 
 const CalendarPage = () => {
   // Hook per recuperare dati dal backend
@@ -226,6 +227,33 @@ const CalendarPage = () => {
       competition: '',
       notes: ''
     });
+  };
+
+  // Funzione per modificare un evento
+  const handleEditEvent = async (eventId, editData) => {
+    const event = events.find(e => e.id === eventId);
+    
+    try {
+      if (event.type === 'match') {
+        await mutate('put', `/matches/${eventId}`, editData, 'Partita aggiornata con successo');
+        refetchMatches();
+      } else {
+        // Per allenamenti, calcola startTime e endTime da time
+        const startDateTime = new Date(`${editData.date}T${editData.time}:00`);
+        const endDateTime = new Date(startDateTime);
+        endDateTime.setHours(endDateTime.getHours() + 1, endDateTime.getMinutes() + 30);
+        
+        await mutate('put', `/training-sessions/${eventId}`, {
+          ...editData,
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString()
+        }, 'Allenamento aggiornato con successo');
+        refetchTrainings();
+      }
+      setSelectedEvent(null);
+    } catch (error) {
+      // Errore già gestito da mutate
+    }
   };
 
   // Funzione per eliminare un evento
@@ -715,100 +743,15 @@ const CalendarPage = () => {
         </div>
       )}
 
-      {/* Modal dettaglio evento */}
+      {/* Modal dettaglio evento con nuovo componente */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
-            <div className="fixed inset-0 transition-opacity" onClick={() => setSelectedEvent(null)}>
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-
-            <div className="inline-block w-full max-w-md p-6 my-8 text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Dettagli Evento
-                </h3>
-                <button
-                  onClick={() => setSelectedEvent(null)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <span className={`px-2 py-1 text-xs rounded text-white ${selectedEvent.color}`}>
-                    {selectedEvent.type === 'match' ? 'Partita' : 'Allenamento'}
-                  </span>
-                </div>
-                
-                <h4 className="text-xl font-semibold">{selectedEvent.title}</h4>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <CalendarIcon className="h-5 w-5 text-gray-400" />
-                    <span>{formatDate(selectedEvent.date)}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <ClockIcon className="h-5 w-5 text-gray-400" />
-                    <span>{selectedEvent.time}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <UserGroupIcon className="h-5 w-5 text-gray-400" />
-                    <span>{selectedEvent.team}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <MapPinIcon className="h-5 w-5 text-gray-400" />
-                    <span>{selectedEvent.location}</span>
-                  </div>
-                </div>
-
-                {selectedEvent.opponent && (
-                  <div className="pt-3 border-t">
-                    <p className="text-sm"><strong>Avversario:</strong> {selectedEvent.opponent}</p>
-                    {selectedEvent.competition && (
-                      <p className="text-sm mt-1"><strong>Competizione:</strong> {selectedEvent.competition}</p>
-                    )}
-                  </div>
-                )}
-
-                {selectedEvent.notes && (
-                  <div className="pt-3 border-t">
-                    <p className="text-sm"><strong>Note:</strong></p>
-                    <p className="text-sm text-gray-600 mt-1">{selectedEvent.notes}</p>
-                  </div>
-                )}
-
-                <div className="pt-4 flex justify-end space-x-2">
-                  {selectedEvent.type === 'match' && (
-                    <button
-                      onClick={() => {
-                        toast.success('Convocazioni in arrivo (funzione da completare)');
-                        setSelectedEvent(null);
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                      Convocazioni
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDeleteEvent(selectedEvent)}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                  >
-                    Elimina
-                  </button>
-                  <button
-                    onClick={() => setSelectedEvent(null)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                  >
-                    Chiudi
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <EventDetailModal
+          event={selectedEvent}
+          teams={teams}
+          onClose={() => setSelectedEvent(null)}
+          onEdit={handleEditEvent}
+          onDelete={handleDeleteEvent}
+        />
       )}
     </div>
   );
