@@ -14,7 +14,6 @@ export class TrainingService {
     organizationId: string;
     teamId: string;
     date: Date;
-    time?: string;
     duration?: number;
     type?: string;
     location?: string;
@@ -38,7 +37,6 @@ export class TrainingService {
           organizationId: data.organizationId,
           teamId: data.teamId,
           date: new Date(data.date),
-          time: data.time || '18:00',
           duration: data.duration || 90,
           type: data.type || 'Allenamento',
           location: data.location || 'Campo principale',
@@ -47,7 +45,7 @@ export class TrainingService {
         },
         include: {
           team: true,
-          attendance: {
+          attendances: {
             include: {
               athlete: true
             }
@@ -91,7 +89,7 @@ export class TrainingService {
         where,
         include: {
           team: true,
-          attendance: {
+          attendances: {
             include: {
               athlete: true
             }
@@ -128,14 +126,14 @@ export class TrainingService {
         },
         include: {
           team: true,
-          attendance: {
+          attendances: {
             include: {
               athlete: true
             }
           }
         },
         orderBy: {
-          time: 'asc'
+          date: 'asc'
         }
       });
 
@@ -155,7 +153,7 @@ export class TrainingService {
         where: { id, organizationId },
         include: {
           team: true,
-          attendance: {
+          attendances: {
             include: {
               athlete: true
             }
@@ -182,7 +180,6 @@ export class TrainingService {
     organizationId: string,
     data: {
       date?: Date;
-      time?: string;
       duration?: number;
       type?: string;
       location?: string;
@@ -207,7 +204,7 @@ export class TrainingService {
         },
         include: {
           team: true,
-          attendance: {
+          attendances: {
             include: {
               athlete: true
             }
@@ -258,7 +255,7 @@ export class TrainingService {
   async recordAttendance(
     sessionId: string,
     organizationId: string,
-    attendance: Array<{
+    attendances: Array<{
       athleteId: string;
       present: boolean;
       notes?: string;
@@ -293,7 +290,7 @@ export class TrainingService {
 
       return updatedSession;
     } catch (error) {
-      console.error('Error recording attendance:', error);
+      console.error('Error recording attendances:', error);
       throw error;
     }
   }
